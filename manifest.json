@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "TagFind",
+  "description": "Base Level Extension",
+  "version": "1.0",
+  "permissions": ["activeTab", "scripting"],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "extensionIcon.png"
+  },
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "all_frames": true,
+    "js":      ["content.js"]
+    }],
+
+  "web_accessible_resources":[
+    {
+      "resources": ["search/search.html", "search/css/style.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Q",
+        "mac": "MacCtrl+Shift+Q"
+      },
+      "description":"opens search popup"
+    },
+    "toggle-search": {
+      "suggested_key": {
+        "default": "Ctrl+Q",
+        "mac": "Command+G"
+      },
+      "description": "Toggles search bar"
+    }
+  }
+}
