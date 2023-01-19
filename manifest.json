@@ -17,12 +17,12 @@
   "content_scripts": [{
     "matches": ["<all_urls>"],
     "all_frames": true,
-    "js":      ["content.js"]
+    "js":      ["content.js", "src/js/content-import.js"]
     }],
 
   "web_accessible_resources":[
     {
-      "resources": ["search/search.html", "search/css/style.css"],
+      "resources": ["src/js/*"],
       "matches": ["<all_urls>"]
     }
   ],
