@@ -1,7 +1,7 @@
 
 var ThisTabId;
 var TabSearchData;
-var ongoingSearch;
+var currentSearch;
 
 const highlightCSS = new CSSStyleSheet();
 highlightCSS.replaceSync(".TFHighlight { background-color: red; opacity: 0.5; z-index: 1000; position: absolute; }");
