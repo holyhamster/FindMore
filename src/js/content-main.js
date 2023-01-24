@@ -104,9 +104,9 @@ export function main() {
           _dataRef.searchString = e.target.value;
           cacheDataToBackground();
 
-          removeHighlight();
           if (currentSearch)
             currentSearch.interrupt();
+          removeHighlight();
 
           if (_dataRef.searchString && _dataRef.searchString.length > 0)
             currentSearch = new DomSearcher(TabSearchData.searchString, TabSearchData.getRegexpOptions(), false);
@@ -140,6 +140,7 @@ export function main() {
   }
 
   function removeHighlight () {
+    console.log(`removed highlight`);
     let highlights = document.querySelectorAll('.TFContainer');
     for (let i = 0; i < highlights.length; i++) {
       highlights[i].remove();

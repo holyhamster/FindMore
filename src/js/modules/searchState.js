@@ -11,7 +11,7 @@ class SearchState {
 
   getRegexpOptions()
   {
-    return "gi";
+    return "i";
   }
 }
 
