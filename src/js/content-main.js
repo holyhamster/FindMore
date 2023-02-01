@@ -10,15 +10,21 @@ export function main() {
   var currentSearch;
 
   const highlightCSS = new CSSStyleSheet();
-  highlightCSS.replaceSync(".TFHighlight { background-color: red; opacity: 0.5; z-index: 147483647; }");
+  highlightCSS.replaceSync(
+    `.TFHighlight { background-color: red; opacity: 0.5; z-index: 147483647; position: absolute; }
+    .TFContainer { position: absolute; }
+    .TFContainerRelative { position: relative; }`);
 
   document.addEventListener('keydown', function(e){
     if (e.key == "Escape")
       if (TabSearchData && TabSearchData.open)
       {
         TabSearchData.open = false;
+        if (currentSearch)
+          currentSearch.interrupt();
+        //removeghlight();
         updateBarState(TabSearchData);
-        removeHighlight();
+
         cacheDataToBackground();
       }
   });
@@ -48,8 +54,9 @@ export function main() {
 
             if (NEW_SEARCH_STATE || request.forcedUpdate)
             {
+              if (currentSearch)
+                currentSearch.interrupt();
               updateBarState(TabSearchData);
-
               removeHighlight();
               if (currentSearch)
                 currentSearch.interrupt();
@@ -97,20 +104,7 @@ export function main() {
         inputBar.setAttribute("value", _dataRef.searchString);
         inputBar.focus();
         inputBar.addEventListener("input", function(e){
-          if (_dataRef.searchString == e.target.value)
-            return;
-
-
-          _dataRef.searchString = e.target.value;
-          cacheDataToBackground();
-
-          if (currentSearch)
-            currentSearch.interrupt();
-          removeHighlight();
-
-          if (_dataRef.searchString && _dataRef.searchString.length > 0)
-            currentSearch = new DomSearcher(TabSearchData.searchString, TabSearchData.getRegexpOptions(), false);
-          //getTextRectangles(_dataRef.searchString);
+          onInputChange(_dataRef, e.target.value)
         });
 
         bar.appendChild(inputBar);
@@ -153,7 +147,22 @@ export function main() {
     chrome.runtime.sendMessage(message);
   }
 
+  function onInputChange(_searchData, _newValue)
+  {
+    if (_searchData.searchString == _newValue)
+      return;
 
+
+    _searchData.searchString = _newValue;
+    cacheDataToBackground();
+
+    if (currentSearch)
+      currentSearch.interrupt();
+    removeHighlight();
+
+    if (_searchData.searchString && _searchData.searchString.length > 0)
+      currentSearch = new DomSearcher(TabSearchData.searchString, TabSearchData.getRegexpOptions(), false);
+  }
 
   function openSearchBar2()
   {

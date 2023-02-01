@@ -26,18 +26,18 @@ chrome.runtime.onMessage.addListener(function(e) {
   }
 });
 
-//chrome.windows.onBoundsChanged.addListener(function() {
-//  console.log("bound change event triggered");
-//
-//  let keyIterator = TabData.keys();
-//  while (iKey = keyIterator.next().value)
-//  {
-    //if (TabData.get(iKey).open)
-    //{
-//      updateSearch(iKey, TabData.get(iKey), FORCED_UPDATE = true);
-    //}
-  //}
-//});
+chrome.windows.onBoundsChanged.addListener(function() {
+  console.log("bound change event triggered");
+
+  let keyIterator = TabData.keys();
+  while (iKey = keyIterator.next().value)
+  {
+    if (TabData.get(iKey).open)
+    {
+      updateSearch(iKey, TabData.get(iKey), FORCED_UPDATE = true);
+    }
+  }
+});
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeinfo){
   console.log("update event triggered");
