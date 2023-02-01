@@ -36,13 +36,22 @@ class DomSearcher{
   }
   startSearch()
   {
+    //this.showNodes()
     this.searchRecursive(this.searchString, DomSearcher.initRegion(), [], new Map(), this.getWalk(), this.regexString);
   }
   //iterates through a search region, continues pulling new nodes out of this.walk when search fails
   //makes a timeout everytime it makes too many calls at once (to give the browser some rendering time)
   //
   //_regionNodes are all nodes in the current search region, _regionString is their stacked .contentText starting from _regionOffset index
-
+  showNodes()
+  {
+    let dogg = document.createTreeWalker(document.body, NodeFilter.SHOW_ALL);
+    let node;
+    while(node = dogg.nextNode())
+    {
+      console.log(node);
+    }
+  }
   searchRecursive(_searchString, _region, _matches, _highlightGroups, _walk, _regexp)
   {
     let callsLeft = this.consecutiveCalls;
@@ -106,6 +115,15 @@ class DomSearcher{
     if (!newNode)
       return false;
 
+    let newLineOffset = DomSearcher.checkForNewLine(newNode);
+    if (newLineOffset)
+    {
+      if (newLineOffset == newNode.textContent.length - 1)
+      {
+
+      }
+      _region.nodes = [newNode];
+    }
     _region.string += newNode.textContent;
     _region.nodes.push(newNode);
 
@@ -241,7 +259,10 @@ class DomSearcher{
     }
   }
 
+  static checkForNewLine()
+  {
 
+  }
   static commitChange(_highlightGroup, _anchorNode)
   {
     if (_highlightGroup.appended && _highlightGroup.highlightSpans.length > 3)
