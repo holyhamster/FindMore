@@ -114,27 +114,6 @@ class DomSearcher{
     return region;
   }
 
-  static expandRegion(_region, _walk)
-  {
-    let newNode = _walk.nextNode();
-
-    if (!newNode)
-      return false;
-
-    let newLineOffset = DomSearcher.checkForNewLine(newNode);
-    if (newLineOffset)
-    {
-      if (newLineOffset == newNode.textContent.length - 1)
-      {
-
-      }
-      _region.nodes = [newNode];
-    }
-    _region.string += newNode.textContent;
-    _region.nodes.push(newNode);
-
-    return true;
-  }
 
   static processMatch(_match, _region, _range, _highlightGroups)
   {
@@ -157,63 +136,6 @@ class DomSearcher{
 
     return {parent: parentNode, group: hlGroup};
   }
-
-  static getAllMatches(_amount, _region, _searchString, _regexp)
-  {
-
-    let matches = [..._region.string.substring(_region.offset).matchAll(_regexp)];
-    matches = matches.splice(0, _amount);
-    let previousNodesOffset = 0, j = 0;
-    for (let i = 0; i < matches.length; i++)
-    {
-      matches[i].index += _region.offset;
-      let MATCH_INSIDE_I_NODE;
-      while (MATCH_INSIDE_I_NODE = (previousNodesOffset + _region.nodes[j].textContent.length) <= matches[i].index)
-      {
-        previousNodesOffset += _region.nodes[j].textContent.length;
-        j += 1;
-      }
-
-      matches[i].startIndex = j;
-      matches[i].startOffset = matches[i].index - previousNodesOffset;
-
-      while (MATCH_INSIDE_I_NODE = (previousNodesOffset + _region.nodes[j].textContent.length < matches[i].index + _searchString.length))
-      {
-        previousNodesOffset += _region.nodes[j].textContent.length;
-        j += 1;
-      }
-      matches[i].endIndex = j;
-      matches[i].endOffset = matches[i].index + _searchString.length - previousNodesOffset;
-    }
-    return matches;
-  }
-
-  static trimRegionToPoint(_region, _index, _offset)
-  {
-    _region.offset = _offset;
-    _region.nodes = _region.nodes.slice(_index);
-    _region.string = "";
-    for (let i = 0; i < _region.nodes.length; i++)
-      _region.string += _region.nodes[i].textContent;
-  }
-
-  static trimRegion(_region, _searchString)
-  {
-    let SEARCH_REGION_IS_UNNESESARY_LOG;
-    while(SEARCH_REGION_IS_UNNESESARY_LOG = (_region.nodes.length > 0 &&
-      ((_region.string.length) - _region.nodes[0].textContent.length > _searchString.length - 1)))
-    {
-      _region.string = _region.string.substring(_region.nodes[0].textContent.length);
-      _region.nodes.shift();
-      _region.offset = 0;
-    }
-  }
-
-  static checkForNewLine()
-  {
-
-  }
-
 
   getWalk() {
       const condition = {
