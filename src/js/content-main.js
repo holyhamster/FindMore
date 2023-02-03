@@ -11,9 +11,13 @@ export function main() {
 
   const highlightCSS = new CSSStyleSheet();
   highlightCSS.replaceSync(
-    `.TFHighlight { background-color: red; opacity: 0.5; z-index: 147483647; position: absolute; }
+    `.TFHighlight { background-color: red; opacity: 0.4; z-index: 147483647; position: absolute; }
+    .TFHighlight-2 { background-color: blue; opacity: 0.4; z-index: 147483647; position: absolute; }
     .TFContainer { position: absolute; }
     .TFContainerRelative { position: relative; }`);
+
+    //.TFContainer { position: absolute; left: 0px; top: 0px; }
+    //.TFContainerRelative { position: relative; left: 0px; top: 0px; }`);
 
   document.addEventListener('keydown', function(e){
     if (e.key == "Escape")
@@ -136,8 +140,12 @@ export function main() {
   function removeHighlight () {
     console.log(`removed highlight`);
     let highlights = document.querySelectorAll('.TFContainer');
+    let highlightsRelative = document.querySelectorAll('.TFContainerRelative');
     for (let i = 0; i < highlights.length; i++) {
       highlights[i].remove();
+    }
+    for (let i = 0; i < highlightsRelative.length; i++) {
+      highlightsRelative[i].remove();
     }
   }
 

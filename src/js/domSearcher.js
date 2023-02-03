@@ -1,3 +1,5 @@
+import HighlightGroup from './highlightGroup.js';
+import SearchRegion from './searchRegion.js';
 
 class DomSearcher{
   interrupted;
@@ -57,15 +59,16 @@ class DomSearcher{
     let callsLeft = this.consecutiveCalls;
     let range = document.createRange();
     let dirtyHLGroups = new Map();
+
     while(callsLeft >= 0)
     {
       callsLeft -= 1;
       if (_matches.length > 0)
       {
         let match = _matches.shift();
-        let dirtyHL = DomSearcher.processMatch(match, _region, range, _highlightGroups);
-        if (dirtyHL && !dirtyHLGroups.get(dirtyHL))
-          dirtyHLGroups.set(dirtyHL.anchor, dirtyHL.group);
+        let newHL = DomSearcher.processMatch(match, _region, range, _highlightGroups);
+        if (newHL && !dirtyHLGroups.get(newHL))
+          dirtyHLGroups.set(newHL.parent, newHL.group);
 
         if (_matches.length == 0)
           DomSearcher.trimRegionToPoint(_region, match.endIndex, match.endOffset);
@@ -80,7 +83,7 @@ class DomSearcher{
           DomSearcher.trimRegion(_region, _searchString);
           if (!WALK_IN_PROGRESS)
           {
-            dirtyHLGroups.forEach(DomSearcher.commitChange);
+            dirtyHLGroups.forEach(function(_hlGroup) {_hlGroup.commit(); });
             console.log("end of tree");
             return;
           }
@@ -91,9 +94,11 @@ class DomSearcher{
 
     if (_matches.length != 0)
       console.log ("DANGER, UNHANDLED MATCHES")
+
     if (this.interrupted)
       return;
-    dirtyHLGroups.forEach(DomSearcher.commitChange);
+
+    dirtyHLGroups.forEach(function(_hlGroup) {_hlGroup.commit(); });
 
     setTimeout( function() { this.searchRecursive.call(
       this, _searchString, _region, _matches, _highlightGroups, _walk, _regexp) }.bind(this), this.interval);
@@ -130,84 +135,28 @@ class DomSearcher{
     return true;
   }
 
-  static nodeHasRelativeParent(_node)
-  {
-    let cyclingParent = _node.parentNode;
-    let result = false;
-    while (cyclingParent != null)
-    {
-      if (cyclingParent.nodeType == Node.ELEMENT_NODE)
-      {
-        let compStyle = window.getComputedStyle(cyclingParent);
-        result = compStyle.getPropertyValue("position") == "relative";
-        if (result)
-          break;
-      }
-      cyclingParent = cyclingParent.parentNode;
-    }
-    return result;
-  }
-
   static processMatch(_match, _region, _range, _highlightGroups)
   {
-    let anchorNode = _region.nodes[_match.endIndex];
+    let parentNode = _region.nodes[_match.endIndex].parentNode;
 
-    let hlGroup = (_highlightGroups.get(anchorNode));
+    let hlGroup = (_highlightGroups.get(parentNode));
     if (!hlGroup)
     {
-      hlGroup = this.createHighlightGroup(document, anchorNode);
-      _highlightGroups.set(anchorNode, hlGroup);
-    }
+      hlGroup = new HighlightGroup(parentNode, _range);
+      _highlightGroups.set(parentNode, hlGroup);
 
-    if (!hlGroup.invisible && !hlGroup.anchorRect)
-    {
-      _range.setStart(anchorNode, anchorNode.textContent.length - 1);
-      _range.setEnd(anchorNode, anchorNode.textContent.length);
-      let rects = _range.getClientRects();
-      hlGroup.invisible = rects.length == 0;
-      if (!hlGroup.invisible)
-        hlGroup.anchorRect = rects[rects.length - 1];
     }
-
-    if (hlGroup.invisible)
+    if (!hlGroup.isGroupVisibleAfterUpdate(_range))
       return;
 
     _range.setStart(_region.nodes[_match.startIndex], _match.startOffset);
     _range.setEnd(_region.nodes[_match.endIndex], _match.endOffset);
-    let highlightRects = _range.getClientRects();
 
-    for (let i = 0; i < highlightRects.length; i++)
-    {
-      if (highlightRects[i].width != 0 && highlightRects[i].height != 0)
-        hlGroup.highlightSpans.push(this.createHighlightSpan(highlightRects[i], hlGroup.anchorRect));
-    }
+    hlGroup.highlightRange(_range);
 
-    return {anchor: anchorNode, group: hlGroup};
+    return {parent: parentNode, group: hlGroup};
   }
 
-  static createHighlightSpan(_hightlightRect, _anchorRect)
-  {
-    let span = document.createElement('SPAN');
-    span.classList.add('TFHighlight');
-    span.style.height = _hightlightRect.height + 'px';
-    span.style.width = _hightlightRect.width + 'px';
-    span.style.marginLeft =  _hightlightRect.left - _anchorRect.right + 'px';
-    span.style.marginTop = _hightlightRect.top - _anchorRect.top + 'px';
-    return span;
-  }
-  static createHighlightGroup(_document, _anchorNode)
-  {
-    let hlGroup = new Object();
-    hlGroup.highlightSpans = [];
-    hlGroup.container = _document.createElement('SPAN');
-
-    if (DomSearcher.nodeHasRelativeParent(_anchorNode))  //absolute position is cheaper to calculate, but requires a relative ancestor.
-      hlGroup.container.classList.add('TFContainer');
-    else
-      hlGroup.container.classList.add('TFContainerRelative');
-
-    return hlGroup
-  }
   static getAllMatches(_amount, _region, _searchString, _regexp)
   {
 
@@ -263,32 +212,6 @@ class DomSearcher{
   {
 
   }
-  static commitChange(_highlightGroup, _anchorNode)
-  {
-    if (_highlightGroup.appended && _highlightGroup.highlightSpans.length > 3)
-    {
-      _highlightGroup.container.remove();
-      _highlightGroup.appended = false;
-    }
-    //console.log("committing");
-    //console.log(_highlightGroup);
-    //console.log(_anchorNode);
-    for (let i = 0; i < _highlightGroup.highlightSpans.length; i++)
-    {
-      //console.log(_highlightGroup.highlightSpans[i]);
-      _highlightGroup.container.appendChild(_highlightGroup.highlightSpans[i]);
-    }
-
-    if (!_highlightGroup.appended)
-    {
-      _anchorNode.after(_highlightGroup.container);
-      _highlightGroup.appended = true;
-    }
-
-    _highlightGroup.highlightSpans = [];
-    _highlightGroup.anchorRect = null;
-  }
-
 
 
   getWalk() {
@@ -307,26 +230,7 @@ class DomSearcher{
         }
 
       };
-
       return document.createTreeWalker(document.body, NodeFilter.SHOW_ALL, condition);
-  }
-
-  static getFirstRect(_node, _range, _cache)
-  {
-    let rect = _cache.get(_node);
-    if (!rect)
-    {
-      _range.setStart(_node, _node.textContent.length - 1);
-      _range.setEnd(_node, _node.textContent.length);
-      let rects = _range.getClientRects();
-      if (rects.length == 0)  //sometimes the node isnt visible and it will not have any rects
-      {
-        return;
-      }
-      rect = rects[rects.length - 1];
-      _cache.set(_node, rect);
-    }
-    return rect;
   }
 }
 
