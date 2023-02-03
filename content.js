@@ -1,178 +1,146 @@
 
 var ThisTabId;
-var TabSearchValue;
-var SearchOpen = false;
+var TabSearchData;
+var currentSearch;
+
+const highlightCSS = new CSSStyleSheet();
+highlightCSS.replaceSync(".TFHighlight { background-color: red; opacity: 0.5; z-index: 1000; position: absolute; }");
 
 document.addEventListener('keydown', function(e){
   if (e.key == "Escape")
-    if (SearchOpen)
+    if (TabSearchData.open)
     {
-      closeSearchBar();
-      sendSearchContentToBackground();
+      TabSearchData.open = false;
+      updateBarState(TabSearchData);
+      removeHighlight();
+      cacheDataToBackground();
     }
 });
 
 chrome.runtime.onMessage.addListener(
     function(request, sender) {
+
       if (!ThisTabId)
         ThisTabId = request.tabId;
       switch (request.message) {
-        case "open_search":
-          openSearchBar(request.data);
+
+        case "update_search":
+          console.log("event go");
+          let NEW_SEARCH_STATE = false;
+          console.log(request);
+          if (request.data) {
+              if (!searchDataIsSame(TabSearchData, request.data)) {
+                NEW_SEARCH_STATE = true;
+                TabSearchData = createAndValidateData(request.data);
+
+              }
+          }
+          else if (!TabSearchData) {
+            NEW_SEARCH_STATE = true;
+            TabSearchData = createAndValidateData();
+          }
+
+          if (NEW_SEARCH_STATE || request.forcedUpdate)
+          {
+            updateBarState(TabSearchData);
+
+            removeHighlight();
+            if (TabSearchData.open &&
+              TabSearchData.searchString != "")
+            {
+              getTextRectangles(TabSearchData.searchString);
+            }
+            cacheDataToBackground();
+          }
           break;
-        case "tab_updated":
-          onTabUpdate(request.data, request.state);
-          break;
+
+
         default:
           console.log("uncaught message: " + request.message);
       }
     }
   );
 
-  function openSearchBar(_backgroundSearchValue)
-  {
-    if (SearchOpen)
-      return;
+function createAndValidateData(_baseData)
+{
+  var result = _baseData
+  if (!result)
+    result = new Object();
 
-    SearchOpen = true;
-    if (!TabSearchValue)
+  result.open = result.open || false;
+  result.searchString = result.searchString || "";
+
+  return result;
+}
+
+function searchDataIsSame(_data1, _data2)
+{
+  return (_data1?.searchString === _data2?.searchString) && (_data1?.open == _data2?.open);
+}
+
+function updateBarState(_dataRef)
+{
+  const TFSearchBarID = "TFSearchBar";
+  const TFInputBarID = "TFInputBar";
+
+  let bar = document.getElementById(TFSearchBarID);
+
+  if (_dataRef.open) {
+
+    let inputBar = document.getElementById(TFInputBarID);
+    if (!bar)
     {
-      if (_backgroundSearchValue == null)
-      {
-        TabSearchValue = new Object();
-        TabSearchValue.searchString = "";
-      }
-      else
-      {
-        TabSearchValue = _backgroundSearchValue;
-      }
+      bar = document.createElement("div");
+
+      bar.setAttribute("id", TFSearchBarID);
+
+      inputBar = document.createElement("input");
+      inputBar.setAttribute("id", TFInputBarID)
+      inputBar.setAttribute("value", _dataRef.searchString);
+
+      inputBar.addEventListener("input", function(e){
+        if (_dataRef.searchString == e.target.value)
+          return;
+
+        removeHighlight();
+        _dataRef.searchString = e.target.value;
+        cacheDataToBackground();
+        if (_dataRef.searchString && _dataRef.searchString.length > 0)
+        getTextRectangles(_dataRef.searchString);
+      });
+
+      bar.appendChild(inputBar);
+      bar.style.position = "fixed";
+      bar.style.top = "10px";
+      bar.style.right = "10px";
+      bar.style.backgroundColor = "white";
+      bar.style.padding = "10px";
+      bar.style.zIndex = 1000;
+      document.body.appendChild(bar);
+
+
+
+      if (!document.adoptedStyleSheets.includes(highlightCSS))
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, highlightCSS];
     }
 
-    renderSearchContent(TabSearchValue.searchString);
+    if (inputBar.value != _dataRef.searchString)
+    {
+      inputBar.setAttribute("value", _dataRef.searchString);
+    }
   }
 
-  function closeSearchBar()
-  {
-    if (!SearchOpen)
-      return;
-
-    SearchOpen = false;
-    var getbar = document.getElementById("TagFind_SearchBar");
-    getbar.remove();
-  }
-
-function renderSearchContent(_searchString)
-{
-    var floatingDiv = document.createElement("div");
-
-    floatingDiv.setAttribute("id", "TagFind_SearchBar");
-
-    var inputBar = document.createElement("input");
-    inputBar.setAttribute("value", _searchString);
-
-    inputBar.addEventListener("input", function(e){
-      onSearchValueChange(e.target.value);
-    });
-
-    floatingDiv.appendChild(inputBar);
-    floatingDiv.style.position = "fixed";
-    floatingDiv.style.top = "10px";
-    floatingDiv.style.right = "10px";
-    floatingDiv.style.backgroundColor = "white";
-    floatingDiv.style.padding = "10px";
-    floatingDiv.style.zIndex = 1000;
-    document.body.appendChild(floatingDiv);
-}
-
-function onTabUpdate(_bgSearchValue, _bgState)
-{
-  if (!TabSearchValue & _bgSearchValue)
-    TabSearchValue = _bgSearchValue;
-
-  if (!SearchOpen & _bgState)
-  {
-    openSearchBar(_bgSearchValue);
+  if (!_dataRef.open && bar){
+    bar.remove();
   }
 }
 
-const highlightWholeWords = (node, regexSearch) => {
-  let range = document.createRange();
-  let rects = [];
-  let rMatch;
-  regexSearch.lastIndex = 0;
-  while (rMatch = regexSearch.exec(node.textContent))
-  {
-    const preNode = document.createTextNode(node.textContent.substring(0, rMatch.index));
-    const hit = createHighlighted(node.textContent.substring(rMatch.index, rMatch.index + rMatch.length));
+async function getTextRectangles(_searchString){
+  var perf = new PerformanceMesurer();
 
-    node.textContent = node.textContent.substring(rMatch.index + rMatch.length);
-    node.parentElement.insertBefore(preNode, node);
-    node.parentElement.insertBefore(hit, node);
-    regexSearch.lastIndex = 0;
-  }
-};
-
-const createHighlighted = (text) => {
-  const span = document.createElement("span");
-  span.style.backgroundColor = "red";
-  const textNode = document.createTextNode(text);
-  span.appendChild(textNode);
-  return span;
-}
-
-const highlightRects = (rects) => {
-  for (let i = 0; i < rects.length; i++) {
-
-    let rect = rects[i];
-    let highlightRect = document.createElement('DIV')
-    document.body.appendChild(highlightRect)
-    highlightRect.classList.add('tagFindHighlight')
-    highlightRect.style.top = rect.y + window.scrollY + 'px'
-    highlightRect.style.left = rect.x + 'px'
-    highlightRect.style.height = rect.height + 'px'
-    highlightRect.style.width = rect.width + 'px'
-    highlightRect.style.backgroundColor = "red";
-  }
-}
-
-const getRect = (node, start, length) => {
-
-
-  range.setStart(node, start);
-  range.setEnd(node)
-}
-const highlightBorderWords = (nodeArray, regexSearch) => {
-
-
-  let allNodesString = "";
-  nodeArray.forEach(element => { allNodesString += element.textContent; });
-  console.log(`bordermatch activated: ${allNodesString} `);
-  regexSearch.lastIndex = 0;
-  let rMatch = regexSearch.exec(allNodesString);
-  const firstNode = nodeArray[0];
-  const lastNode = nodeArray[nodeArray.length - 1];
-  console.log(regexSearch + ' on ' + allNodesString);
-
-  const highlightedStart = createHighlighted(firstNode.textContent.substring(rMatch.index));
-
-  firstNode.parentElement.insertBefore(highlightedStart, firstNode.nextSibling);
-  firstNode.textContent = firstNode.textContent.substring(0, rMatch.index);
-
-  for (let i = 1; i < nodeArray.length - 1; i ++)
-  {
-    nodeArray[i].innerHTML = createHighlighted(nodeArray[i].textContent).innerHTML;
-  }
-
-  const postNodePosition = rMatch.index + rMatch.length - (allNodesString.length - lastNode.length);
-  const highlightedEnd = createHighlighted(lastNode.textContent.substring(0, postNodePosition));
-
-  lastNode.parentElement.insertBefore(highlightedEnd, lastNode);
-  lastNode.textContent = nodeArray[0].textContent.substring(postNodePosition);
-
-  console.log(`firstnode ${firstNode.innerHTML} lastnode ${lastNode.innerHTML}`);
-};
-
-function textNodesUnder(el, wordToFind){
+  if (!_searchString | _searchString === "")
+    return [];
+  var DEBUG_MESSAGES = false;
   var condition = {
     acceptNode: (node) => {
       if (node.nodeName.toUpperCase() == "STYLE" ||
@@ -186,92 +154,132 @@ function textNodesUnder(el, wordToFind){
 
       return NodeFilter.FILTER_SKIP;
     }
+
   };
 
   var node;
-  var walk = document.createTreeWalker(el,NodeFilter.SHOW_ALL, condition);
+  var walk = document.createTreeWalker(document.body, NodeFilter.SHOW_ALL, condition);
 
-  var currentStringNodes = [];  //array to store nodes for current string
-  var occurances = 0;  //array to store hits for current string
-  var currentString = ""; //buffer string to check for hits in-between nodes
+  //values to store data of the current search region
+  var regionNodes = [];
+  var regionOffset = 0;
+  var regionString = "";
 
+  const regexSearch = new RegExp(_searchString, "gi");
 
-  //aaa
-  //aaaa a a a aa
-  const lengthOfNodes = (array) => {
-    let length = 0;
-    array.forEach(element => { length += element.textContent.length })
-    return length;};
+  //ba aa
+  var rects = [];
+  var range = document.createRange();
+  console.log(`before treewalk: ${perf.get()}`)
 
-  const regexSearch = new RegExp(wordToFind, "gi");
-
-
-
-//  while(node = walk.nextNode())
-//  {
-//    console.log(node);
-  //}
-  //return "";
   while(node = walk.nextNode())
   {
 
-    let wordOccurances = (node.textContent.match(regexSearch) || []).length;
+    if (SEARCH_CHANGED = (!TabSearchData || !TabSearchData.open || TabSearchData.searchString != _searchString))//TODO abstract away the conditions
+      return [];
 
-    currentString += node.textContent;
-    currentStringNodes.push(node);
-    occurances += wordOccurances;
-    //aba a ba aba aba
-    //if inbetween hits possible
-    if (currentStringNodes.length > 1 && currentString.length >= wordToFind.length)
+    //add new node to the current search region
+    regionString += node.textContent;
+    regionNodes.push(node);
+
+    if (DEBUG_MESSAGES)
+      console.log(`CYCLE: new node "${node.textContent}" regionString : "${regionString}"`);
+
+
+    //match the region
+    regexSearch.lastIndex = 0;
+    let match;
+    var safety = 50000;
+    while (match = regexSearch.exec(regionString))
     {
-      //if inbetween hits
-      let inbetweenOccurances = (currentString.match(regexSearch) || []).length;
-      //console.log(currentStringNodes);
-      //console.log('occ: ' + occurances);
-      //console.log('inb: ' +inbetweenOccurances);
+      let nodeMatchIndex = match.index + regionOffset;
 
-      if (inbetweenOccurances > occurances)
+      let startPos = findNodePosition(regionNodes, nodeMatchIndex, DEBUG_MESSAGES);
+      let endPos = findNodePosition(regionNodes, nodeMatchIndex + _searchString.length, DEBUG_MESSAGES);
+
+      if (DEBUG_MESSAGES)
+        console.log(`start: ${startPos.index}-index ${startPos.offset}-offset, stend: ${endPos.index}-index ${endPos.offset}-offset`)
+
+      range.setStart(regionNodes[startPos.index], startPos.offset);
+      range.setEnd(regionNodes[endPos.index], endPos.offset);
+
+      let newRects = range.getClientRects();
+      for (let j = 0; j < newRects.length; j++)
       {
-        console.log(`border: cString ${currentString} occurances: ${occurances} inbetweenOcc: ${inbetweenOccurances} array:${currentStringNodes.length}`)
-        highlightBorderWords(currentStringNodes, regexSearch);
-        currentString = node.textContent;
-        currentStringNodes = [node];
-        occurances =  (node.textContent.match(regexSearch) || []).length;
+        rects.push(newRects[j]);
+
+        highlightRect(newRects[j]);
       }
-      //if the current string is longer than the search word without the first node, remove first node
-      else if (currentString.length - currentStringNodes[0].textContent.length >= wordToFind.length - 1)
+
+      regionString = regionString.substring(match.index + _searchString.length);
+      if (regionString != "")
       {
-        currentString = currentString.substring(currentStringNodes[0].textContent.length);
-        occurances -= (currentStringNodes[0].textContent.match(regexSearch) || []).length;
-        currentStringNodes.shift();
+        regionOffset = endPos.offset;
+        regionNodes = regionNodes.slice(endPos.index);
+        if (DEBUG_MESSAGES)
+          console.log(`regionString after match: ${regionString} offset ${regionOffset}`);
       }
+      else
+      {
+        regionNodes = [];
+        regionOffset = 0;
+      }
+      regexSearch.lastIndex = 0;
     }
 
-    if (node.textContent.match(regexSearch))
+    //remove nodes from the beginning if the search region is larger than the search string
+    while (regionNodes.length > 0 &&
+      (regionOffset + regionString.length) - regionNodes[0].textContent.length > _searchString.length - 1)
     {
-      highlightWholeWords(node, regexSearch); //highlights and cuts ALL occurances of the word out of the node. the left node is a cutoff piece
-      currentString = node.textContent;
-
-      currentStringNodes = [node];
-      occurances = 0;
-      console.log(`after highlight: ${node.textContent}`);
+      if (DEBUG_MESSAGES)
+        console.log(`too long, cutting off ${regionNodes[0].textContent}`);
+      regionString = regionString.substring(regionNodes[0].textContent.length - regionOffset);
+      regionOffset = 0;
+      regionNodes.shift();
     }
   }
-  return;
+  console.log(`after treewalk: ${perf.get()}`)
+  return rects;
 }
 
-function sendSearchContentToBackground()
+function findNodePosition(_nodeArray, _index, _debug)
 {
-  message = { message:"update_content", tabId: ThisTabId, data: TabSearchValue, state: SearchOpen };
+  let MATCH_INSIDE_I_NODE = _nodeArray[0].textContent.length < _index;
+  let previousNodesOffset = 0, i = 0;
+  while (MATCH_INSIDE_I_NODE)
+  {
+    if (_debug)
+      console.log(`node: ${i} + "${_nodeArray[i].textContent}"`);
+      previousNodesOffset += _nodeArray[i].textContent.length;
+    i += 1;
+    MATCH_INSIDE_I_NODE = (previousNodesOffset + _nodeArray[i].textContent.length) < _index;
+  }
+  if (_debug)
+      console.log(`node: ${i} + "${_nodeArray[i].textContent}"`);
+
+  return { index: i, offset: _index - previousNodesOffset };
+}
+function highlightRect (_rect) {
+    let highlightRect = document.createElement('DIV');
+    document.body.appendChild(highlightRect);
+    highlightRect.classList.add('TFHighlight');
+    highlightRect.style.top = _rect.y + window.scrollY + 'px';
+    highlightRect.style.left = _rect.x + 'px';
+    highlightRect.style.height = _rect.height + 'px';
+    highlightRect.style.width = _rect.width + 'px';
+}
+
+function removeHighlight () {
+  let highlights = document.querySelectorAll('.TFHighlight');
+  for (let i = 0; i < highlights.length; i++) {
+    highlights[i].remove();
+  }
+}
+
+function cacheDataToBackground()
+{
+  message = { message:"update_content", tabId: ThisTabId, data: TabSearchData};
   chrome.runtime.sendMessage(message);
-}
-
-function onSearchValueChange(newValue)
-{
-  TabSearchValue.searchString = newValue;
-  if (newValue && newValue.length > 0)
-    textNodesUnder(document.body, newValue);
-  sendSearchContentToBackground();
 }
 
 
@@ -294,5 +302,17 @@ function openSearchBar2()
   });
 }
 
+class PerformanceMesurer {
+  constructor() {
+    this.last = performance.now();
+  }
+
+  get()
+  {
+    let val = performance.now() - this.last;
+    this.last = performance.now();
+    return val;
+  }
+}
 //chrome.runtime.sendMessage("content-loaded");
 console.log("content script loaded")
