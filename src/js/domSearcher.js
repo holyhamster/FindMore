@@ -39,8 +39,7 @@ class DomSearcher{
   startSearch()
   {
     //this.showNodes()
-    const region = new SearchRegion(this.getWalk(), this.searchString, this.regexString);
-    this.searchRecursive(region, [], new Map());
+    this.searchRecursive(this.searchString, DomSearcher.initRegion(), [], new Map(), this.getWalk(), this.regexString);
   }
   //iterates through a search region, continues pulling new nodes out of this.walk when search fails
   //makes a timeout everytime it makes too many calls at once (to give the browser some rendering time)
@@ -55,7 +54,7 @@ class DomSearcher{
       console.log(node);
     }
   }
-  searchRecursive(_searchRegion, _matches, _highlightGroups)
+  searchRecursive(_searchString, _region, _matches, _highlightGroups, _walk, _regexp)
   {
     let callsLeft = this.consecutiveCalls;
     let range = document.createRange();
@@ -67,28 +66,28 @@ class DomSearcher{
       if (_matches.length > 0)
       {
         let match = _matches.shift();
-        let newHL = DomSearcher.processMatch(match, _searchRegion, range, _highlightGroups);
+        let newHL = DomSearcher.processMatch(match, _region, range, _highlightGroups);
         if (newHL && !dirtyHLGroups.get(newHL))
           dirtyHLGroups.set(newHL.parent, newHL.group);
 
         if (_matches.length == 0)
-          _searchRegion.trimToPoint(match.endIndex, match.endOffset);
+          DomSearcher.trimRegionToPoint(_region, match.endIndex, match.endOffset);
       }
       else if (callsLeft > 0)
       {
 
-        _matches = _searchRegion.getMatches(callsLeft);
-        if (_matches.length == 0)  //try basing this on offset <<--???
+        _matches = DomSearcher.getAllMatches(callsLeft, _region, _searchString, _regexp);
+        if (_matches.length == 0)  //try basing this on offset
         {
-          let WALK_IN_PROGRESS = _searchRegion.addNextNode();
-
+          let WALK_IN_PROGRESS = DomSearcher.expandRegion(_region, _walk);
+          DomSearcher.trimRegion(_region, _searchString);
           if (!WALK_IN_PROGRESS)
           {
             dirtyHLGroups.forEach(function(_hlGroup) {_hlGroup.commit(); });
             console.log("end of tree");
             return;
           }
-          _matches = _searchRegion.getMatches(callsLeft);
+          _matches = DomSearcher.getAllMatches(callsLeft, _region, _searchString, _regexp);
         }
       }
     }
@@ -102,7 +101,7 @@ class DomSearcher{
     dirtyHLGroups.forEach(function(_hlGroup) {_hlGroup.commit(); });
 
     setTimeout( function() { this.searchRecursive.call(
-      this, _searchRegion, _matches, _highlightGroups) }.bind(this), this.interval);
+      this, _searchString, _region, _matches, _highlightGroups, _walk, _regexp) }.bind(this), this.interval);
   }
 
   static initRegion()

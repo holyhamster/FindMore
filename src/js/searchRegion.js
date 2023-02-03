@@ -3,7 +3,7 @@ class SearchRegion
     constructor(_treeWalk, _searchString, _regexp)
     {
         this.searchString = _searchString;
-        this.regexp = _regexp;
+        this.regex = _regexp;
 
         this.string = "";
         this.nodes = [];
@@ -11,14 +11,22 @@ class SearchRegion
         this.walk = _treeWalk;
     }
 
-    addNextNode()
+    addNext()
     {
       let newNode = this.walk.nextNode();
 
       if (!newNode)
         return false;
 
-        //check for node breaks
+      let newLineOffset = DomSearcher.checkForNewLine(newNode);
+      if (newLineOffset)
+      {
+        if (newLineOffset == newNode.textContent.length - 1)
+        {
+
+        }
+        this.nodes = [newNode];
+      }
       this.string += newNode.textContent;
       this.nodes.push(newNode);
 
@@ -33,7 +41,7 @@ class SearchRegion
       while(SEARCH_REGION_IS_UNNESESARY_LOG = (this.nodes.length > 0 &&
         ((this.string.length) - this.nodes[0].textContent.length > this.searchString.length - 1)))
       {
-        this.string = this.string.substring(this.nodes[0].textContent.length);
+        this.string = _region.string.substring(this.nodes[0].textContent.length);
         this.nodes.shift();
         this.offset = 0;
       }
@@ -50,30 +58,28 @@ class SearchRegion
 
     getMatches(_amount)
     {
-        if (this.nodes.length == 0)
-            return [];
+
         let matches = [...this.string.substring(this.offset).matchAll(this.regexp)];
         matches = matches.splice(0, _amount);
         let previousNodesOffset = 0, j = 0;
         for (let i = 0; i < matches.length; i++)
         {
-            matches[i].index += this.offset;
-            let MATCH_INSIDE_I_NODE;
+        matches[i].index += this.offset;
+        let MATCH_INSIDE_I_NODE;
+        while (MATCH_INSIDE_I_NODE = (previousNodesOffset + this.nodes[j].textContent.length) <= matches[i].index)
+        {
+            previousNodesOffset += this.nodes[j].textContent.length;
+            j += 1;
+        }
 
-            while (MATCH_INSIDE_I_NODE = (previousNodesOffset + this.nodes[j].textContent.length) <= matches[i].index)
-            {
-                previousNodesOffset += this.nodes[j].textContent.length;
-                j += 1;
-            }
+        matches[i].startIndex = j;
+        matches[i].startOffset = matches[i].index - previousNodesOffset;
 
-            matches[i].startIndex = j;
-            matches[i].startOffset = matches[i].index - previousNodesOffset;
-
-            while (MATCH_INSIDE_I_NODE = (previousNodesOffset + this.nodes[j].textContent.length < matches[i].index + this.searchString.length))
-            {
-                previousNodesOffset += this.nodes[j].textContent.length;
-                j += 1;
-            }
+        while (MATCH_INSIDE_I_NODE = (previousNodesOffset + this.nodes[j].textContent.length < matches[i].index + this.searchString.length))
+        {
+            previousNodesOffset += this.nodes[j].textContent.length;
+            j += 1;
+        }
             matches[i].endIndex = j;
             matches[i].endOffset = matches[i].index + this.searchString.length - previousNodesOffset;
         }

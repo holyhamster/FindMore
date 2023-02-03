@@ -126,7 +126,7 @@ class HighlightGroup
             }
             node = node.parentNode;
         }
-        return false;
+        return result;
     }
 }
 export default HighlightGroup;
