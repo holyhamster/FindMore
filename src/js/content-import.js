@@ -4,4 +4,4 @@
 
     const contentScript = await import(src);
     contentScript.main();
-  })();
+})();

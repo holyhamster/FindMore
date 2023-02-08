@@ -1,13 +1,14 @@
-class HighlightGroup
-{
-    constructor(_parentNode, _range)
+class HighlightGroup {
+    constructor(_parentNode, _range, _id)
     {
+        this.highlightClassName = `TFH${_id}`;
         this.spans = [];
         this.parentNode = _parentNode;
         this.container = document.createElement('SPAN');
         //absolute position is cheaper to calculate, but ignore any scrollbar between itself and closest relative ancestor
         this.relative = !HighlightGroup.hasRelativeAncestor(_parentNode);
 
+        this.container.classList.add(`TFC${_id}`)
         if (this.relative)
             this.container.classList.add('TFContainerRelative');
         else
@@ -15,21 +16,17 @@ class HighlightGroup
 
         this.isGroupVisibleAfterUpdate(_range);
     }
-    static new(_base)
-    {
+    static new(_base) {
         return new this(_base);
     }
 
-    isVisible()
-    {
+    isVisible() {
         //TODO: add visibility check
         return true;
     }
 
-    getContainerPos(_range)
-    {
-        if (!this.containerAppended)
-        {
+    getContainerPos(_range) {
+        if (!this.containerAppended) {
             this.parentNode.prepend(this.container);
             this.containerAppended = true;
         }
@@ -39,39 +36,30 @@ class HighlightGroup
         return result;
     }
 
-    isGroupVisibleAfterUpdate(_range)
-    {
-        if (!this.anchorRectUpdated)
-        {
+    isGroupVisibleAfterUpdate(_range) {
+        if (!this.anchorRectUpdated) {
             this.anchorRectUpdated = true;
             this.anchorRect = this.getContainerPos(_range);
         }
         return Boolean(this.anchorRect);
     }
 
-    highlightRange(_range)
-    {
+    highlightRange(_range) {
         let rects = _range.getClientRects();
 
-        for (let i = 0; i < rects.length; i++)
-        {
+        for (let i = 0; i < rects.length; i++) {
             this.addHighlightRect(rects[i]);
         }
     }
-    addHighlightRect(_rect)
-    {
-        if (_rect.width != 0 && _rect.height != 0)
-        {
+    addHighlightRect(_rect) {
+        if (_rect.width != 0 && _rect.height != 0) {
             let span = document.createElement('SPAN');
-
-            if (this.relative)
-                span.classList.add('TFHighlight-2');
-            else
-                span.classList.add('TFHighlight');
+            span.classList.add('TFHighlight');
+            span.classList.add(this.highlightClassName);
 
             span.style.height = _rect.height + 'px';
             span.style.width = _rect.width + 'px';
-            span.style.left =  _rect.left - this.anchorRect.left + 'px';
+            span.style.left = _rect.left - this.anchorRect.left + 'px';
             span.style.top = _rect.top - this.anchorRect.top + 'px';
             //span.setAttribute("id",
             //` anchor: ${this.rectToString(this.anchorRect)} self:${this.rectToString(_rect)}}` );
@@ -79,19 +67,16 @@ class HighlightGroup
         }
     }
 
-    rectToString(_rect)
-    {
+    rectToString(_rect) {
         return `left:${_rect.left.toFixed(2)} top:${_rect.top.toFixed(2)}`
     }
 
-    commit()
-    {
+    commit() {
         if (!this.anchorRect)
             return;
 
         let HEAVY_CONTAINER_NEEDS_REMOVAL = this.containerAppended && this.spans.length > 3;
-        if (HEAVY_CONTAINER_NEEDS_REMOVAL)
-        {
+        if (HEAVY_CONTAINER_NEEDS_REMOVAL) {
             this.container.remove();
             this.containerAppended = false;
         }
@@ -99,8 +84,7 @@ class HighlightGroup
         for (let i = 0; i < this.spans.length; i++)
             this.container.appendChild(this.spans[i]);
 
-        if (!this.containerAppended)
-        {
+        if (!this.containerAppended) {
             this.parentNode.prepend(this.container);
             this.containerAppended = true;
         }
@@ -110,14 +94,11 @@ class HighlightGroup
         this.anchorRectUpdated = false;
     }
 
-    static hasRelativeAncestor(_node)
-    {
+    static hasRelativeAncestor(_node) {
         let node = _node;
 
-        while (node)
-        {
-            if (node.nodeType == Node.ELEMENT_NODE)
-            {
+        while (node) {
+            if (node.nodeType == Node.ELEMENT_NODE) {
                 if (node.scrollTop > 0 || node.scrollLeft > 0)
                     return false;
 

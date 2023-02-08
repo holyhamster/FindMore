@@ -1,18 +1,27 @@
-class SearchState {
-  constructor(_base)
-  {
-    this.open = _base.open || false;
-    this.searchString = _base.searchString || "";
+//serializable class that can be passed from the background script to the content script
 
-  }
-  static new(_base) {
-    return new this(_base);
-  }
+class SearchState
+{
+    searchString;
 
-  getRegexpOptions()
-  {
-    return "i";
-  }
+    constructor(_string)
+    {
+        this.searchString = _string;
+    }
+    static new(_string)
+    {
+        return new this(_string);
+    }
+
+    getRegexpOptions()
+    {
+        return "i";
+    }
+
+    isEquals(_search)
+    {
+        return this.searchString == _search.searchString;
+    }
 }
 
 export default SearchState;
