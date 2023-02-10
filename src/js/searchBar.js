@@ -24,7 +24,7 @@ class SearchBar
 
     color;
 
-    selectedIndex = 0;
+    selectedIndex;
 
     constructor(_id, _state, _order, _color)
     {
@@ -51,14 +51,15 @@ class SearchBar
         this.highlightCSS = new CSSStyleSheet();
         this.highlightCSS.replaceSync(
             `.TFH${this.id} { background-color: ${this.color}; opacity: 0.4; z-index: 147483647;}
+            .TFHS${this.id} { border: 5px solid ${invertHex(this.color) }; padding: 0px;}
             .TFSB${this.id} { background-color: ${this.color} }`);
         document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.highlightCSS];
 
         this.constructHtml();
         this.setPosition(_order);
-        if (this.searchState.searchString != "")
+        this.updateLabels();
+        if (this.searchState && this.searchState.searchString != "")
             this.startSearcher();
-
         
     }
 
@@ -108,6 +109,7 @@ class SearchBar
             }
 
             this.searchState.searchString = e.target.value;
+            this.selectedIndex = null;
             if (e.target.value != "")
             {
                 this.startSearcher();
@@ -143,7 +145,7 @@ class SearchBar
         if (this.searcherRef)
         {
             this.searcherRef.interrupt();
-            document.removeEventListener(`TF-matches-update${this.id}`, this.updateMatches);
+            document.removeEventListener(`TF-matches-update${this.id}`, this.updateLabels);
         }
 
         this.removeHighlights();
@@ -162,22 +164,60 @@ class SearchBar
     }
     previousMatch()
     {
+        if (!this.searcherRef || this.searcherRef.getMatches().length == 0)
+            return;
 
+        if (this.selectedIndex == null)
+            this.selectedIndex = 0;
+        else
+            this.selectedIndex -= 1;
+
+        if (this.selectedIndex < 0)
+            this.selectedIndex = this.searcherRef.getMatches().length - 1;
+
+        this.searcherRef.selectHighlight(this.selectedIndex);
+        this.updateLabels()
     }
     nextMatch()
     {
+        if (!this.searcherRef || this.searcherRef.getMatches().length == 0)
+            return;
 
+        if (this.selectedIndex == null)
+        {
+            this.selectedIndex = 0;
+        }
+        else
+        {
+            this.selectedIndex += 1;
+        }
+
+        if (this.selectedIndex >= this.searcherRef.getMatches().length)
+        {
+            this.selectedIndex = 0;
+        }
+
+        this.searcherRef.selectHighlight(this.selectedIndex);
+        this.updateLabels()
     }
     startSearcher()
     {
         this.searcherRef = new DOMSearcher(this.id,
             this.searchState.searchString, this.searchState.getRegexpOptions());
-        document.addEventListener(`TF-matches-update${this.id}`, this.updateMatches.bind(this));
+        document.addEventListener(`TF-matches-update${this.id}`, this.updateLabels.bind(this));
     }
 
-    updateMatches(e)
+    updateLabels()
     {
-        this.progressLabel.innerHTML = e.matches.length;
+        if (this.selectedIndex == null && this.searcherRef?.getMatches().length > 0)
+        {
+            this.selectedIndex = 0;
+            this.searcherRef.selectHighlight(this.selectedIndex);
+        }
+
+        const labelText = (this.selectedIndex == null ? '0' : (this.selectedIndex + 1)) + `/` + 
+            (this.searcherRef == null ? 0 : this.searcherRef.getMatches().length);
+        this.progressLabel.innerHTML = labelText;
     }
 
     removeHighlights()
@@ -189,6 +229,19 @@ class SearchBar
             highlights[i].remove();
         }
     }
+    
+}
+
+function invertHex(_hex)
+{
+    let color = _hex + "";
+    color = color.substring(1); // remove #
+    color = parseInt(color, 16); // convert to integer
+    color = 0xFFFFFF ^ color; // invert three bytes
+    color = color.toString(16); // convert to hex
+    color = ("000000" + color).slice(-6); // pad with leading zeros
+    color = "#" + color; // prepend #
+    return color;
 }
 
 export default SearchBar;

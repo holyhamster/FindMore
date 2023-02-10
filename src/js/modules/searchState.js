@@ -15,7 +15,7 @@ class SearchState
 
     getRegexpOptions()
     {
-        return "i";
+        return "gi";
     }
 
     isEquals(_search)

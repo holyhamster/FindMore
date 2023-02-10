@@ -14,7 +14,7 @@ export function main()
         `.TFHighlight { position: absolute; }
         .TFContainer { position: absolute; }
         .TFContainerRelative { position: relative; }
-        .TFSearchBar { position:fixed; }`);
+        .TFSearchBar { position:fixed; opacity: .8; }`);
 
     if (!document.adoptedStyleSheets.includes(highlightCSS))
         document.adoptedStyleSheets = [...document.adoptedStyleSheets, highlightCSS];
@@ -96,7 +96,6 @@ export function main()
         while (iKey = iter.next().value)
         {
             _map.get(iKey).setPosition(order);
-            console.log(`reorder: ${order}`);
             order += 1;
         }
     }

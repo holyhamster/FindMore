@@ -5,55 +5,50 @@ class DomSearcher
 {
     interrupted;
     searchString;
-    regexString;
+    regexp;
     interval = 1;
     consecutiveCalls = 100;
-    DEBUG_MESSAGES;
-    matchArray;
-    matchArrayBuffer; //holds
+    matchArray = [];
     id;
     onNewMatches;
+
+    selectedIndex;
 
     constructor(_id, _searchString, _regexOptions)
     {
         this.id = _id;
-
-        this.onNewMatches = new Event(`TF-matches-update${this.id}`);
-        
-        this.regexString = new RegExp(_searchString, 'gi');
-
-        this.interrupted = false;
         this.searchString = _searchString;
-        this.DEBUG_MESSAGES = true;
 
         this.regexp = new RegExp(_searchString, _regexOptions);
-        this.matchArray = [];
+        this.interrupted = false;
+
+        this.onNewMatches = new Event(`TF-matches-update${this.id}`);
+
+        
+        
+
+        
         this.startSearch();
         
-        //this.searchRecursion(
-        //this.getWalk(), new RegExp(_searchString, _regexOptions), "", [], 0);
     }
 
     interrupt()
     {
-        console.log("interrupt triggered");
         this.interrupted = true;
     }
+
     startSearch()
     {
         //this.showNodes()
         
         setTimeout(function ()
         {
-            let region = new SearchRegion(this.getWalk(), this.searchString, this.regexString);
-            this.searchRecursive(region, [], new Map())
+            let region = new SearchRegion(this.getWalk(), this.searchString, this.regexp);
+            this.searchRecursive(region, new Map())
         }.bind(this), this.interval);
         
     }
-    //iterates through a search region, continues pulling new nodes out of this.walk when search fails
-    //makes a timeout everytime it makes too many calls at once (to give the browser some rendering time)
-    //
-    //_regionNodes are all nodes in the current search region, _regionString is their stacked .contentText starting from _regionOffset index
+
     showNodes()
     {
         let dogg = document.createTreeWalker(document.body, NodeFilter.SHOW_ALL);
@@ -63,102 +58,129 @@ class DomSearcher
             console.log(node);
         }
     }
-    searchRecursive(_searchRegion, _matches, _highlightGroups)
+    searchRecursive(_searchRegion, _highlightGroups)
     {
         let callsLeft = this.consecutiveCalls;
         let range = document.createRange();
-        let dirtyHLGroups = new Map();
+        let newHighlights = [];
 
+        let matches = _searchRegion.getMatches(callsLeft);
         while (callsLeft >= 0)
         {
             callsLeft -= 1;
-            if (_matches.length > 0)
+
+            let match = matches.shift();
+            if (match)
             {
-                let match = _matches.shift();
-                this.matchArray.push(match);
                 let newHL = this.processMatch(match, _searchRegion, range, _highlightGroups);
-                if (newHL && !dirtyHLGroups.get(newHL))
-                    dirtyHLGroups.set(newHL.parent, newHL.group);
-
-                if (_matches.length == 0)
-                    _searchRegion.trimToPoint(match.endIndex, match.endOffset);
+                if (newHL && !newHighlights.includes(newHL))
+                    newHighlights.push(newHL);
             }
-            else
-            {
-                _matches = _searchRegion.getMatches(callsLeft);
-                if (_matches.length == 0)  //try basing this on offset <<--???
-                {
-                    let WALK_IN_PROGRESS = _searchRegion.addNextNode();
 
-                    if (!WALK_IN_PROGRESS)
-                    {
-                        dirtyHLGroups.forEach(function (_hlGroup) { _hlGroup.commit(); });
-                        console.log("end of tree");
-                        return;
-                    }
-                    _matches = _searchRegion.getMatches(callsLeft);
-                }
+            if (matches.length == 0)
+            {
+                if (match)
+                    _searchRegion.trimToPoint(match.endIndex, match.endOffset);
+
+                let WALK_IN_PROGRESS = _searchRegion.addNextNode();
+
+                if (!WALK_IN_PROGRESS)
+                    break;
+
+                matches = _searchRegion.getMatches(callsLeft);
             }
         }
 
-        if (_matches.length != 0)
-            console.log("DANGER, UNHANDLED MATCHES")
+        if (matches.length > 0)
+            console.log("ERROR, UNPROCESSED MATCHES");
 
         if (this.interrupted)
             return;
 
-        dirtyHLGroups.forEach(function (_hlGroup) { _hlGroup.commit(); });
+        if (newHighlights.length > 0)
+            document.dispatchEvent(this.onNewMatches);
 
-        this.onNewMatches.matches = this.matchArray;
-        document.dispatchEvent(this.onNewMatches);
+        for (let i = 0; i < newHighlights.length; i++)
+            newHighlights[i].commit();
+        
         setTimeout(function ()
         {
             this.searchRecursive.call(
-                this, _searchRegion, _matches, _highlightGroups)
+                this, _searchRegion, _highlightGroups)
         }.bind(this), this.interval);
     }
 
-    static initRegion()
+    selectHighlight(_index)
     {
-        let region = new Object();
-        region.string = "";
-        region.nodes = [];
-        region.offset = 0;
-        return region;
+        if (this.selectedIndex != null)
+        {
+            this.matchArray[this.selectedIndex].resetSelection(this.selectedIndex);
+        }
+
+        this.selectedIndex = _index;
+        this.matchArray[this.selectedIndex].container.scrollIntoView();
+        this.matchArray[this.selectedIndex].selectAt(_index);
     }
 
+    getMatches()
+    {
+        return this.matchArray;
+    }
 
     processMatch(_match, _region, _range, _highlightGroups)
     {
-        let parentNode = _region.nodes[_match.endIndex].parentNode;
+        let nonEmptyRects = this.getValidRects(_match, _region, _range);
 
-        let hlGroup = (_highlightGroups.get(parentNode));
+        let parentNode = _region.nodes[_match.endIndex].parentNode;
+        let hlGroup = _highlightGroups.get(parentNode);
         if (!hlGroup)
         {
             hlGroup = new HighlightGroup(parentNode, _range, this.id);
             _highlightGroups.set(parentNode, hlGroup);
-
         }
-        if (!hlGroup.isGroupVisibleAfterUpdate(_range))
-            return;
 
+        //if (!hlGroup.isGroupVisibleAfterUpdate(_range))
+          //  return;
+
+        let highlighted = hlGroup.highlightRects(this.matchArray.length, nonEmptyRects);
+
+        if (highlighted)
+            this.matchArray.push(hlGroup);
+
+        return hlGroup;
+    }
+    getValidRects(_match, _region, _range)
+    {
         _range.setStart(_region.nodes[_match.startIndex], _match.startOffset);
         _range.setEnd(_region.nodes[_match.endIndex], _match.endOffset);
 
-        hlGroup.highlightRange(_range);
+        let nonEmptyRects = [], rects = _range.getClientRects();
 
-        return { parent: parentNode, group: hlGroup };
+        for (let i = 0; i < rects.length; i++)
+            if (rects[i].width >= 1 && rects[i].height >= 1)
+                nonEmptyRects.push(rects[i]);
+
+        return nonEmptyRects;
     }
-
     getWalk()
     {
         const condition = {
             acceptNode: (node) =>
             {
+                
+                //classString.split(' ');
                 if (node.nodeName.toUpperCase() == "STYLE" ||
                     node.nodeName.toUpperCase() == "SCRIPT")
                 {
                     return NodeFilter.FILTER_REJECT
+                }
+                if (node.nodeType == Node.ELEMENT_NODE)
+                {
+                    let classes = node.className.toString().split(/\s+/);
+                    if (classes.includes(`TFSearchBar`))
+                    {
+                        return NodeFilter.FILTER_REJECT
+                    }
                 }
                 if (node.nodeName.toUpperCase() == "#TEXT" &&
                     node.textContent)
