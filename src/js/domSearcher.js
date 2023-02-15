@@ -16,6 +16,14 @@ class DomSearcher
 
     constructor(_id, _searchString, _regexOptions)
     {
+        this.intersectionObserver = new IntersectionObserver(entries =>
+        {
+            if (!entries[0].isIntersecting)
+                entries[0].target.scrollIntoView({ block: "center" });
+            
+            this.intersectionObserver.unobserve(entries[0].target)
+        });
+
         this.id = _id;
         this.searchString = _searchString;
 
@@ -23,13 +31,8 @@ class DomSearcher
         this.interrupted = false;
 
         this.onNewMatches = new Event(`TF-matches-update${this.id}`);
-
-        
-        
-
         
         this.startSearch();
-        
     }
 
     interrupt()
@@ -60,13 +63,17 @@ class DomSearcher
     }
     searchRecursive(_searchRegion, _highlightGroups)
     {
+        //console.log("recursion");
         let callsLeft = this.consecutiveCalls;
         let range = document.createRange();
         let newHighlights = [];
+        let WALK_IN_PROGRESS = true;
 
         let matches = _searchRegion.getMatches(callsLeft);
-        while (callsLeft >= 0)
+        //console.log(JSON.stringify(_searchRegion.nodes));
+        while (callsLeft >= 0 && WALK_IN_PROGRESS)
         {
+            //console.log(`calls:${callsLeft} matches:${matches.length}`);
             callsLeft -= 1;
 
             let match = matches.shift();
@@ -82,18 +89,14 @@ class DomSearcher
                 if (match)
                     _searchRegion.trimToPoint(match.endIndex, match.endOffset);
 
-                let WALK_IN_PROGRESS = _searchRegion.addNextNode();
-
-                if (!WALK_IN_PROGRESS)
-                    break;
-
-                matches = _searchRegion.getMatches(callsLeft);
+                if (callsLeft > 0)
+                {
+                    WALK_IN_PROGRESS = _searchRegion.addNextNode();
+                    matches = _searchRegion.getMatches(callsLeft);
+                }
             }
         }
-
-        if (matches.length > 0)
-            console.log("ERROR, UNPROCESSED MATCHES");
-
+        
         if (this.interrupted)
             return;
 
@@ -102,29 +105,42 @@ class DomSearcher
 
         for (let i = 0; i < newHighlights.length; i++)
             newHighlights[i].commit();
-        
-        setTimeout(function ()
-        {
-            this.searchRecursive.call(
-                this, _searchRegion, _highlightGroups)
-        }.bind(this), this.interval);
+
+        if (WALK_IN_PROGRESS)
+            setTimeout(function (){
+                this.searchRecursive.call(
+                    this, _searchRegion, _highlightGroups)
+            }.bind(this), this.interval);
     }
 
     selectHighlight(_index)
     {
+        
+        
         if (this.selectedIndex != null)
-        {
             this.matchArray[this.selectedIndex].resetSelection(this.selectedIndex);
-        }
 
         this.selectedIndex = _index;
-        this.matchArray[this.selectedIndex].container.scrollIntoView();
-        this.matchArray[this.selectedIndex].selectAt(_index);
+        //this.intersectionObserver.unobserve(this.matchArray[this.selectedIndex].container);
+        //this.matchArray[this.selectedIndex].container.scrollIntoView();
+
+        let selectionSpans = this.matchArray[this.selectedIndex].selectAt(_index);
+        if (selectionSpans.length > 0)
+            this.intersectionObserver.observe(selectionSpans[0]);
+        //console.log(this.matchArray[this.selectedIndex]);
     }
 
     getMatches()
     {
         return this.matchArray;
+    }
+
+    getHLGroupAt(_index)
+    {
+        if (_index < 0 || this.matchArray.length <= _index)
+            return;
+
+        return this.matchArray[_index];
     }
 
     processMatch(_match, _region, _range, _highlightGroups)
@@ -149,6 +165,7 @@ class DomSearcher
 
         return hlGroup;
     }
+
     getValidRects(_match, _region, _range)
     {
         _range.setStart(_region.nodes[_match.startIndex], _match.startOffset);
@@ -176,8 +193,8 @@ class DomSearcher
                 }
                 if (node.nodeType == Node.ELEMENT_NODE)
                 {
-                    let classes = node.className.toString().split(/\s+/);
-                    if (classes.includes(`TFSearchBar`))
+                    let classes = node.id.toString().split(/\s+/);
+                    if (classes.includes(`TFShadowRoot`))
                     {
                         return NodeFilter.FILTER_REJECT
                     }

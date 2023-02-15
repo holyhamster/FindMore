@@ -6,16 +6,32 @@ class SearchCollection
 
     constructor(_base)
     {
-        if (_base)
-        {
-            this.searches = _base.searches;
-        }
         this.searches = [];
     }
 
-    static new(_base)
+    static new()
     {
-        return new this(_base);
+        return new this();
+    }
+
+    static load(_base, _persistentOnly)
+    {
+        let collection = SearchCollection.new();
+        if (!_base)
+            return collection;
+
+        for (let i = 0; i < _base.searches.length; i++)
+        {
+            if (!_persistentOnly || _base.searches[i].pinned)
+                collection.searches.push(_base.searches[i]);
+        }
+
+        return collection;
+    }
+
+    isEmpty()
+    {
+        return this.searches.length == 0;
     }
 
     isEquals(_state)
@@ -37,6 +53,7 @@ class SearchCollection
         this.searches.push(new SearchState(""));
         return this.searches[this.searches.length - 1];
     }
+
     delete(_search)
     {
         let newSearches = [];

@@ -3,23 +3,26 @@ console.log("popup script loaded");
 //    text: "OFF",
   //});
 
-document.addEventListener('DOMContentLoaded', function() {
-  var findButton = document.getElementById('popupFindButton');
-  findButton.addEventListener('click', function() {
-    var input = document.createElement("input");
-    input.type = "text";
-    input.id = "myInput";
-    document.body.appendChild(input);
+document.addEventListener('DOMContentLoaded', function ()
+{
+    var findButton = document.getElementById('popupFindButton');
+    findButton.addEventListener('click', function ()
+    {
+        chrome.runtime.sendMessage({ message: "tf-popup-new-search" });
+        close();
+    });
 
+    var saveButton = document.getElementById('popupSaveButton');
+    saveButton.addEventListener('click', function ()
+    {
+        chrome.runtime.sendMessage({ message: "tf-popup-save-search" });
+        close();
+    });
 
-    //chrome.windows.create({
-      //url: chrome.runtime.getURL('../search/search.html'),
-      //type: 'popup',
-      //width: 500,
-//      height: 300
-    //});
-
-    //var search = document.getElementById('searchInput');
-    //alert(search.value);
-  }, false);
-}, false);
+    var loadButton = document.getElementById('popupLoadButton');
+    saveButton.addEventListener('click', function ()
+    {
+        chrome.runtime.sendMessage({ message: "tf-popup-load-search" });
+        close();
+    });
+});

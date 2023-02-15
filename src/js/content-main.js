@@ -14,13 +14,15 @@ export function main()
         `.TFHighlight { position: absolute; }
         .TFContainer { position: absolute; }
         .TFContainerRelative { position: relative; }
-        .TFSearchBar { position:fixed; opacity: .8; }`);
+        `);
 
+   
     if (!document.adoptedStyleSheets.includes(highlightCSS))
         document.adoptedStyleSheets = [...document.adoptedStyleSheets, highlightCSS];
 
     document.addEventListener("TF-bar-closed", function (e)
     {
+        
         if (searchBarMap.get(e.id))
         {
             TabSearchData.delete(searchBarMap.searchState);
@@ -29,25 +31,28 @@ export function main()
 
         reorderBars(searchBarMap);
         
-        cacheDataToBackground();
+        cacheData();
     });
 
-    document.addEventListener("TF-search-changed", function (e)
+    document.addEventListener("tf-search-changed", function (e)
     {
-        cacheDataToBackground();
+        cacheData();
     });
 
     document.addEventListener('keydown', function (e)
     {
         if (e.key == "Escape")
+        {
             searchBarMap.forEach(function (_val) { _val.close() });
-
-            cacheDataToBackground();
+            cacheData();
+        }
     });
 
     chrome.runtime.onMessage.addListener(
         function (request, sender)
         {
+            console.log("processing");
+            console.log(request);
             if (!ThisTabId)
                 ThisTabId = request.tabId;
             switch (request.message)
@@ -62,16 +67,22 @@ export function main()
                 case "update_search":
                     console.log("update trigger");
                     let NEW_SEARCH_STATE = false;
+
                     if (request.data &&
                         !TabSearchData.isEquals(request.data))
                     {
+                        console.log(JSON.stringify(request))
                         NEW_SEARCH_STATE = true;
-                        TabSearchData = new SearchCollection(request.data);
+                        TabSearchData = SearchCollection.load(request.data, request.pinnedOnly);
+                        console.log(JSON.stringify(TabSearchData))
                     }
 
                     if (NEW_SEARCH_STATE || request.forcedUpdate)
                     {
+                        console.log("opening");
+                        console.log(JSON.stringify(TabSearchData));
                         searchBarMap.forEach(function (_val) { _val.close() });
+                        searchBarMap = new Map();
 
                         for (let i = 0; i < TabSearchData.searches.length; i++)
                         {
@@ -106,12 +117,14 @@ export function main()
         return lastID;
     }
 
-    function cacheDataToBackground()
+    function cacheData()
     {
-        let message = { message: "update_content", tabId: ThisTabId, data: TabSearchData };
+        if (TabSearchData.isEmpty())
+            return;
+
+        let message = { message: "tf-update-state", tabId: ThisTabId, data: TabSearchData };
         chrome.runtime.sendMessage(message);
     }
 
-    //chrome.runtime.sendMessage("content-loaded");
-    console.log("content script loaded")
+    chrome.runtime.sendMessage({ message: "tf-content-script-loaded" });
 }

@@ -99,6 +99,7 @@ class HighlightGroup
         {
             spans[i].classList.add(this.selectedClassName)
         }
+        return spans;
     }
     
     resetSelection(_searchIndex)
