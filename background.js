@@ -1,6 +1,8 @@
 
 var TabsData = new Map();
-window.localStorage.setItem("test", "test2");
+
+
+
 chrome.commands.onCommand.addListener(function (command) {
     if (command === 'toggle-search')
     {
@@ -15,6 +17,35 @@ chrome.runtime.onMessage.addListener(function (_args, _sender)
     {
         case "tf-popup-new-search":
             openNewAtActiveTab();
+            break;
+        case "tf-popup-save-search":
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) =>
+            {
+                if (!tabs || tabs.length == 0)
+                    return;
+                let activeId = (Number)(tabs[0].id);
+
+                if (!TabsData.has(activeId))
+                    return;
+
+                chrome.storage.local.set({ "savedSearch": TabsData.get(activeId) }, function ()
+                {
+                    chrome.storage.local.get("savedSearch", function (items)
+                    {
+                        console.log(items);
+                    });
+                });
+            })
+
+            
+            break;
+        case "tf-popup-load-search":
+            chrome.storage.local.get("savedSearch", function (items)
+            {
+                console.log("loading data");
+                console.log(items[0]);
+            });
+
             break;
         case "tf-update-state":
             TabsData.set(_args.tabId, _args.data);
@@ -45,7 +76,6 @@ chrome.windows.onBoundsChanged.addListener(function () {
 chrome.tabs.onUpdated.addListener(function (tabId, changeinfo) {
     //console.log("updating page");
     //console.log(changeinfo);
-    console.log(window.localStorage.getItem("test"));
     if (false && changeinfo.status && changeinfo.status == "complete" && TabsData.has(tabId)) {
         updateSearch(tabId, TabsData.get(tabId));
     }

@@ -49,6 +49,7 @@ class SearchRegion {
     getMatches(_amount) {
         if (this.nodes.length == 0 | _amount == 0)
             return [];
+        
         let matches = [...this.string.substring(this.offset).matchAll(this.regexp)];
         matches = matches.splice(0, _amount);
         let previousNodesOffset = 0, j = 0;

@@ -5,6 +5,7 @@ export function main()
 {
 
     var ThisTabId;
+    var searchesMap = new Map();
     var TabSearchData = new SearchCollection();
     var searchBarMap = new Map();
     var lastID = 0;
@@ -20,12 +21,12 @@ export function main()
     if (!document.adoptedStyleSheets.includes(highlightCSS))
         document.adoptedStyleSheets = [...document.adoptedStyleSheets, highlightCSS];
 
-    document.addEventListener("TF-bar-closed", function (e)
+    document.addEventListener("tf-bar-closed", function (e)
     {
         
         if (searchBarMap.get(e.id))
         {
-            TabSearchData.delete(searchBarMap.searchState);
+            TabSearchData.delete(searchBarMap.get(e.id).searchState);
             searchBarMap.delete(e.id);
         }
 

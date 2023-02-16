@@ -16,6 +16,7 @@ class DomSearcher
 
     constructor(_id, _searchString, _regexOptions)
     {
+        
         this.intersectionObserver = new IntersectionObserver(entries =>
         {
             if (!entries[0].isIntersecting)
@@ -26,8 +27,8 @@ class DomSearcher
 
         this.id = _id;
         this.searchString = _searchString;
-
-        this.regexp = new RegExp(_searchString, _regexOptions);
+        //remove escape for a full regex expression experience
+        this.regexp = new RegExp(_searchString = escapeRegExp(_searchString), _regexOptions);
         this.interrupted = false;
 
         this.onNewMatches = new Event(`TF-matches-update${this.id}`);
@@ -209,6 +210,11 @@ class DomSearcher
         };
         return document.createTreeWalker(document.body, NodeFilter.SHOW_ALL, condition);
     }
+}
+
+function escapeRegExp(string)
+{
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export default DomSearcher;

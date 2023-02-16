@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function ()
     });
 
     var loadButton = document.getElementById('popupLoadButton');
-    saveButton.addEventListener('click', function ()
+    loadButton.addEventListener('click', function ()
     {
         chrome.runtime.sendMessage({ message: "tf-popup-load-search" });
         close();

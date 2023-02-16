@@ -1,8 +1,6 @@
 import DOMSearcher from './domSearcher.js';
 
-const TFSearchBarID = "TFSearchBar";
 const matchUpdateEventName = "TF-matches-update";
-const barClosedEventName = "TF-bar-closed";
 class SearchBar
 {
     id;
@@ -26,27 +24,27 @@ class SearchBar
 
         this.classNames = getCSSClassSchema(_id);
 
-        
+
         this.color = _state.color;
 
-        this.onClose = new Event(barClosedEventName);
+        this.onClose = new Event("tf-bar-closed");
         this.onClose.id = this.id;
 
         this.onSearchChange = new Event("tf-search-changed");
         this.onSearchChange.id = this.id;
-        this.onSearchChange.id = this.id;
+        
 
         this.highlightCSS = new CSSStyleSheet();
         this.highlightCSS.replaceSync(
             `.${this.classNames.highlight}` +
-            `{ background-color: ${this.color}; opacity: 0.4; z-index: 147483647;}` +
+            `{ background-color: ${this.color}; opacity: 0.8; z-index: 147483647;}` +
             `.${this.classNames.highlightSelected}` +
             `{ border: 5px solid ${invertHex(this.color)}; padding: 0px;}`);
         document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.highlightCSS];
 
         this.constructHtml();
         this.setPosition(_order);
-        
+
         if (this.searchState && this.searchState.searchString != "")
         {
             console.log("here")
@@ -65,54 +63,50 @@ class SearchBar
     constructHtml()
     {
         let topFlex = document.createElement("div");
+        topFlex.setAttribute("class", "TFSearchBarRow");
         topFlex.innerHTML = `
-            <input id="searchInput${this.id}" value="${this.searchState.searchString}">
-            <span id="matchesLabel${this.id}" 
-                style="min-width: 100px; margin-left: auto;">0/0</span>
-            <button id="refreshButton${this.id}" style="margin-left: auto;">R</button>
-            <button id="downButton${this.id}" style="margin-right: auto;">v</button>
-            <button id="upButton${this.id}" style="margin-right: auto;">^</button>
-            <button id="closeButton${this.id}" style="margin-right: auto;">x</button>`;
-        topFlex.style = `display: flex;`;
+            <input class="searchInput" value="${this.searchState.searchString}">
+            <span class="matchesLabel">0/0</span>
+            <button class="refreshButton">R</button>
+            <button class="downButton">v</button>
+            <button class="upButton">^</button>
+            <button class="closeButton">x</button>`;
 
-        topFlex.querySelector(`#searchInput${this.id}`)
+        topFlex.querySelector(`.searchInput`)
             .addEventListener("input", function (e) { this.restartSearch(e) }.bind(this));
-        topFlex.querySelector(`#searchInput${this.id}`)
+        topFlex.querySelector(`.searchInput`)
             .addEventListener("keydown", function (e)
             {
                 if (e.key === "Enter")
                     this.nextMatch()
             }.bind(this));
-        topFlex.querySelector(`#refreshButton${this.id}`)
+
+        topFlex.querySelector(`.refreshButton`)
             .addEventListener("click", function () { this.restartSearch() }.bind(this));
-        topFlex.querySelector(`#downButton${this.id}`)
+        topFlex.querySelector(`.downButton`)
             .addEventListener("click", function () { this.nextMatch() }.bind(this));
-        topFlex.querySelector(`#upButton${this.id}`)
+        topFlex.querySelector(`.upButton`)
             .addEventListener("click", function () { this.previousMatch() }.bind(this));
-        topFlex.querySelector(`#closeButton${this.id}`)
+        topFlex.querySelector(`.closeButton`)
             .addEventListener("click", function () { this.close() }.bind(this));
 
-
-        
-
-
         let botFlex = document.createElement("div");
+        botFlex.setAttribute("class", "TFSearchBarRow");
         botFlex.innerHTML = `
-                <input type="checkbox" id="caseCheck${this.id}" 
-                    ${this.searchState.caseSensetive? 'cached': ''} name="caseCheck${this.id}">
+                <input type="checkbox" id="caseCheck${this.id}" class="caseCheck" 
+                    ${this.searchState.caseSensetive ? 'cached' : ''} name="caseCheck${this.id}">
                 <label for="caseCheck${this.id}">match case</label>
-                <input type="checkbox" id="wordCheck${this.id}" 
+                <input type="checkbox" id="wordCheck${this.id}" class="wordCheck" 
                     ${this.searchState.wholeWord ? 'cached' : ''} name="wordCheck{this.id}">
                 <label for="wordCheck${this.id}">whole word</label>
-                <button type="button" id="pinButton${this.id}" style="margin-right:auto;">
-                    ${this.searchState.pinned? 'PINNED': 'NOT PINNED'}
+                <button class="pinButton">
+                    ${this.searchState.pinned ? 'PINNED' : 'PIN'}
                 </button>`;
-        botFlex.style = `display: flex;`
-        botFlex.querySelector(`#caseCheck${this.id}`)
+        botFlex.querySelector(`.caseCheck`)
             .addEventListener("input", function (e) { this.caseChange(e) }.bind(this));
-        botFlex.querySelector(`#wordCheck${this.id}`)
-            .addEventListener("input", function (e) { this.wholeWordChange(e)}.bind(this));
-        botFlex.querySelector(`#pinButton${this.id}`)
+        botFlex.querySelector(`.wordCheck`)
+            .addEventListener("input", function (e) { this.wholeWordChange(e) }.bind(this));
+        botFlex.querySelector(`.pinButton`)
             .addEventListener("click", function () { this.pinButtonPressed() }.bind(this));
         this.mainDiv = this.constructMainDiv();
 
@@ -122,7 +116,7 @@ class SearchBar
         let shadowroot = this.getShadowRoot();
         shadowroot.appendChild(this.mainDiv);
 
-        topFlex.querySelector(`#searchInput${this.id}`).focus();
+        topFlex.querySelector(`.searchInput`).focus();
     }
 
     getShadowRoot()
@@ -132,7 +126,6 @@ class SearchBar
         {
             shadowDiv = document.createElement("div");
             shadowDiv.setAttribute("id", "TFShadowRoot");
-            shadowDiv.style.all = `<style>:host {all:initial;} </style>`;
             document.body.appendChild(shadowDiv);
         }
 
@@ -140,6 +133,23 @@ class SearchBar
             return shadowDiv.shadowRoot;
 
         shadowDiv.attachShadow({ mode: "open" });
+        shadowDiv.shadowRoot.innerHTML = "<style>" +
+            ":host {all:initial; font-family: Verdana, sans-serif; webkit-touch-callout: none;} " +
+            ".TFSearchBar {position: fixed; display: flex; flex-direction: column; " +
+            "justify-content: space-evenly; border-radius: 12px; opacity: 0.9;} " +
+            ".TFSearchBarRow {display: flex; justify-content:space-between; } " +
+            "button { border-radius: 3px;} " +
+            ".closeButton {margin-left: auto;} " +
+            ".downButton {margin-left: auto; } " +
+            ".upButton {margin-left: auto; margin-right: 5px; } " +
+            ".refreshButton {margin-left: auto; margin-right: 5px; }" +
+            ".searchButton {margin-right: auto; } " +
+            ".matchesLabel {margin-right: auto; min-width:100px; } " +
+
+            ".wordLabel {margin-right: auto;} " +
+            ".pinButton {margin-left: auto;} " +
+
+            "</style>";
         return shadowDiv.shadowRoot;
     }
 
@@ -148,7 +158,7 @@ class SearchBar
         let main = document.createElement("div");
         main.setAttribute("class", `TFSearchBar`);
         main.setAttribute("id", `TFSearchBar${this.id}`);
-        main.style = `position: fixed; display: flex; flex-direction: column; opacity: 0.8;
+        main.style = `  
               top: 10px; right: 10px; min-width: 300px; padding: 10px; z-index: 147483647;
               background-color: ${this.color};`
 
@@ -181,6 +191,8 @@ class SearchBar
             return;
 
         this.searchState.caseSensitive = _args.target.checked;
+        this.searchState.regexpOptions = "g" + (this.searchState.caseSensitive ? "" : "i");
+        console.log(this.searchState);
         this.restartSearch();
     }
     wholeWordChange(_args)
@@ -194,10 +206,10 @@ class SearchBar
     pinButtonPressed()
     {
         if (!this.pinButton)
-            this.pinButton = this.mainDiv.querySelector(`#pinButton${this.id}`);
+            this.pinButton = this.mainDiv.querySelector(`.pinButton`);
 
         this.searchState.pinned = !this.searchState.pinned;
-        this.pinButton.textContent = (this.searchState.pinned ? "PINNED" : "NOT PINNED");
+        this.pinButton.textContent = (this.searchState.pinned ? "PINNED" : "PIN");
 
         document.dispatchEvent(this.onSearchChange);
     }
@@ -291,7 +303,7 @@ class SearchBar
     updateLabels()
     {
         if (!this.progressLabel)
-            this.progressLabel = this.mainDiv.querySelector(`#matchesLabel${this.id}`);
+            this.progressLabel = this.mainDiv.querySelector(`.matchesLabel`);
 
         if (this.selectedIndex == null && this.searcherRef?.getMatches().length > 0)
         {
@@ -299,7 +311,7 @@ class SearchBar
             this.searcherRef.selectHighlight(this.selectedIndex);
         }
 
-        const labelText = (this.selectedIndex == null ? '0' : (this.selectedIndex + 1)) + `/` + 
+        const labelText = (this.selectedIndex == null ? '0' : (this.selectedIndex + 1)) + `/` +
             (this.searcherRef == null ? 0 : this.searcherRef.getMatches().length);
         this.progressLabel.textContent = labelText;
 
