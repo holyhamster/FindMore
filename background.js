@@ -1,12 +1,12 @@
 
 var TabsData = new Map();
 
-
-
 chrome.commands.onCommand.addListener(function (command) {
     if (command === 'toggle-search')
     {
-        openNewAtActiveTab();
+        runOnActive(function(_id) {
+            chrome.tabs.sendMessage(_id, { message: "new_search", tabId: _id });
+        });
     };
 });
 
@@ -16,43 +16,39 @@ chrome.runtime.onMessage.addListener(function (_args, _sender)
     switch (_args.message)
     {
         case "tf-popup-new-search":
-            openNewAtActiveTab();
-            break;
-        case "tf-popup-save-search":
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) =>
-            {
-                if (!tabs || tabs.length == 0)
-                    return;
-                let activeId = (Number)(tabs[0].id);
-
-                if (!TabsData.has(activeId))
-                    return;
-
-                chrome.storage.local.set({ "savedSearch": TabsData.get(activeId) }, function ()
-                {
-                    chrome.storage.local.get("savedSearch", function (items)
-                    {
-                        console.log(items);
-                    });
-                });
-            })
-
-            
-            break;
-        case "tf-popup-load-search":
-            chrome.storage.local.get("savedSearch", function (items)
-            {
-                console.log("loading data");
-                console.log(items[0]);
+            runOnActive(function (_id) {
+                chrome.tabs.sendMessage(_id, { message: "new_search", tabId: _id });
             });
-
             break;
+
+        case "tf-popup-save-search":
+            runOnActive((_id) =>
+            {
+                if (!TabsData.has(_id))
+                    return;
+                chrome.storage.local.set({ "tfSavedSearch": TabsData.get(_id) });
+            });     
+            break;
+
+        case "tf-popup-load-search":
+            runOnActive((_id) =>
+            {
+                chrome.storage.local.get("tfSavedSearch", function (data)
+                {
+                    let searchData = data.tfSavedSearch;
+                    TabsData.set(_id, searchData);
+                    updateSearch(_id, searchData, FORCED = true, PINNED_ONLY = false);
+                });
+            });
+            break;
+
         case "tf-update-state":
             TabsData.set(_args.tabId, _args.data);
 
             console.log(`cached state ${_args.tabId} - ${JSON.stringify(_args.data)}`);
             console.log(JSON.stringify(TabsData));
             break;
+
         case "tf-content-script-loaded":
             const tabData = TabsData.get(_sender.tab.id);
             console.log(tabData);
@@ -82,20 +78,24 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeinfo) {
     //chrome.tabs.sendMessage(tabId, {message:"page_reloaded"});
 });
 
-function openNewAtActiveTab()
+function runOnActive(_giveActiveId, _onNoActive)
 {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) =>
     {
-        if (tabs && tabs.length > 0)
+        if (!tabs || tabs.length == 0)
         {
-            let activeId = (Number)(tabs[0].id);
-            chrome.tabs.sendMessage(activeId, { message: "new_search", tabId: activeId });
+            if (_onNoActive)
+                _onNoActive();
+            return;
         }
-    })
+
+        let activeId = (Number)(tabs[0].id);
+        _giveActiveId(activeId);
+    });
 }
+
 function updateSearch(_tabId, _tabData, _forced, _pinnedOnly)
 {
-    
     var message = { message: "update_search", tabId: _tabId };
 
     message.data = _tabData;
@@ -104,12 +104,6 @@ function updateSearch(_tabId, _tabData, _forced, _pinnedOnly)
     console.log(`update event sent`);
     console.log(JSON.stringify(message));
     chrome.tabs.sendMessage(_tabId, message);
-}
-
-function tabIdHasPersistantSearches(_tabId)
-{
-    if (!TabsData.has(_tabId))
-        return false;
 }
 
 //run when extension is loaded

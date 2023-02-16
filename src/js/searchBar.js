@@ -21,6 +21,7 @@ class SearchBar
     {
         this.id = _id;
         this.searchState = _state;
+        this.searchState.woo = "woo";
 
         this.classNames = getCSSClassSchema(_id);
 
@@ -47,7 +48,6 @@ class SearchBar
 
         if (this.searchState && this.searchState.searchString != "")
         {
-            console.log("here")
             this.startSearcher();
         }
 
@@ -88,7 +88,11 @@ class SearchBar
         topFlex.querySelector(`.upButton`)
             .addEventListener("click", function () { this.previousMatch() }.bind(this));
         topFlex.querySelector(`.closeButton`)
-            .addEventListener("click", function () { this.close() }.bind(this));
+            .addEventListener("click", function ()
+            {
+                this.close();
+                document.dispatchEvent(this.onClose);
+            }.bind(this));
 
         let botFlex = document.createElement("div");
         botFlex.setAttribute("class", "TFSearchBarRow");
@@ -169,7 +173,6 @@ class SearchBar
 
     close()
     {
-        document.dispatchEvent(this.onClose);
         if (this.searcherRef)
             this.stopSearcher();
 

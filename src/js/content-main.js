@@ -1,14 +1,12 @@
-import SearchCollection from './searchCollection.js';
 import SearchBar from './searchBar.js';
+import SearchState from './modules/searchState.js';
 
 export function main()
 {
 
     var ThisTabId;
     var searchesMap = new Map();
-    var TabSearchData = new SearchCollection();
-    var searchBarMap = new Map();
-    var lastID = 0;
+    var barsMap = new Map();
 
     const highlightCSS = new CSSStyleSheet();
     highlightCSS.replaceSync(
@@ -24,13 +22,13 @@ export function main()
     document.addEventListener("tf-bar-closed", function (e)
     {
         
-        if (searchBarMap.get(e.id))
+        if (barsMap.get(e.id))
         {
-            TabSearchData.delete(searchBarMap.get(e.id).searchState);
-            searchBarMap.delete(e.id);
+            searchesMap.delete(e.id);
+            barsMap.delete(e.id);
         }
 
-        reorderBars(searchBarMap);
+        reorderBars(barsMap);
         
         cacheData();
     });
@@ -44,7 +42,9 @@ export function main()
     {
         if (e.key == "Escape")
         {
-            searchBarMap.forEach(function (_val) { _val.close() });
+            barsMap.forEach(function (_val) { _val.close() });
+            barsMap = new Map();
+            searchesMap = new Map();
             cacheData();
         }
     });
@@ -60,39 +60,37 @@ export function main()
             {
                 case "new_search":
                     let id = getNewID();
-                    let bar = new SearchBar(id, TabSearchData.addNewState(), searchBarMap.size);
-                    searchBarMap.set(id, bar);
-                    reorderBars(searchBarMap);
+                    let newSearch = new SearchState("");
+                    let bar = new SearchBar(id, newSearch, barsMap.size);
+                    searchesMap.set(id, newSearch)
+                    barsMap.set(id, bar);
+                    cacheData();
                     break;
 
                 case "update_search":
-                    console.log("update trigger");
-                    let NEW_SEARCH_STATE = false;
+                    if (!request.data)
+                        return;
+                    console.log("updating");
+                    console.log(request.data);
+                    //if (!request.forcedUpdate)
+                    //add same-ness check
 
-                    if (request.data &&
-                        !TabSearchData.isEquals(request.data))
+                    barsMap.forEach(function (_val) { _val.close() });
+                    barsMap = new Map();
+                    let loadedMap = deserializeIntoMap(request.data);
+
+                    loadedMap.forEach(function (_val, _key)
                     {
-                        console.log(JSON.stringify(request))
-                        NEW_SEARCH_STATE = true;
-                        TabSearchData = SearchCollection.load(request.data, request.pinnedOnly);
-                        console.log(JSON.stringify(TabSearchData))
-                    }
-
-                    if (NEW_SEARCH_STATE || request.forcedUpdate)
-                    {
-                        console.log("opening");
-                        console.log(JSON.stringify(TabSearchData));
-                        searchBarMap.forEach(function (_val) { _val.close() });
-                        searchBarMap = new Map();
-
-                        for (let i = 0; i < TabSearchData.searches.length; i++)
+                        if (request.pinnedOnly && !_val.pinned)
                         {
-                            let id = getNewID();
-                            let bar = new SearchBar(id, TabSearchData.searches[i], i);
-                            searchBarMap.set(id, bar);
+                            return;
                         }
-                        reorderBars(searchBarMap);
-                    }
+                        let newId = getNewID();
+                        searchesMap.set(newId, _val);
+                        let newSearchBar = new SearchBar(newId, _val, barsMap.size);
+                        console.log(barsMap.size);
+                        barsMap.set(newId, newSearchBar);
+                    });
                     break;
 
                 default:
@@ -104,26 +102,36 @@ export function main()
     function reorderBars(_map)
     {
         let iter = _map.keys();
-        let order = 0, iKey = 0;
-        while (iKey = iter.next().value)
+        let order = 0;
+        barsMap.forEach(function (_val, _key)
         {
-            _map.get(iKey).setPosition(order);
+            _val.setPosition(order);
             order += 1;
-        }
+        });
     }
 
     function getNewID()
     {
-        lastID += 1;
-        return lastID;
-    }
+        let id = 0;
+        while (searchesMap.has(id))
+            id += 1;
 
+        return id;
+    }
+    function serializeMap(_map)
+    {
+        return JSON.stringify(Array.from(_map.entries()));
+    }
+    function deserializeIntoMap(_string)
+    {
+        return new Map(JSON.parse(_string));
+    }
     function cacheData()
     {
-        if (TabSearchData.isEmpty())
-            return;
-
-        let message = { message: "tf-update-state", tabId: ThisTabId, data: TabSearchData };
+        let message = {
+            message: "tf-update-state", tabId: ThisTabId,
+            data: serializeMap(searchesMap)
+        };
         chrome.runtime.sendMessage(message);
     }
 
