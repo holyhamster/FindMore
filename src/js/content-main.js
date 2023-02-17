@@ -8,17 +8,7 @@ export function main()
     var searchesMap = new Map();
     var barsMap = new Map();
 
-    const highlightCSS = new CSSStyleSheet();
-    highlightCSS.replaceSync(
-        `.TFHighlight { position: absolute; }
-        .TFContainer { position: absolute; }
-        .TFContainerRelative { position: relative; }
-        `);
-
    
-    if (!document.adoptedStyleSheets.includes(highlightCSS))
-        document.adoptedStyleSheets = [...document.adoptedStyleSheets, highlightCSS];
-
     document.addEventListener("tf-bar-closed", function (e)
     {
         

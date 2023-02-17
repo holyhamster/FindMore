@@ -14,7 +14,7 @@ class DomSearcher
 
     selectedIndex;
 
-    constructor(_id, _searchString, _regexOptions)
+    constructor(_id, _searchString, _regexOptions, _walker)
     {
         
         this.intersectionObserver = new IntersectionObserver(entries =>
@@ -33,7 +33,7 @@ class DomSearcher
 
         this.onNewMatches = new Event(`TF-matches-update${this.id}`);
         
-        this.startSearch();
+        this.startSearch(_walker);
     }
 
     interrupt()
@@ -41,13 +41,13 @@ class DomSearcher
         this.interrupted = true;
     }
 
-    startSearch()
+    startSearch(_walker)
     {
         //this.showNodes()
         
         setTimeout(function ()
         {
-            let region = new SearchRegion(this.getWalk(), this.searchString, this.regexp);
+            let region = new SearchRegion(_walker, this.searchString, this.regexp);
             this.searchRecursive(region, new Map())
         }.bind(this), this.interval);
         
@@ -180,36 +180,7 @@ class DomSearcher
 
         return nonEmptyRects;
     }
-    getWalk()
-    {
-        const condition = {
-            acceptNode: (node) =>
-            {
-                
-                //classString.split(' ');
-                if (node.nodeName.toUpperCase() == "STYLE" ||
-                    node.nodeName.toUpperCase() == "SCRIPT")
-                {
-                    return NodeFilter.FILTER_REJECT
-                }
-                if (node.nodeType == Node.ELEMENT_NODE)
-                {
-                    let classes = node.id.toString().split(/\s+/);
-                    if (classes.includes(`TFShadowRoot`))
-                    {
-                        return NodeFilter.FILTER_REJECT
-                    }
-                }
-                if (node.nodeName.toUpperCase() == "#TEXT" &&
-                    node.textContent)
-                    return NodeFilter.FILTER_ACCEPT;
-
-                return NodeFilter.FILTER_SKIP;
-            }
-
-        };
-        return document.createTreeWalker(document.body, NodeFilter.SHOW_ALL, condition);
-    }
+    
 }
 
 function escapeRegExp(string)

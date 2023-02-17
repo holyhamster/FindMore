@@ -17,6 +17,8 @@ class SearchBar
     selectedIndex;
     intersectionObserver;
 
+    iframesCSSMap = new Map();
+
     constructor(_id, _state, _order)
     {
         this.id = _id;
@@ -33,14 +35,18 @@ class SearchBar
 
         this.onSearchChange = new Event("tf-search-changed");
         this.onSearchChange.id = this.id;
-        
+
+        this.cssString =
+            `.${this.classNames.hlContainer} { position: absolute; }` +
+            `.TFCR${this.id} { position: relative; }` +
+            `.${this.classNames.highlight}` +
+            `{ position: absolute; background-color: ${this.color}; opacity: 0.8; z-index: 147483647;}` +
+            `.${this.classNames.highlightSelected}` +
+            `{ border: 5px solid ${invertHex(this.color)}; padding: 0px;}`
 
         this.highlightCSS = new CSSStyleSheet();
-        this.highlightCSS.replaceSync(
-            `.${this.classNames.highlight}` +
-            `{ background-color: ${this.color}; opacity: 0.8; z-index: 147483647;}` +
-            `.${this.classNames.highlightSelected}` +
-            `{ border: 5px solid ${invertHex(this.color)}; padding: 0px;}`);
+        this.highlightCSS.replaceSync(this.cssString);
+
         document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.highlightCSS];
 
         this.constructHtml();
@@ -185,6 +191,12 @@ class SearchBar
 
             document.adoptedStyleSheets = sheets;
         }
+        this.iframesCSSMap.forEach(function (_css, _frameSheets)
+        {
+            let index = _frameSheets.indexOf(_css);
+            if (index >= 0)
+                _frameSheets.splice(index, 1);
+        });
 
         this.mainDiv.remove();
     }
@@ -286,7 +298,7 @@ class SearchBar
             this.stopSearcher();
 
         this.searcherRef = new DOMSearcher(this.id,
-            this.searchState.searchString, this.searchState.regexpOptions);
+            this.searchState.searchString, this.searchState.regexpOptions, this.getWalk());
         document.addEventListener(
             `${matchUpdateEventName}${this.id}`, this.updateLabels.bind(this));
         this.updateLabels();
@@ -296,7 +308,17 @@ class SearchBar
         if (this.searcherRef)
         {
             this.searcherRef.interrupt();
-            removeDOMClass(this.classNames.hlContainer);
+            removeDOMClass(document, this.classNames.hlContainer);
+            removeDOMClass(document, `TFCR${this.id}`);
+
+            this.iframesCSSMap.forEach(function (_sheets, _iframe)
+            {
+                removeDOMClass(_iframe.contentDocument, this.classNames.hlContainer);
+                removeDOMClass(_iframe.contentDocument, `TFCR${this.id}`);
+                _sheets.remove();
+            }.bind(this));
+            this.iframesCSSMap.clear();
+
             this.selectedIndex = null;
             document.removeEventListener(
                 `${matchUpdateEventName}${this.id}`, this.updateLabels);
@@ -319,17 +341,117 @@ class SearchBar
         this.progressLabel.textContent = labelText;
 
     }
+
+    getWalk()
+    {
+        let iframeMap = this.iframesCSSMap;
+        let cssString = this.cssString;
+        let treeWalker = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
+
+        treeWalker.que = [ treeWalker ];
+        treeWalker.nextNode = function ()
+        {
+            
+            if (this.iFrameWalker)
+            {
+                let nextIframeNode = this.iFrameWalker.nextNode();
+                
+                if (nextIframeNode)
+                {
+                    console.log(`walking with framewalker`);
+                    console.log(nextIframeNode);
+                    return nextIframeNode;
+                }
+                else
+                {
+                    console.log(`exiting framewalker`);
+                    this.iFrameWalker = null;
+                }
+            }
+
+            let currentNode = this.currentNode;
+            let nextNode = TreeWalker.prototype.nextNode.call(this);
+
+            if (currentNode.nodeName.toUpperCase() == 'IFRAME')
+            {
+                console.log(`detected iFrame`);
+                if (currentNode.contentDocument)
+                {
+                    addCSSToIFrame(currentNode, cssString, iframeMap);
+
+                    this.iFrameWalker = currentNode.contentDocument
+                        .createTreeWalker(currentNode.contentDocument.body,
+                            NodeFilter.SHOW_ALL, treeWalkerCondition);
+                    
+                    let iframeNode = this.iFrameWalker.nextNode();
+                    console.log(`have contents, creating iFrameWalker`);
+                    console.log(iframeNode);
+                    if (iframeNode)
+                        return iframeNode;
+                }
+            }
+
+            return nextNode;
+        };
+        return treeWalker;
+    }
 }
 
-function removeDOMClass(_className)
+const treeWalkerCondition = {
+    acceptNode: (node) =>
+    {
+        if (node.nodeName.toUpperCase() == "IFRAME")
+            return NodeFilter.FILTER_ACCEPT;
+
+        if (node.nodeName.toUpperCase() == "STYLE" ||
+            node.nodeName.toUpperCase() == "SCRIPT")
+            return NodeFilter.FILTER_REJECT;
+
+        if (node.nodeType == Node.ELEMENT_NODE)
+        {
+            let classes = node.id.toString().split(/\s+/);
+            let NODE_IS_SEARCHBAR_SHADOWROOT = classes.includes(`TFShadowRoot`);
+            if (NODE_IS_SEARCHBAR_SHADOWROOT)
+                return NodeFilter.FILTER_REJECT;
+        }
+
+        if (node.nodeName.toUpperCase() == "#TEXT" && node.textContent)
+            return NodeFilter.FILTER_ACCEPT;
+
+        return NodeFilter.FILTER_SKIP;
+    }
+};
+
+function removeDOMClass(_document, _className)
 {
-    let highlights = document.querySelectorAll(`.${_className}`);
+    let highlights = _document.querySelectorAll(`.${_className}`);
 
     for (let i = 0; i < highlights.length; i++)
     {
         highlights[i].remove();
     }
 }
+
+function addCSSToIFrame(_iframe, _cssString, _iframeToStylesMap)
+{
+    console.log(_iframe);
+    console.log(_iframe.contentDocument);
+    let existingStyle = _iframeToStylesMap.get(_iframe);
+    if (!existingStyle)
+    {
+        existingStyle = _iframe.contentDocument.createElement("style");
+        existingStyle.setAttribute("class", "TFIframeStyle");
+        existingStyle.innerHTML = _cssString;
+        _iframeToStylesMap.set(_iframe, existingStyle)
+    }
+
+    if (existingStyle.parentNode != _iframe.contentDocument.head)
+    {
+        _iframe.contentDocument.head.appendChild(existingStyle);
+    }
+}
+
 function invertHex(_hex)
 {
     let color = _hex + "";
@@ -351,5 +473,12 @@ function getCSSClassSchema(_id)
     schema.highlightSelected = `TFHS${_id}`;
 
     return schema;
+}
+
+function copyCSSHighlight(_css)
+{
+    let result = new CSSStyleSheet();
+    Array.from(_css.cssRules).forEach(function (_rule) { result.replaceSync(_rule.cssText); });
+    return result;
 }
 export default SearchBar;

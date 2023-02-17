@@ -20,11 +20,11 @@ class HighlightGroup
         //absolute position is cheaper to calculate, but ignore any scrollbar between itself and closest relative ancestor
         this.relative = !HighlightGroup.hasRelativeAncestor(_parentNode);
 
-        this.container.classList.add(`TFC${_id}`)
+        
         if (this.relative)
-            this.container.classList.add('TFContainerRelative');
+            this.container.classList.add(`TFCR${_id}`)
         else
-            this.container.classList.add('TFContainer');
+            this.container.classList.add(`TFC${_id}`)
 
         //this.isGroupVisibleAfterUpdate(_range);
     }
