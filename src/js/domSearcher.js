@@ -28,7 +28,8 @@ class DomSearcher
         this.id = _id;
         this.searchString = _searchString;
         //remove escape for a full regex expression experience
-        this.regexp = new RegExp(_searchString = escapeRegExp(_searchString), _regexOptions);
+        //this.regexp = new RegExp(escapeRegExp(_searchString), _regexOptions);
+        this.regexp = new RegExp(_searchString, _regexOptions);
         this.interrupted = false;
 
         this.onNewMatches = new Event(`TF-matches-update${this.id}`);

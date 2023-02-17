@@ -37,11 +37,11 @@ class SearchBar
         this.onSearchChange.id = this.id;
 
         this.cssString =
-            `.${this.classNames.hlContainer} { position: absolute; }` +
+            `.TFC${this.id} { position: absolute; }` +
             `.TFCR${this.id} { position: relative; }` +
-            `.${this.classNames.highlight}` +
+            `.TFH${this.id}` +
             `{ position: absolute; background-color: ${this.color}; opacity: 0.8; z-index: 147483647;}` +
-            `.${this.classNames.highlightSelected}` +
+            `.TFHS${this.id}` +
             `{ border: 5px solid ${invertHex(this.color)}; padding: 0px;}`
 
         this.highlightCSS = new CSSStyleSheet();
@@ -308,12 +308,12 @@ class SearchBar
         if (this.searcherRef)
         {
             this.searcherRef.interrupt();
-            removeDOMClass(document, this.classNames.hlContainer);
+            removeDOMClass(document, `TFC${this.id}`);
             removeDOMClass(document, `TFCR${this.id}`);
 
             this.iframesCSSMap.forEach(function (_sheets, _iframe)
             {
-                removeDOMClass(_iframe.contentDocument, this.classNames.hlContainer);
+                removeDOMClass(_iframe.contentDocument, `TFC${this.id}`);
                 removeDOMClass(_iframe.contentDocument, `TFCR${this.id}`);
                 _sheets.remove();
             }.bind(this));
@@ -344,52 +344,36 @@ class SearchBar
 
     getWalk()
     {
-        let iframeMap = this.iframesCSSMap;
-        let cssString = this.cssString;
         let treeWalker = document.createTreeWalker(
             document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
+        treeWalker.cssString = this.cssString;
+        treeWalker.que = [treeWalker];
+        treeWalker.map = this.iframesCSSMap;
 
-        treeWalker.que = [ treeWalker ];
-        treeWalker.nextNode = function ()
+        treeWalker.nextNodePlus = function ()
         {
-            
-            if (this.iFrameWalker)
+            if (this.que.length == 0)
+                return null;
+
+            let nextNode = this.que.slice(-1)[0].nextNode();
+
+            if (!nextNode)
             {
-                let nextIframeNode = this.iFrameWalker.nextNode();
-                
-                if (nextIframeNode)
-                {
-                    console.log(`walking with framewalker`);
-                    console.log(nextIframeNode);
-                    return nextIframeNode;
-                }
-                else
-                {
-                    console.log(`exiting framewalker`);
-                    this.iFrameWalker = null;
-                }
+                this.que.pop();
+                //console.log(`surfacing back to ${this.que.length}-level frame`);
+                return this.nextNodePlus();
             }
 
-            let currentNode = this.currentNode;
-            let nextNode = TreeWalker.prototype.nextNode.call(this);
-
-            if (currentNode.nodeName.toUpperCase() == 'IFRAME')
+            if (nextNode.nodeName.toUpperCase() == 'IFRAME' &&
+                nextNode.contentDocument)
             {
-                console.log(`detected iFrame`);
-                if (currentNode.contentDocument)
-                {
-                    addCSSToIFrame(currentNode, cssString, iframeMap);
-
-                    this.iFrameWalker = currentNode.contentDocument
-                        .createTreeWalker(currentNode.contentDocument.body,
-                            NodeFilter.SHOW_ALL, treeWalkerCondition);
-                    
-                    let iframeNode = this.iFrameWalker.nextNode();
-                    console.log(`have contents, creating iFrameWalker`);
-                    console.log(iframeNode);
-                    if (iframeNode)
-                        return iframeNode;
-                }
+                let iframeDoc = nextNode.contentDocument;
+                let iframeWalker = iframeDoc.createTreeWalker(
+                    iframeDoc.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
+                addCSSToIFrame(nextNode, this.cssString, this.map);
+                this.que.push(iframeWalker);
+                //console.log(`diving deeper into ${this.que.length}-level frame`);
+                return this.nextNodePlus();
             }
 
             return nextNode;
@@ -425,6 +409,9 @@ const treeWalkerCondition = {
 
 function removeDOMClass(_document, _className)
 {
+    if (!_document)
+        return;
+
     let highlights = _document.querySelectorAll(`.${_className}`);
 
     for (let i = 0; i < highlights.length; i++)
@@ -435,8 +422,6 @@ function removeDOMClass(_document, _className)
 
 function addCSSToIFrame(_iframe, _cssString, _iframeToStylesMap)
 {
-    console.log(_iframe);
-    console.log(_iframe.contentDocument);
     let existingStyle = _iframeToStylesMap.get(_iframe);
     if (!existingStyle)
     {

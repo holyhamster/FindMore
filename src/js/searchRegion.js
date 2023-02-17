@@ -10,7 +10,7 @@ class SearchRegion {
     }
 
     addNextNode() {
-        let newNode = this.walk.nextNode();
+        let newNode = this.walk.nextNodePlus();
 
         if (!newNode)
             return false;
