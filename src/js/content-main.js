@@ -42,44 +42,37 @@ export function main()
     chrome.runtime.onMessage.addListener(
         function (request, sender)
         {
-            console.log("processing");
-            console.log(request);
-            if (!ThisTabId)
-                ThisTabId = request.tabId;
+            ThisTabId = request.tabId;
+
             switch (request.message)
             {
-                case "new_search":
+                case "tf-new-search":
                     let id = getNewID();
                     let newSearch = new SearchState("");
-                    let bar = new SearchBar(id, newSearch, barsMap.size);
                     searchesMap.set(id, newSearch)
-                    barsMap.set(id, bar);
+                    barsMap.set(id, new SearchBar(id, newSearch, barsMap.size));
                     cacheData();
                     break;
 
-                case "update_search":
+                case "tf-update-search":
                     if (!request.data)
                         return;
-                    console.log("updating");
-                    console.log(request.data);
-                    //if (!request.forcedUpdate)
-                    //add same-ness check
 
                     barsMap.forEach(function (_val) { _val.close() });
                     barsMap = new Map();
+                    searchesMap = new Map();
                     let loadedMap = deserializeIntoMap(request.data);
 
-                    loadedMap.forEach(function (_val, _key)
+                    loadedMap.forEach(function (_state)
                     {
-                        if (request.pinnedOnly && !_val.pinned)
-                        {
+                        if (request.pinnedOnly && !_state.pinned)
                             return;
-                        }
+
                         let newId = getNewID();
-                        searchesMap.set(newId, _val);
-                        let newSearchBar = new SearchBar(newId, _val, barsMap.size);
-                        console.log(barsMap.size);
-                        barsMap.set(newId, newSearchBar);
+                        searchesMap.set(newId, _state);
+
+                        barsMap.set(newId,
+                            new SearchBar(newId, _state, barsMap.size));
                     });
                     break;
 
@@ -114,7 +107,13 @@ export function main()
     }
     function deserializeIntoMap(_string)
     {
-        return new Map(JSON.parse(_string));
+        let map = new Map(JSON.parse(_string));
+        map.forEach(function (_val, _key, _map)
+        {
+            _map.set(_key, SearchState.load(_val));
+        });
+        console.log(JSON.stringify(map));
+        return map;
     }
     function cacheData()
     {

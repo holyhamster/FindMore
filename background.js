@@ -5,19 +5,18 @@ chrome.commands.onCommand.addListener(function (command) {
     if (command === 'toggle-search')
     {
         runOnActive(function(_id) {
-            chrome.tabs.sendMessage(_id, { message: "new_search", tabId: _id });
+            chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id });
         });
     };
 });
 
 chrome.runtime.onMessage.addListener(function (_args, _sender)
 {
-    console.log(_args);
     switch (_args.message)
     {
         case "tf-popup-new-search":
             runOnActive(function (_id) {
-                chrome.tabs.sendMessage(_id, { message: "new_search", tabId: _id });
+                chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id });
             });
             break;
 
@@ -96,7 +95,7 @@ function runOnActive(_giveActiveId, _onNoActive)
 
 function updateSearch(_tabId, _tabData, _forced, _pinnedOnly)
 {
-    var message = { message: "update_search", tabId: _tabId };
+    var message = { message: "tf-update-search", tabId: _tabId };
 
     message.data = _tabData;
     message.forcedUpdate = _forced;

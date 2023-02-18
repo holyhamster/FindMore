@@ -1,4 +1,5 @@
 import DOMSearcher from './domSearcher.js';
+import SearchState from './modules/searchState.js';
 
 const matchUpdateEventName = "TF-matches-update";
 class SearchBar
@@ -6,8 +7,8 @@ class SearchBar
     id;
 
     mainDiv;
-    searchState;
-    searcherRef;
+    state;
+    domSearcher;
 
     onClose;
     onSearchChange;
@@ -22,8 +23,7 @@ class SearchBar
     constructor(_id, _state, _order)
     {
         this.id = _id;
-        this.searchState = _state;
-        this.searchState.woo = "woo";
+        this.state = _state;
 
         this.classNames = getCSSClassSchema(_id);
 
@@ -39,10 +39,9 @@ class SearchBar
         this.cssString =
             `.TFC${this.id} { position: absolute; }` +
             `.TFCR${this.id} { position: relative; }` +
-            `.TFH${this.id}` +
-            `{ position: absolute; background-color: ${this.color}; opacity: 0.8; z-index: 147483647;}` +
-            `.TFHS${this.id}` +
-            `{ border: 5px solid ${invertHex(this.color)}; padding: 0px;}`
+            `.TFH${this.id} { position: absolute; background-color: ${this.color};`+
+                ` opacity: 0.8; z-index: 147483647;}` +
+            `.TFHS${this.id} { border: 5px solid ${invertHex(this.color)}; padding: 0px;}`
 
         this.highlightCSS = new CSSStyleSheet();
         this.highlightCSS.replaceSync(this.cssString);
@@ -52,16 +51,12 @@ class SearchBar
         this.constructHtml();
         this.setPosition(_order);
 
-        if (this.searchState && this.searchState.searchString != "")
-        {
-            this.startSearcher();
-        }
-
+        if (this.state && this.state.searchString != "")
+            this.startSearcher(this.state, this.id);
     }
 
     setPosition(_order)
     {
-
         this.mainDiv.style.top = (_order * 70) + 10 + "px";
     }
 
@@ -71,7 +66,7 @@ class SearchBar
         let topFlex = document.createElement("div");
         topFlex.setAttribute("class", "TFSearchBarRow");
         topFlex.innerHTML = `
-            <input class="searchInput" value="${this.searchState.searchString}">
+            <input class="searchInput" value="${this.state.searchString}" placeholder="Find in page">
             <span class="matchesLabel">0/0</span>
             <button class="refreshButton">R</button>
             <button class="downButton">v</button>
@@ -79,17 +74,31 @@ class SearchBar
             <button class="closeButton">x</button>`;
 
         topFlex.querySelector(`.searchInput`)
-            .addEventListener("input", function (e) { this.restartSearch(e) }.bind(this));
-        topFlex.querySelector(`.searchInput`)
-            .addEventListener("keydown", function (e)
+            .addEventListener("input", function (_args)
             {
-                if (e.key === "Enter")
+                if (!_args?.target)
+                    return;
+                _args.target.value = formatIncomingString(_args.target.value);
+                
+                let stateChange = _args.target.value != this.state.searchString;
+                this.state.searchString = _args.target.value;
+                this.restartSearch(this.state, this.id, stateChange);
+            }.bind(this));
+
+        topFlex.querySelector(`.searchInput`)
+            .addEventListener("keydown", function (_args)
+            {
+                if (_args.key === "Enter")
                     this.nextMatch()
             }.bind(this));
 
         topFlex.querySelector(`.refreshButton`)
-            .addEventListener("click", function () { this.restartSearch() }.bind(this));
-        topFlex.querySelector(`.downButton`)
+            .addEventListener("click", function ()
+            {
+                this.restartSearch(this.state, this.id, false)
+            }.bind(this));
+
+        topFlex.querySelector(`.downButton`) 
             .addEventListener("click", function () { this.nextMatch() }.bind(this));
         topFlex.querySelector(`.upButton`)
             .addEventListener("click", function () { this.previousMatch() }.bind(this));
@@ -102,22 +111,40 @@ class SearchBar
 
         let botFlex = document.createElement("div");
         botFlex.setAttribute("class", "TFSearchBarRow");
-        botFlex.innerHTML = `
-                <input type="checkbox" id="caseCheck${this.id}" class="caseCheck" 
-                    ${this.searchState.caseSensetive ? 'cached' : ''} name="caseCheck${this.id}">
-                <label for="caseCheck${this.id}">match case</label>
-                <input type="checkbox" id="wordCheck${this.id}" class="wordCheck" 
-                    ${this.searchState.wholeWord ? 'cached' : ''} name="wordCheck{this.id}">
-                <label for="wordCheck${this.id}">whole word</label>
-                <button class="pinButton">
-                    ${this.searchState.pinned ? 'PINNED' : 'PIN'}
-                </button>`;
-        botFlex.querySelector(`.caseCheck`)
-            .addEventListener("input", function (e) { this.caseChange(e) }.bind(this));
-        botFlex.querySelector(`.wordCheck`)
-            .addEventListener("input", function (e) { this.wholeWordChange(e) }.bind(this));
-        botFlex.querySelector(`.pinButton`)
-            .addEventListener("click", function () { this.pinButtonPressed() }.bind(this));
+        botFlex.innerHTML = 
+                `<input type="checkbox" class="caseCheck" id="caseCheck${this.id}"` +
+                    `${this.state.caseSensetive ? "cached" : ""} name="caseCheck${this.id}">`+
+                `<label for="caseCheck${this.id}">match case</label>` +
+                `<input type="checkbox" class="wordCheck" id="wordCheck${this.id}"` +
+                    `${this.state.wholeWord ? "cached" : ""} name="wordCheck{this.id}">` +
+                `<label for="wordCheck${this.id}">whole word</label>` +
+                `<button class="pinButton"> ${this.state.pinned ? "PINNED" : "PIN"}`+
+                `</button>`;
+
+        botFlex.querySelector(`.caseCheck`).addEventListener("input", function (_args)
+            {
+                let stateChange = this.state.caseSensitive != _args.target.checked;
+                this.state.caseSensitive = _args.target.checked;
+                this.restartSearch(this.state, this.id, stateChange);
+            }.bind(this));
+
+        botFlex.querySelector(`.wordCheck`).addEventListener("input", function (_args)
+        {
+            let stateChange = this.state.wholeWord != _args.target.checked;
+            this.state.wholeWord = _args.target.checked;
+            this.restartSearch(this.state, this.id, stateChange);
+        }.bind(this));
+
+        botFlex.querySelector(`.pinButton`).addEventListener("click", function (_args)
+            {
+                if (!this.pinButton)
+                    this.pinButton = this.mainDiv.querySelector(`.pinButton`);
+
+                this.state.pinned = !this.state.pinned;
+                this.pinButton.textContent = (this.state.pinned ? "PINNED" : "PIN");
+                document.dispatchEvent(this.onSearchChange);
+        }.bind(this));
+
         this.mainDiv = this.constructMainDiv();
 
         this.mainDiv.appendChild(topFlex);
@@ -139,14 +166,15 @@ class SearchBar
             document.body.appendChild(shadowDiv);
         }
 
-        if (shadowDiv.shadowRoot)
-            return shadowDiv.shadowRoot;
+        if (SearchBar.shadowRoot)
+            return SearchBar.shadowRoot;
 
-        shadowDiv.attachShadow({ mode: "open" });
-        shadowDiv.shadowRoot.innerHTML = "<style>" +
-            ":host {all:initial; font-family: Verdana, sans-serif; webkit-touch-callout: none;} " +
+        SearchBar.shadowRoot = shadowDiv.attachShadow({ mode: "closed" });
+        SearchBar.shadowRoot.innerHTML = "<style>" +
+            //":host, :host * {}" +
+            ":host, div {all: initial; font-family: Verdana, sans-serif; webkit-touch-callout: none;} " +
             ".TFSearchBar {position: fixed; display: flex; flex-direction: column; " +
-            "justify-content: space-evenly; border-radius: 12px; opacity: 0.9;} " +
+                "justify-content: space-evenly; border-radius: 12px; opacity: 0.9;} " +
             ".TFSearchBarRow {display: flex; justify-content:space-between; } " +
             "button { border-radius: 3px;} " +
             ".closeButton {margin-left: auto;} " +
@@ -155,12 +183,10 @@ class SearchBar
             ".refreshButton {margin-left: auto; margin-right: 5px; }" +
             ".searchButton {margin-right: auto; } " +
             ".matchesLabel {margin-right: auto; min-width:100px; } " +
-
             ".wordLabel {margin-right: auto;} " +
             ".pinButton {margin-left: auto;} " +
-
             "</style>";
-        return shadowDiv.shadowRoot;
+        return SearchBar.shadowRoot;
     }
 
     constructMainDiv()
@@ -179,8 +205,7 @@ class SearchBar
 
     close()
     {
-        if (this.searcherRef)
-            this.stopSearcher();
+        this.stopSearcher(this.id);
 
         if (document.adoptedStyleSheets.includes(this.highlightCSS))
         {
@@ -200,61 +225,21 @@ class SearchBar
 
         this.mainDiv.remove();
     }
-    caseChange(_args)
+
+    restartSearch(_state, _id, _sendEvent)
     {
-        if (this.searchState.caseSensitive == _args.target.checked)
-            return;
-
-        this.searchState.caseSensitive = _args.target.checked;
-        this.searchState.regexpOptions = "g" + (this.searchState.caseSensitive ? "" : "i");
-        console.log(this.searchState);
-        this.restartSearch();
-    }
-    wholeWordChange(_args)
-    {
-        if (this.searchState.wholeWord == _args.target.checked)
-            return;
-
-        this.searchState.wholeWord = _args.target.checked;
-        this.restartSearch();
-    }
-    pinButtonPressed()
-    {
-        if (!this.pinButton)
-            this.pinButton = this.mainDiv.querySelector(`.pinButton`);
-
-        this.searchState.pinned = !this.searchState.pinned;
-        this.pinButton.textContent = (this.searchState.pinned ? "PINNED" : "PIN");
-
-        document.dispatchEvent(this.onSearchChange);
-    }
-
-    restartSearch(_args)
-    {
-        let newValue = false;
-        if (_args && _args.target &&
-            this.searchState.searchString != _args.target.value)
-        {
-            this.searchState.searchString = _args.target.value;
-            newValue = true;
-        }
-
-        if (this.searcherRef)
-            this.stopSearcher();
-
         this.selectedIndex = null;
         this.updateLabels();
 
-        if (this.searchState.searchString != "")
-            this.startSearcher();
+        this.startSearcher(_state, _id);       
 
-        if (newValue)
+        if (_sendEvent)
             document.dispatchEvent(this.onSearchChange);
     }
 
     previousMatch()
     {
-        if (!this.searcherRef || this.searcherRef.getMatches().length == 0)
+        if (!this.domSearcher || this.domSearcher.getMatches().length == 0)
             return;
 
         if (this.selectedIndex == null)
@@ -263,15 +248,15 @@ class SearchBar
             this.selectedIndex -= 1;
 
         if (this.selectedIndex < 0)
-            this.selectedIndex = this.searcherRef.getMatches().length - 1;
+            this.selectedIndex = this.domSearcher.getMatches().length - 1;
 
-        this.searcherRef.selectHighlight(this.selectedIndex);
+        this.domSearcher.selectHighlight(this.selectedIndex);
         this.updateLabels()
     }
 
     nextMatch()
     {
-        if (!this.searcherRef || this.searcherRef.getMatches().length == 0)
+        if (!this.domSearcher || this.domSearcher.getMatches().length == 0)
             return;
 
         if (this.selectedIndex == null)
@@ -283,45 +268,47 @@ class SearchBar
             this.selectedIndex += 1;
         }
 
-        if (this.selectedIndex >= this.searcherRef.getMatches().length)
+        if (this.selectedIndex >= this.domSearcher.getMatches().length)
         {
             this.selectedIndex = 0;
         }
 
-        this.searcherRef.selectHighlight(this.selectedIndex);
+        this.domSearcher.selectHighlight(this.selectedIndex);
         this.updateLabels()
     }
 
-    startSearcher()
+    startSearcher(_state, _id)
     {
-        if (this.searcherRef)
-            this.stopSearcher();
-
-        this.searcherRef = new DOMSearcher(this.id,
-            this.searchState.searchString, this.searchState.regexpOptions, this.getWalk());
+        this.stopSearcher(_id);
+        
+        if (_state.searchString != "")
+            this.domSearcher = new DOMSearcher(_id,_state.searchString, _state.getRegex(false),
+                this.getWalk());
         document.addEventListener(
-            `${matchUpdateEventName}${this.id}`, this.updateLabels.bind(this));
+            `${matchUpdateEventName}${_id}`, this.updateLabels.bind(this));
         this.updateLabels();
     }
-    stopSearcher()
+
+    stopSearcher(_id)
     {
-        if (this.searcherRef)
+        if (this.domSearcher)
         {
-            this.searcherRef.interrupt();
-            removeDOMClass(document, `TFC${this.id}`);
-            removeDOMClass(document, `TFCR${this.id}`);
+            this.domSearcher.interrupt();
+            this.domSearcher = null;
+            removeDOMClass(document, `TFC${_id}`);
+            removeDOMClass(document, `TFCR${_id}`);
 
             this.iframesCSSMap.forEach(function (_sheets, _iframe)
             {
-                removeDOMClass(_iframe.contentDocument, `TFC${this.id}`);
-                removeDOMClass(_iframe.contentDocument, `TFCR${this.id}`);
+                removeDOMClass(_iframe.contentDocument, `TFC${_id}`);
+                removeDOMClass(_iframe.contentDocument, `TFCR${_id}`);
                 _sheets.remove();
             }.bind(this));
             this.iframesCSSMap.clear();
 
             this.selectedIndex = null;
             document.removeEventListener(
-                `${matchUpdateEventName}${this.id}`, this.updateLabels);
+                `${matchUpdateEventName}${_id}`, this.updateLabels);
         }
     }
 
@@ -330,14 +317,14 @@ class SearchBar
         if (!this.progressLabel)
             this.progressLabel = this.mainDiv.querySelector(`.matchesLabel`);
 
-        if (this.selectedIndex == null && this.searcherRef?.getMatches().length > 0)
+        if (this.selectedIndex == null && this.domSearcher?.getMatches().length > 0)
         {
             this.selectedIndex = 0;
-            this.searcherRef.selectHighlight(this.selectedIndex);
+            this.domSearcher.selectHighlight(this.selectedIndex);
         }
 
         const labelText = (this.selectedIndex == null ? '0' : (this.selectedIndex + 1)) + `/` +
-            (this.searcherRef == null ? 0 : this.searcherRef.getMatches().length);
+            (this.domSearcher == null ? 0 : this.domSearcher.getMatches().length);
         this.progressLabel.textContent = labelText;
 
     }
@@ -420,6 +407,14 @@ function removeDOMClass(_document, _className)
     }
 }
 
+function formatIncomingString(_string)
+{
+    if (!_string)
+        return "";
+    if (_string.length > 100)
+        _string = _string.substring(0, 100);
+    return _string;
+}
 function addCSSToIFrame(_iframe, _cssString, _iframeToStylesMap)
 {
     let existingStyle = _iframeToStylesMap.get(_iframe);

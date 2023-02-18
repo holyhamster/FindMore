@@ -2,29 +2,48 @@
 
 class SearchState
 {
-    searchString;
-    regexpOptions;
-    constructor(_string, _color)
+    constructor(_searchString, _color)
     {
-        this.searchString = _string;
+        this.searchString = _searchString;
+        this.color = _color;
+
+        if (!this.color)
+            this.color = getRandomColor();
+
         this.pinned = false;
         this.caseSensitive = false;
         this.wholeWord = false;
-        this.regexpOptions = "gi";
-        this.color = _color;
-        if (!this.color)
-            this.color = getRandomColor()
-    }
-    static new(_string)
-    {
-        return new this(_string);
     }
 
-    isEquals(_search)
+    static new(_string, _color)
     {
-        return this.searchString == _search.searchString;
+        return new this(_string, _color);
+    }
+
+    static load(_state)
+    {
+        let result = new SearchState(_state.searchString, _state.color);
+        result.pinned = _state.pinned;
+        result.caseSensitive = _state.caseSensitive;
+        result.wholeWord = _state.wholeWord;
+        return result;
+    }
+
+    getRegex(_escape = true)
+    {
+        let regString = _escape ? this.searchString.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+            : this.searchString;
+
+        if (this.wholeWord)
+            regString = '\b' + regString + '\b';
+
+        let regOptions = this.caseSensitive ? "g" : "gi";
+
+        return new RegExp(regString, regOptions);
     }
 }
+
+
 
 function getRandomColor()
 {

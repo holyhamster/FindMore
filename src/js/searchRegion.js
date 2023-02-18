@@ -1,4 +1,7 @@
-class SearchRegion {
+//Keeps all information about the current search scope and its controls
+
+class SearchRegion
+{
     constructor(_treeWalk, _searchString, _regexp) {
         this.searchString = _searchString;
         this.regexp = _regexp;
@@ -46,7 +49,8 @@ class SearchRegion {
             this.string += this.nodes[i].textContent;
     }
 
-    getMatches(_amount) {
+    getMatches(_amount)
+    {
         if (this.nodes.length == 0 | _amount == 0)
             return [];
         

@@ -6,15 +6,14 @@ class DomSearcher
     interrupted;
     searchString;
     regexp;
-    interval = 1;
-    consecutiveCalls = 100;
+    
     matchArray = [];
     id;
     onNewMatches;
 
     selectedIndex;
 
-    constructor(_id, _searchString, _regexOptions, _walker)
+    constructor(_id, _searchString, _regex, _walker)
     {
         
         this.intersectionObserver = new IntersectionObserver(entries =>
@@ -27,9 +26,7 @@ class DomSearcher
 
         this.id = _id;
         this.searchString = _searchString;
-        //remove escape for a full regex expression experience
-        //this.regexp = new RegExp(escapeRegExp(_searchString), _regexOptions);
-        this.regexp = new RegExp(_searchString, _regexOptions);
+        this.regexp = _regex;
         this.interrupted = false;
 
         this.onNewMatches = new Event(`TF-matches-update${this.id}`);
@@ -63,6 +60,9 @@ class DomSearcher
             console.log(node);
         }
     }
+
+    interval = 1;
+    consecutiveCalls = 100;
     searchRecursive(_searchRegion, _highlightGroups)
     {
         //console.log("recursion");
@@ -153,7 +153,7 @@ class DomSearcher
         let hlGroup = _highlightGroups.get(parentNode);
         if (!hlGroup)
         {
-            hlGroup = new HighlightGroup(parentNode, _range, this.id);
+            hlGroup = new HighlightGroup(parentNode, this.id);
             _highlightGroups.set(parentNode, hlGroup);
         }
 

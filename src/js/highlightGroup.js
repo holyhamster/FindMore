@@ -1,20 +1,19 @@
 class HighlightGroup
 {
-    highlightClassName;
-    selectedClassName;
+    id;
+
     parentNode;
     container;
+
     relative;
     visible;
-    searchMap = new Map();
-    newSpans = [];
-    color;
 
-    constructor(_parentNode, _range, _id, _color)
+    searchMap = new Map();
+    uncommittedSpans = [];
+
+    constructor(_parentNode, _id)
     {
-        this.color = _color;
-        this.highlightClassName = `TFH${_id}`;
-        this.selectedClassName = `TFHS${_id}`;
+        this.id = _id;
         this.parentNode = _parentNode;
         this.container = document.createElement('SPAN');
         //absolute position is cheaper to calculate, but ignore any scrollbar between itself and closest relative ancestor
@@ -28,25 +27,20 @@ class HighlightGroup
 
         //this.isGroupVisibleAfterUpdate(_range);
     }
-    static new(_base) {
-        return new this(_base);
-    }
 
-    updateVisibility()
+    isVisible()
     {
-        this.updatedAfterCommit = true;
-
         let parentStyle = window.getComputedStyle(this.parentNode);
 
-        this.visible = parentStyle.visibility != "hidden" && parentStyle.display != "none";
+        let visible = parentStyle.visibility != "hidden" && parentStyle.display != "none";
 
-        if (this.visible)
+        if (visible)
         {
             let parentBoundingRect = this.parentNode.getBoundingClientRect();
-            this.visible = parentBoundingRect.width >= 1 && parentBoundingRect.height >= 1;
+            visible = parentBoundingRect.width >= 1 && parentBoundingRect.height >= 1;
         }
 
-        if (this.visible)
+        if (visible)
         {
             if (!this.containerAppended)
             {
@@ -56,13 +50,16 @@ class HighlightGroup
             this.anchorRect = this.container.getBoundingClientRect();
         }
 
-        return this.visible;
+        return visible;
     }
 
     highlightRects(_searchIndex, _rects)
     {
         if (!this.updatedAfterCommit)
-            this.updateVisibility();
+        {
+            this.updatedAfterCommit = true;
+            this.visible = this.isVisible();
+        }
 
         if (!this.visible)
             return false;
@@ -77,7 +74,7 @@ class HighlightGroup
             return false;
 
         this.searchMap.set(_searchIndex, newSpans);
-        this.newSpans = [...this.newSpans, ...newSpans];
+        this.uncommittedSpans = [...this.uncommittedSpans, ...newSpans];
 
         return true;;
     }
@@ -97,7 +94,7 @@ class HighlightGroup
             return;
         for (let i = 0; i < spans.length; i++)
         {
-            spans[i].classList.add(this.selectedClassName)
+            spans[i].classList.add(`TFHS${this.id}`)
         }
         return spans;
     }
@@ -118,8 +115,8 @@ class HighlightGroup
 
         for (let i = 0; i < spans.length; i++)
         {
-            if (spans[i].classList.contains(this.selectedClassName))
-                spans[i].classList.remove(this.selectedClassName)
+            if (spans[i].classList.contains(`TFHS${this.id}`))
+                spans[i].classList.remove(`TFHS${this.id}`)
         }
     }
 
@@ -128,7 +125,7 @@ class HighlightGroup
     {
         let span = document.createElement('SPAN');
         span.classList.add('TFHighlight');
-        span.classList.add(this.highlightClassName);
+        span.classList.add(`TFH${this.id}`);
 
         span.style.height = _rect.height + 'px';
         span.style.width = _rect.width + 'px';
@@ -148,21 +145,20 @@ class HighlightGroup
         if (!this.updatedAfterCommit)
             console.log("committing clean highlight, check your pipeline")
 
-        let HEAVY_CONTAINER_NEEDS_REMOVAL = this.containerAppended && this.newSpans.size > 3;
+        let HEAVY_CONTAINER_NEEDS_REMOVAL = this.containerAppended && this.uncommittedSpans.size > 3;
         if (HEAVY_CONTAINER_NEEDS_REMOVAL) {
             this.container.remove();
             this.containerAppended = false;
         }
 
-        for (let i = 0; i < this.newSpans.length; i++)
-            this.container.appendChild(this.newSpans[i]);
+        while (this.uncommittedSpans.length > 0)
+            this.container.appendChild(this.uncommittedSpans.shift())
 
         if (!this.containerAppended) {
             this.parentNode.prepend(this.container);
             this.containerAppended = true;
         }
 
-        this.newSpans = [];
         this.updatedAfterCommit = false;
     }
 
