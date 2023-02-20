@@ -13,22 +13,13 @@ class SearchBar
     onClose;
     onSearchChange;
 
-    color;
-
     selectedIndex;
     intersectionObserver;
-
-    iframesCSSMap = new Map();
 
     constructor(_id, _state, _order)
     {
         this.id = _id;
         this.state = _state;
-
-        this.classNames = getCSSClassSchema(_id);
-
-
-        this.color = _state.color;
 
         this.onClose = new Event("tf-bar-closed");
         this.onClose.id = this.id;
@@ -39,10 +30,10 @@ class SearchBar
         this.cssString =
             `.TFC${this.id} { position: absolute; }` +
             `.TFCR${this.id} { position: relative; }` +
-            `.TFH${this.id} { position: absolute; background-color: ${this.color};`+
+            `.TFH${this.id} { position: absolute; background-color: ${this.state.color};`+
                 ` opacity: 0.8; z-index: 147483647;}` +
-            `.TFHS${this.id} { border: 5px solid ${invertHex(this.color)}; padding: 0px;}`
-
+        `.TFHS${this.id} { border: 5px solid ${this.state.secondaryColor}; padding: 0px;}`
+        
         this.highlightCSS = new CSSStyleSheet();
         this.highlightCSS.replaceSync(this.cssString);
 
@@ -52,7 +43,7 @@ class SearchBar
         this.setPosition(_order);
 
         if (this.state && this.state.searchString != "")
-            this.startSearcher(this.state, this.id);
+            this.startDomSearch(this.state, this.id);
     }
 
     setPosition(_order)
@@ -98,10 +89,10 @@ class SearchBar
                 this.restartSearch(this.state, this.id, false)
             }.bind(this));
 
-        topFlex.querySelector(`.downButton`) 
-            .addEventListener("click", function () { this.nextMatch() }.bind(this));
+        topFlex.querySelector(`.downButton`)
+            .addEventListener("click", function () { this.updateLabels(1) }.bind(this));
         topFlex.querySelector(`.upButton`)
-            .addEventListener("click", function () { this.previousMatch() }.bind(this));
+            .addEventListener("click", function () { this.updateLabels(-1) }.bind(this));
         topFlex.querySelector(`.closeButton`)
             .addEventListener("click", function ()
             {
@@ -149,6 +140,8 @@ class SearchBar
 
         this.mainDiv.appendChild(topFlex);
         this.mainDiv.appendChild(botFlex);
+        this.mainDiv.addEventListener("tf-matches-update",
+            function(_args) { this.updateLabels(_args.length); }.bind(this));
 
         let shadowroot = this.getShadowRoot();
         shadowroot.appendChild(this.mainDiv);
@@ -196,7 +189,7 @@ class SearchBar
         main.setAttribute("id", `TFSearchBar${this.id}`);
         main.style = `  
               top: 10px; right: 10px; min-width: 300px; padding: 10px; z-index: 147483647;
-              background-color: ${this.color};`
+              background-color: ${this.state.color};`
 
         return main;
     }
@@ -205,7 +198,7 @@ class SearchBar
 
     close()
     {
-        this.stopSearcher(this.id);
+        this.clearDOMSearch(this.id);
 
         if (document.adoptedStyleSheets.includes(this.highlightCSS))
         {
@@ -216,12 +209,6 @@ class SearchBar
 
             document.adoptedStyleSheets = sheets;
         }
-        this.iframesCSSMap.forEach(function (_css, _frameSheets)
-        {
-            let index = _frameSheets.indexOf(_css);
-            if (index >= 0)
-                _frameSheets.splice(index, 1);
-        });
 
         this.mainDiv.remove();
     }
@@ -231,89 +218,55 @@ class SearchBar
         this.selectedIndex = null;
         this.updateLabels();
 
-        this.startSearcher(_state, _id);       
+        this.startDomSearch(_state, _id);       
 
         if (_sendEvent)
             document.dispatchEvent(this.onSearchChange);
     }
 
-    previousMatch()
+    startDomSearch(_state, _id)
     {
-        if (!this.domSearcher || this.domSearcher.getMatches().length == 0)
-            return;
-
-        if (this.selectedIndex == null)
-            this.selectedIndex = 0;
-        else
-            this.selectedIndex -= 1;
-
-        if (this.selectedIndex < 0)
-            this.selectedIndex = this.domSearcher.getMatches().length - 1;
-
-        this.domSearcher.selectHighlight(this.selectedIndex);
-        this.updateLabels()
-    }
-
-    nextMatch()
-    {
-        if (!this.domSearcher || this.domSearcher.getMatches().length == 0)
-            return;
-
-        if (this.selectedIndex == null)
-        {
-            this.selectedIndex = 0;
-        }
-        else
-        {
-            this.selectedIndex += 1;
-        }
-
-        if (this.selectedIndex >= this.domSearcher.getMatches().length)
-        {
-            this.selectedIndex = 0;
-        }
-
-        this.domSearcher.selectHighlight(this.selectedIndex);
-        this.updateLabels()
-    }
-
-    startSearcher(_state, _id)
-    {
-        this.stopSearcher(_id);
+        this.clearDOMSearch(_id);
         
         if (_state.searchString != "")
-            this.domSearcher = new DOMSearcher(_id,_state.searchString, _state.getRegex(false),
-                this.getWalk());
-        document.addEventListener(
-            `${matchUpdateEventName}${_id}`, this.updateLabels.bind(this));
+            this.domSearcher = new DOMSearcher(_id,
+                _state.searchString, _state.getRegex(false),
+                this.getTreeWalk(this.cssString), this.mainDiv);
         this.updateLabels();
     }
 
-    stopSearcher(_id)
+    clearDOMSearch(_id)
     {
-        if (this.domSearcher)
-        {
-            this.domSearcher.interrupt();
-            this.domSearcher = null;
-            removeDOMClass(document, `TFC${_id}`);
-            removeDOMClass(document, `TFCR${_id}`);
+        if (!this.domSearcher)
+            return;
 
-            this.iframesCSSMap.forEach(function (_sheets, _iframe)
-            {
-                removeDOMClass(_iframe.contentDocument, `TFC${_id}`);
-                removeDOMClass(_iframe.contentDocument, `TFCR${_id}`);
-                _sheets.remove();
-            }.bind(this));
-            this.iframesCSSMap.clear();
+        this.domSearcher.interrupt();
+        this.domSearcher.delete();
+        this.domSearcher = null;
 
-            this.selectedIndex = null;
-            document.removeEventListener(
-                `${matchUpdateEventName}${_id}`, this.updateLabels);
-        }
+        this.selectedIndex = null;
     }
 
-    updateLabels()
+    updateLabels(_indexChange)
     {
+        let matchesLength  = this.domSearcher?.getMatches().length;
+        if (matchesLength && matchesLength > 0)
+        {
+            if (this.selectedIndex == null)
+                this.selectedIndex = 0;
+
+            if (_indexChange)
+                this.selectedIndex += _indexChange;
+
+            if (this.selectedIndex >= matchesLength)
+                this.selectedIndex = 0;
+
+            if (this.selectedIndex < 0)
+                this.selectedIndex = matchesLength - 1;
+
+            this.domSearcher.selectHighlight(this.selectedIndex);
+        }
+
         if (!this.progressLabel)
             this.progressLabel = this.mainDiv.querySelector(`.matchesLabel`);
 
@@ -323,19 +276,18 @@ class SearchBar
             this.domSearcher.selectHighlight(this.selectedIndex);
         }
 
-        const labelText = (this.selectedIndex == null ? '0' : (this.selectedIndex + 1)) + `/` +
-            (this.domSearcher == null ? 0 : this.domSearcher.getMatches().length);
+        const labelText = (this.selectedIndex == null ? '0' : (this.selectedIndex + 1))
+            + `/` + (this.domSearcher == null ? 0 : this.domSearcher.getMatches().length);
         this.progressLabel.textContent = labelText;
-
     }
 
-    getWalk()
+    getTreeWalk(_iFrameCSS)
     {
         let treeWalker = document.createTreeWalker(
             document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
-        treeWalker.cssString = this.cssString;
+        treeWalker.cssString = _iFrameCSS;
         treeWalker.que = [treeWalker];
-        treeWalker.map = this.iframesCSSMap;
+        treeWalker.iframeCSSMap = new Map();
 
         treeWalker.nextNodePlus = function ()
         {
@@ -357,7 +309,7 @@ class SearchBar
                 let iframeDoc = nextNode.contentDocument;
                 let iframeWalker = iframeDoc.createTreeWalker(
                     iframeDoc.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
-                addCSSToIFrame(nextNode, this.cssString, this.map);
+                addCSSToIFrame(nextNode, this.cssString, this.iframeCSSMap);
                 this.que.push(iframeWalker);
                 //console.log(`diving deeper into ${this.que.length}-level frame`);
                 return this.nextNodePlus();
@@ -394,19 +346,6 @@ const treeWalkerCondition = {
     }
 };
 
-function removeDOMClass(_document, _className)
-{
-    if (!_document)
-        return;
-
-    let highlights = _document.querySelectorAll(`.${_className}`);
-
-    for (let i = 0; i < highlights.length; i++)
-    {
-        highlights[i].remove();
-    }
-}
-
 function formatIncomingString(_string)
 {
     if (!_string)
@@ -432,33 +371,4 @@ function addCSSToIFrame(_iframe, _cssString, _iframeToStylesMap)
     }
 }
 
-function invertHex(_hex)
-{
-    let color = _hex + "";
-    color = color.substring(1); // remove #
-    color = parseInt(color, 16); // convert to integer
-    color = 0xFFFFFF ^ color; // invert three bytes
-    color = color.toString(16); // convert to hex
-    color = ("000000" + color).slice(-6); // pad with leading zeros
-    color = "#" + color; // prepend #
-    return color;
-}
-
-function getCSSClassSchema(_id)
-{
-    let schema = new Object();
-
-    schema.hlContainer = `TFC${_id}`;
-    schema.highlight = `TFH${_id}`;
-    schema.highlightSelected = `TFHS${_id}`;
-
-    return schema;
-}
-
-function copyCSSHighlight(_css)
-{
-    let result = new CSSStyleSheet();
-    Array.from(_css.cssRules).forEach(function (_rule) { result.replaceSync(_rule.cssText); });
-    return result;
-}
 export default SearchBar;

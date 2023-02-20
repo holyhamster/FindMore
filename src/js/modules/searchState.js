@@ -6,9 +6,11 @@ class SearchState
     {
         this.searchString = _searchString;
         this.color = _color;
-
+        
         if (!this.color)
             this.color = getRandomColor();
+
+        this.secondaryColor = getRandomColor();
 
         this.pinned = false;
         this.caseSensitive = false;
@@ -49,5 +51,15 @@ function getRandomColor()
 {
     return "#" + Math.floor(Math.random() * 16777215).toString(16);
 }
-
+function invertHex(_hex)
+{
+    let color = _hex + "";
+    color = color.substring(1); // remove #
+    color = parseInt(color, 16); // convert to integer
+    color = 0xFFFFFF ^ color; // invert three bytes
+    color = color.toString(16); // convert to hex
+    color = ("000000" + color).slice(-6); // pad with leading zeros
+    color = "#" + color; // prepend #
+    return color;
+}
 export default SearchState;

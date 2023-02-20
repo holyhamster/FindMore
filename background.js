@@ -1,27 +1,27 @@
 
 var TabsData = new Map();
 
-chrome.commands.onCommand.addListener(function (command) {
-    if (command === 'toggle-search')
+chrome.commands.onCommand.addListener(function (_HOTKEY_COMMAND) {
+    if (_HOTKEY_COMMAND === 'toggle-search')
     {
-        runOnActive(function(_id) {
+        obtainActiveID(function(_id) {
             chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id });
         });
     };
 });
 
-chrome.runtime.onMessage.addListener(function (_args, _sender)
+chrome.runtime.onMessage.addListener(function (_RUNTIME_EVENT, _sender)
 {
-    switch (_args.message)
+    switch (_RUNTIME_EVENT.message)
     {
         case "tf-popup-new-search":
-            runOnActive(function (_id) {
+            obtainActiveID(function (_id) {
                 chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id });
             });
             break;
 
         case "tf-popup-save-search":
-            runOnActive((_id) =>
+            obtainActiveID((_id) =>
             {
                 if (!TabsData.has(_id))
                     return;
@@ -30,11 +30,11 @@ chrome.runtime.onMessage.addListener(function (_args, _sender)
             break;
 
         case "tf-popup-load-search":
-            runOnActive((_id) =>
+            obtainActiveID((_id) =>
             {
-                chrome.storage.local.get("tfSavedSearch", function (data)
+                chrome.storage.local.get("tfSavedSearch", function (_storage)
                 {
-                    let searchData = data.tfSavedSearch;
+                    let searchData = _storage.tfSavedSearch;
                     TabsData.set(_id, searchData);
                     updateSearch(_id, searchData, FORCED = true, PINNED_ONLY = false);
                 });
@@ -42,10 +42,7 @@ chrome.runtime.onMessage.addListener(function (_args, _sender)
             break;
 
         case "tf-update-state":
-            TabsData.set(_args.tabId, _args.data);
-
-            console.log(`cached state ${_args.tabId} - ${JSON.stringify(_args.data)}`);
-            console.log(JSON.stringify(TabsData));
+            TabsData.set(_RUNTIME_EVENT.tabId, _RUNTIME_EVENT.data);
             break;
 
         case "tf-content-script-loaded":
@@ -60,12 +57,10 @@ chrome.runtime.onMessage.addListener(function (_args, _sender)
 chrome.windows.onBoundsChanged.addListener(function () {
     console.log("bound change event triggered");
 
-    let keyIterator = TabsData.keys();
-    while (tabId = keyIterator.next().value) {
-        let tabData = TabsData.get(tabId);
-        if (tabData)
-            updateSearch(tabId, tabData, FORCED_UPDATE = true, PINNED_ONLY = false);
-    }
+    TabsData.forEach(function (_data, _id)
+    {
+        updateSearch(_id, _data, FORCED_UPDATE = true, PINNED_ONLY = false);
+    });
 });
 
 chrome.tabs.onUpdated.addListener(function (tabId, changeinfo) {
@@ -77,7 +72,7 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeinfo) {
     //chrome.tabs.sendMessage(tabId, {message:"page_reloaded"});
 });
 
-function runOnActive(_giveActiveId, _onNoActive)
+function obtainActiveID(_giveActiveId, _onNoActive)
 {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) =>
     {

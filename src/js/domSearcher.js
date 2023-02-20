@@ -6,16 +6,16 @@ class DomSearcher
     interrupted;
     searchString;
     regexp;
-    
+    walker;
+
     matchArray = [];
     id;
     onNewMatches;
-
+    
     selectedIndex;
 
-    constructor(_id, _searchString, _regex, _walker)
+    constructor(_id, _searchString, _regex, _walker, _eventElem)
     {
-        
         this.intersectionObserver = new IntersectionObserver(entries =>
         {
             if (!entries[0].isIntersecting)
@@ -25,12 +25,18 @@ class DomSearcher
         });
 
         this.id = _id;
+        this.walker = _walker;
         this.searchString = _searchString;
         this.regexp = _regex;
         this.interrupted = false;
 
-        this.onNewMatches = new Event(`TF-matches-update${this.id}`);
-        
+        let newMatchesEvent = new Event(`tf-matches-update`);
+        this.onNewMatches = (_matches) =>
+        {
+            newMatchesEvent.length = _matches;
+            _eventElem.dispatchEvent(newMatchesEvent);
+        };
+
         this.startSearch(_walker);
     }
 
@@ -103,7 +109,8 @@ class DomSearcher
             return;
 
         if (newHighlights.length > 0)
-            document.dispatchEvent(this.onNewMatches);
+            this.onNewMatches(this.matchArray.length);
+            
 
         for (let i = 0; i < newHighlights.length; i++)
             newHighlights[i].commit();
@@ -132,6 +139,17 @@ class DomSearcher
         //console.log(this.matchArray[this.selectedIndex]);
     }
 
+    delete()
+    {
+        removeDOMClass(document, `TFC${this.id}`);
+        removeDOMClass(document, `TFCR${this.id}`);
+        this.walker.iframeCSSMap.forEach(function (_sheets, _iframe)
+        {
+            removeDOMClass(_iframe.contentDocument, `TFC${this.id}`);
+            removeDOMClass(_iframe.contentDocument, `TFCR${this.id}`);
+            _sheets.remove();
+        }.bind(this));
+    }
     getMatches()
     {
         return this.matchArray;
@@ -184,11 +202,6 @@ class DomSearcher
     
 }
 
-function escapeRegExp(string)
-{
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 export default DomSearcher;
 
 class PerformanceMesurer
@@ -203,5 +216,18 @@ class PerformanceMesurer
         let val = performance.now() - this.last;
         this.last = performance.now();
         return val;
+    }
+}
+
+function removeDOMClass(_document, _className)
+{
+    if (!_document)
+        return;
+
+    let highlights = _document.querySelectorAll(`.${_className}`);
+
+    for (let i = 0; i < highlights.length; i++)
+    {
+        highlights[i].remove();
     }
 }

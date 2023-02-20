@@ -61,8 +61,8 @@ export function main()
                     barsMap.forEach(function (_val) { _val.close() });
                     barsMap = new Map();
                     searchesMap = new Map();
-                    let loadedMap = deserializeIntoMap(request.data);
 
+                    let loadedMap = deserializeIntoMap(request.data);
                     loadedMap.forEach(function (_state)
                     {
                         if (request.pinnedOnly && !_state.pinned)
@@ -84,7 +84,6 @@ export function main()
 
     function reorderBars(_map)
     {
-        let iter = _map.keys();
         let order = 0;
         barsMap.forEach(function (_val, _key)
         {
@@ -112,7 +111,6 @@ export function main()
         {
             _map.set(_key, SearchState.load(_val));
         });
-        console.log(JSON.stringify(map));
         return map;
     }
     function cacheData()
