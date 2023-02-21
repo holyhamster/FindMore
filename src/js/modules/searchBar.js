@@ -1,20 +1,12 @@
 import DOMSearcher from './domSearcher.js';
-import SearchState from './modules/searchState.js';
+import Highlighter from './highlighter.js';
 
-const matchUpdateEventName = "TF-matches-update";
 class SearchBar
 {
-    id;
-
-    mainDiv;
-    state;
     domSearcher;
-
-    onClose;
-    onSearchChange;
+    highlighter;
 
     selectedIndex;
-    intersectionObserver;
 
     constructor(_id, _state, _order)
     {
@@ -26,18 +18,6 @@ class SearchBar
 
         this.onSearchChange = new Event("tf-search-changed");
         this.onSearchChange.id = this.id;
-
-        this.cssString =
-            `.TFC${this.id} { position: absolute; }` +
-            `.TFCR${this.id} { position: relative; }` +
-            `.TFH${this.id} { position: absolute; background-color: ${this.state.color};`+
-                ` opacity: 0.8; z-index: 147483647;}` +
-        `.TFHS${this.id} { border: 5px solid ${this.state.secondaryColor}; padding: 0px;}`
-        
-        this.highlightCSS = new CSSStyleSheet();
-        this.highlightCSS.replaceSync(this.cssString);
-
-        document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.highlightCSS];
 
         this.constructHtml();
         this.setPosition(_order);
@@ -164,7 +144,6 @@ class SearchBar
 
         SearchBar.shadowRoot = shadowDiv.attachShadow({ mode: "closed" });
         SearchBar.shadowRoot.innerHTML = "<style>" +
-            //":host, :host * {}" +
             ":host, div {all: initial; font-family: Verdana, sans-serif; webkit-touch-callout: none;} " +
             ".TFSearchBar {position: fixed; display: flex; flex-direction: column; " +
                 "justify-content: space-evenly; border-radius: 12px; opacity: 0.9;} " +
@@ -190,15 +169,13 @@ class SearchBar
         main.style = `  
               top: 10px; right: 10px; min-width: 300px; padding: 10px; z-index: 147483647;
               background-color: ${this.state.color};`
-
         return main;
     }
-
     //#endregion
 
     close()
     {
-        this.clearDOMSearch(this.id);
+        this.clearPreviousSearch(this.id);
 
         if (document.adoptedStyleSheets.includes(this.highlightCSS))
         {
@@ -226,32 +203,40 @@ class SearchBar
 
     startDomSearch(_state, _id)
     {
-        this.clearDOMSearch(_id);
+        this.clearPreviousSearch(_id);
         
         if (_state.searchString != "")
+        {
+            this.highlighter = new Highlighter(_id, this.mainDiv,
+                _state.color, _state.secondaryColor);
+
             this.domSearcher = new DOMSearcher(_id,
                 _state.searchString, _state.getRegex(false),
-                this.getTreeWalk(this.cssString), this.mainDiv);
+                this.highlighter.getIFrameEvent(), this.highlighter);
+        }
         this.updateLabels();
     }
 
-    clearDOMSearch(_id)
+    clearPreviousSearch(_id)
     {
         if (!this.domSearcher)
             return;
 
         this.domSearcher.interrupt();
-        this.domSearcher.delete();
         this.domSearcher = null;
+
+        this.highlighter.clearAll();
 
         this.selectedIndex = null;
     }
 
     updateLabels(_indexChange)
     {
-        let matchesLength  = this.domSearcher?.getMatches().length;
+        let matchesLength  = this.domSearcher?.getCount();
         if (matchesLength && matchesLength > 0)
         {
+            let oldValue = this.selectedIndex;
+
             if (this.selectedIndex == null)
                 this.selectedIndex = 0;
 
@@ -264,87 +249,24 @@ class SearchBar
             if (this.selectedIndex < 0)
                 this.selectedIndex = matchesLength - 1;
 
-            this.domSearcher.selectHighlight(this.selectedIndex);
+            if (oldValue != this.selectedIndex)
+                this.highlighter.selectHighlight(this.selectedIndex);
         }
 
         if (!this.progressLabel)
             this.progressLabel = this.mainDiv.querySelector(`.matchesLabel`);
 
-        if (this.selectedIndex == null && this.domSearcher?.getMatches().length > 0)
+        if (this.selectedIndex == null && this.domSearcher?.getCount() > 0)
         {
             this.selectedIndex = 0;
             this.domSearcher.selectHighlight(this.selectedIndex);
         }
 
         const labelText = (this.selectedIndex == null ? '0' : (this.selectedIndex + 1))
-            + `/` + (this.domSearcher == null ? 0 : this.domSearcher.getMatches().length);
+            + `/` + (this.domSearcher == null ? 0 : this.domSearcher.getCount());
         this.progressLabel.textContent = labelText;
     }
-
-    getTreeWalk(_iFrameCSS)
-    {
-        let treeWalker = document.createTreeWalker(
-            document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
-        treeWalker.cssString = _iFrameCSS;
-        treeWalker.que = [treeWalker];
-        treeWalker.iframeCSSMap = new Map();
-
-        treeWalker.nextNodePlus = function ()
-        {
-            if (this.que.length == 0)
-                return null;
-
-            let nextNode = this.que.slice(-1)[0].nextNode();
-
-            if (!nextNode)
-            {
-                this.que.pop();
-                //console.log(`surfacing back to ${this.que.length}-level frame`);
-                return this.nextNodePlus();
-            }
-
-            if (nextNode.nodeName.toUpperCase() == 'IFRAME' &&
-                nextNode.contentDocument)
-            {
-                let iframeDoc = nextNode.contentDocument;
-                let iframeWalker = iframeDoc.createTreeWalker(
-                    iframeDoc.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
-                addCSSToIFrame(nextNode, this.cssString, this.iframeCSSMap);
-                this.que.push(iframeWalker);
-                //console.log(`diving deeper into ${this.que.length}-level frame`);
-                return this.nextNodePlus();
-            }
-
-            return nextNode;
-        };
-        return treeWalker;
-    }
 }
-
-const treeWalkerCondition = {
-    acceptNode: (node) =>
-    {
-        if (node.nodeName.toUpperCase() == "IFRAME")
-            return NodeFilter.FILTER_ACCEPT;
-
-        if (node.nodeName.toUpperCase() == "STYLE" ||
-            node.nodeName.toUpperCase() == "SCRIPT")
-            return NodeFilter.FILTER_REJECT;
-
-        if (node.nodeType == Node.ELEMENT_NODE)
-        {
-            let classes = node.id.toString().split(/\s+/);
-            let NODE_IS_SEARCHBAR_SHADOWROOT = classes.includes(`TFShadowRoot`);
-            if (NODE_IS_SEARCHBAR_SHADOWROOT)
-                return NodeFilter.FILTER_REJECT;
-        }
-
-        if (node.nodeName.toUpperCase() == "#TEXT" && node.textContent)
-            return NodeFilter.FILTER_ACCEPT;
-
-        return NodeFilter.FILTER_SKIP;
-    }
-};
 
 function formatIncomingString(_string)
 {
@@ -353,22 +275,6 @@ function formatIncomingString(_string)
     if (_string.length > 100)
         _string = _string.substring(0, 100);
     return _string;
-}
-function addCSSToIFrame(_iframe, _cssString, _iframeToStylesMap)
-{
-    let existingStyle = _iframeToStylesMap.get(_iframe);
-    if (!existingStyle)
-    {
-        existingStyle = _iframe.contentDocument.createElement("style");
-        existingStyle.setAttribute("class", "TFIframeStyle");
-        existingStyle.innerHTML = _cssString;
-        _iframeToStylesMap.set(_iframe, existingStyle)
-    }
-
-    if (existingStyle.parentNode != _iframe.contentDocument.head)
-    {
-        _iframe.contentDocument.head.appendChild(existingStyle);
-    }
 }
 
 export default SearchBar;

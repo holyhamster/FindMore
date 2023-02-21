@@ -18,11 +18,8 @@ class SearchRegion
         if (!newNode)
             return false;
 
-        //check for node breaks
         this.string += newNode.textContent;
         this.nodes.push(newNode);
-        //console.log(`added:`);
-        //console.log(`trimmed:`);
         this.trim();
 
         return true;
@@ -33,7 +30,6 @@ class SearchRegion
         while (SEARCH_REGION_IS_UNNESESARY_LOG = (this.nodes.length > 0 &&
             ((this.string.length) - this.nodes[0].textContent.length > this.searchString.length - 1))) {
             this.string = this.string.substring(this.nodes[0].textContent.length);
-            //console.log(`trimmed:`);
             this.nodes.shift();
             this.offset = 0;
         }
@@ -67,6 +63,7 @@ class SearchRegion
             }
 
             matches[i].startIndex = j;
+            matches[i].startNode = this.nodes[j];
             matches[i].startOffset = matches[i].index - previousNodesOffset;
 
             while (MATCH_INSIDE_I_NODE = (previousNodesOffset + this.nodes[j].textContent.length < matches[i].index + this.searchString.length)) {
@@ -74,11 +71,11 @@ class SearchRegion
                 j += 1;
             }
             matches[i].endIndex = j;
+            matches[i].endNode = this.nodes[j];
             matches[i].endOffset = matches[i].index + this.searchString.length - previousNodesOffset;
         }
         return matches;
     }
 }
-
 
 export default SearchRegion;

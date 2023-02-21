@@ -1,4 +1,4 @@
-import SearchBar from './searchBar.js';
+import SearchBar from './modules/searchBar.js';
 import SearchState from './modules/searchState.js';
 
 export function main()
