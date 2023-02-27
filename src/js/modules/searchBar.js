@@ -1,6 +1,6 @@
 import DOMSearcher from './domSearcher.js';
 import Highlighter from './highlighter.js';
-
+import ShadowrootCSS from './shadowrootCSS.js'
 class SearchBar
 {
     domSearcher;
@@ -8,7 +8,7 @@ class SearchBar
 
     selectedIndex;
 
-    constructor(_id, _state, _order)
+    constructor(_id, _state)
     {
         this.id = _id;
         this.state = _state;
@@ -19,156 +19,183 @@ class SearchBar
         this.onSearchChange = new Event("tf-search-changed");
         this.onSearchChange.id = this.id;
 
-        this.constructHtml();
-        this.setPosition(_order);
+        this.mainDiv = this.constructHtml(_state);
+        SearchBar.getShadowRoot().appendChild(this.mainDiv);
 
-        if (this.state && this.state.searchString != "")
+        this.addHTMLEvents();
+
+        if (this.state.searchString == "")
+            this.mainDiv.querySelector(`.searchInput`).focus();
+        else
             this.startDomSearch(this.state, this.id);
     }
 
-    setPosition(_order)
+    //#region HTML
+    constructHtml(_state)
     {
-        this.mainDiv.style.top = (_order * 70) + 10 + "px";
+        console.log(_state);
+        const topFlex = document.createElement("div");
+        topFlex.setAttribute("class", "TFSearchBarRow");
+        topFlex.innerHTML = 
+            `<input class="searchInput" value="${_state.searchString}" placeholder=" Find in page">
+            <button class="downButton">&#x25BD</button>
+            <button class="upButton">&#x25B3</button>
+            <button class="refreshButton">&#x21BA</button>
+            <button class="closeButton">X</button>`;
+
+        const botFlex = document.createElement("div");
+        botFlex.setAttribute("class", "TFSearchBarRow");
+
+        botFlex.innerHTML = 
+            `<span class="selectedMatch">0</span>
+            <span>/</span>
+            <span class="totalMatches">0</span>
+            <input type="checkbox" class="caseCheck" id="caseCheck${this.id}" name="caseCheck${this.id}"
+                ${_state.caseSensitive ? "checked" : ""}>
+            <label for="caseCheck${this.id}">CasE</label>
+            <input type="checkbox" class="wordCheck" id="wordCheck${this.id}" name="wordCheck${this.id}"
+                ${this.state.wholeWord ? "checked" : ""}>
+            <label for="wordCheck${this.id}" class="wordLabel">_phrase_</label>
+            <button class="colorButton button-28">&#x25D1</button>
+            <button class="pinButton"> ${_state.pinned ? "\u{25A3}" : "\u{25A2}"}</button>`;
+
+        const mainDiv = document.createElement("div");
+        mainDiv.setAttribute("class", `TFSearchBar${_state.pinned? " pinned": ""}`);
+        mainDiv.setAttribute("id", `TFSearchBar${this.id}`);
+        mainDiv.style.backgroundColor = _state.primaryColor;
+        mainDiv.style.setProperty("--primary-color", _state.primaryColor);
+        mainDiv.style.setProperty("--secondary-color", _state.secondaryColor);
+        mainDiv.appendChild(topFlex);
+        mainDiv.appendChild(botFlex);
+
+        topFlex.querySelector(`.searchInput`).focus();
+
+        return mainDiv;
     }
 
-    //#region HTML
-    constructHtml()
+    addHTMLEvents()
     {
-        let topFlex = document.createElement("div");
-        topFlex.setAttribute("class", "TFSearchBarRow");
-        topFlex.innerHTML = `
-            <input class="searchInput" value="${this.state.searchString}" placeholder="Find in page">
-            <span class="matchesLabel">0/0</span>
-            <button class="refreshButton">R</button>
-            <button class="downButton">v</button>
-            <button class="upButton">^</button>
-            <button class="closeButton">x</button>`;
+        this.mainDiv.addEventListener("tf-matches-update",
+            function (_args) { this.updateLabels(); }.bind(this));
 
-        topFlex.querySelector(`.searchInput`)
-            .addEventListener("input", function (_args)
-            {
-                if (!_args?.target)
-                    return;
-                _args.target.value = formatIncomingString(_args.target.value);
-                
-                let stateChange = _args.target.value != this.state.searchString;
-                this.state.searchString = _args.target.value;
-                this.restartSearch(this.state, this.id, stateChange);
-            }.bind(this));
+        this.mainDiv.querySelector(`.searchInput`).addEventListener("input", function (_args)
+        {
+            if (!_args?.target)
+                return;
+            _args.target.value = formatIncomingString(_args.target.value);
 
-        topFlex.querySelector(`.searchInput`)
-            .addEventListener("keydown", function (_args)
-            {
-                if (_args.key === "Enter")
-                    this.nextMatch()
-            }.bind(this));
+            let stateChange = _args.target.value != this.state.searchString;
+            this.state.searchString = _args.target.value;
+            this.restartSearch(this.state, this.id, stateChange);
+        }.bind(this));
 
-        topFlex.querySelector(`.refreshButton`)
-            .addEventListener("click", function ()
-            {
-                this.restartSearch(this.state, this.id, false)
-            }.bind(this));
+        this.mainDiv.querySelector(`.searchInput`).addEventListener("keydown", function (_args)
+        {
+            if (_args.key === "Enter")
+                this.updateLabels(1)
+        }.bind(this));
 
-        topFlex.querySelector(`.downButton`)
-            .addEventListener("click", function () { this.updateLabels(1) }.bind(this));
-        topFlex.querySelector(`.upButton`)
-            .addEventListener("click", function () { this.updateLabels(-1) }.bind(this));
-        topFlex.querySelector(`.closeButton`)
-            .addEventListener("click", function ()
-            {
-                this.close();
-                document.dispatchEvent(this.onClose);
-            }.bind(this));
+        this.mainDiv.querySelector(`.refreshButton`).addEventListener("click", function ()
+        {
+            this.restartSearch(this.state, this.id, false)
+        }.bind(this));
 
-        let botFlex = document.createElement("div");
-        botFlex.setAttribute("class", "TFSearchBarRow");
-        botFlex.innerHTML = 
-                `<input type="checkbox" class="caseCheck" id="caseCheck${this.id}"` +
-                    `${this.state.caseSensetive ? "cached" : ""} name="caseCheck${this.id}">`+
-                `<label for="caseCheck${this.id}">match case</label>` +
-                `<input type="checkbox" class="wordCheck" id="wordCheck${this.id}"` +
-                    `${this.state.wholeWord ? "cached" : ""} name="wordCheck{this.id}">` +
-                `<label for="wordCheck${this.id}">whole word</label>` +
-                `<button class="pinButton"> ${this.state.pinned ? "PINNED" : "PIN"}`+
-                `</button>`;
+        this.mainDiv.querySelector(`.downButton`).addEventListener("click", function ()
+        {
+            this.updateLabels(1)
+        }.bind(this));
 
-        botFlex.querySelector(`.caseCheck`).addEventListener("input", function (_args)
-            {
-                let stateChange = this.state.caseSensitive != _args.target.checked;
-                this.state.caseSensitive = _args.target.checked;
-                this.restartSearch(this.state, this.id, stateChange);
-            }.bind(this));
+        this.mainDiv.querySelector(`.upButton`).addEventListener("click", function ()
+        {
+            this.updateLabels(-1)
+        }.bind(this));
 
-        botFlex.querySelector(`.wordCheck`).addEventListener("input", function (_args)
+        this.mainDiv.querySelector(`.closeButton`).addEventListener("click", function ()
+        {
+            this.close();
+            document.dispatchEvent(this.onClose);
+        }.bind(this));
+
+        this.mainDiv.querySelector(`.caseCheck`).addEventListener("input", function (_args)
+        {
+            let stateChange = this.state.caseSensitive != _args.target.checked;
+            this.state.caseSensitive = _args.target.checked;
+            this.restartSearch(this.state, this.id, stateChange);
+        }.bind(this));
+
+        this.mainDiv.querySelector(`.wordCheck`).addEventListener("input", function (_args)
         {
             let stateChange = this.state.wholeWord != _args.target.checked;
             this.state.wholeWord = _args.target.checked;
             this.restartSearch(this.state, this.id, stateChange);
         }.bind(this));
 
-        botFlex.querySelector(`.pinButton`).addEventListener("click", function (_args)
-            {
-                if (!this.pinButton)
-                    this.pinButton = this.mainDiv.querySelector(`.pinButton`);
+        this.mainDiv.querySelector(`.pinButton`).addEventListener("click", function (_args)
+        {
+            if (!this.pinButton)
+                this.pinButton = this.mainDiv.querySelector(`.pinButton`);
 
-                this.state.pinned = !this.state.pinned;
-                this.pinButton.textContent = (this.state.pinned ? "PINNED" : "PIN");
-                document.dispatchEvent(this.onSearchChange);
+            this.state.pinned = !this.state.pinned;
+            if (this.state.pinned)
+                this.mainDiv.classList.add('pinned');
+            else
+                this.mainDiv.classList.remove('pinned');
+            this.pinButton.textContent = (this.state.pinned ? "\u{25A3}" : "\u{25A2}");
+            document.dispatchEvent(this.onSearchChange);
         }.bind(this));
-
-        this.mainDiv = this.constructMainDiv();
-
-        this.mainDiv.appendChild(topFlex);
-        this.mainDiv.appendChild(botFlex);
-        this.mainDiv.addEventListener("tf-matches-update",
-            function(_args) { this.updateLabels(_args.length); }.bind(this));
-
-        let shadowroot = this.getShadowRoot();
-        shadowroot.appendChild(this.mainDiv);
-
-        topFlex.querySelector(`.searchInput`).focus();
     }
 
-    getShadowRoot()
+    static getShadowRoot()
     {
-        let shadowDiv = document.getElementById("TFShadowRoot");
-        if (!shadowDiv)
-        {
-            shadowDiv = document.createElement("div");
-            shadowDiv.setAttribute("id", "TFShadowRoot");
-            document.body.appendChild(shadowDiv);
-        }
-
         if (SearchBar.shadowRoot)
             return SearchBar.shadowRoot;
 
-        SearchBar.shadowRoot = shadowDiv.attachShadow({ mode: "closed" });
-        SearchBar.shadowRoot.innerHTML = "<style>" +
-            ":host, div {all: initial; font-family: Verdana, sans-serif; webkit-touch-callout: none;} " +
-            ".TFSearchBar {position: fixed; display: flex; flex-direction: column; " +
-                "justify-content: space-evenly; border-radius: 12px; opacity: 0.9;} " +
-            ".TFSearchBarRow {display: flex; justify-content:space-between; } " +
-            "button { border-radius: 3px;} " +
-            ".closeButton {margin-left: auto;} " +
-            ".downButton {margin-left: auto; } " +
-            ".upButton {margin-left: auto; margin-right: 5px; } " +
-            ".refreshButton {margin-left: auto; margin-right: 5px; }" +
-            ".searchButton {margin-right: auto; } " +
-            ".matchesLabel {margin-right: auto; min-width:100px; } " +
-            ".wordLabel {margin-right: auto;} " +
-            ".pinButton {margin-left: auto;} " +
-            "</style>";
+        let shadowHolder = document.getElementById("TFShadowRoot");
+        if (!shadowHolder)
+        {
+            shadowHolder = document.createElement("div");
+            shadowHolder.setAttribute("id", "TFShadowRoot");
+            document.body.appendChild(shadowHolder);
+        }
+
+        SearchBar.shadowRoot = document.createElement("div");
+        SearchBar.shadowRoot.setAttribute("id", "TFBarsContainer");
+
+        let cssReset = document.createElement("div");
+        cssReset.style = "all: initial";
+        cssReset.innerHTML = `<style>${ShadowrootCSS}</style>`;
+        cssReset.appendChild(SearchBar.shadowRoot);
+
+        let shadow = shadowHolder.attachShadow({ mode: "closed" });
+        shadow.appendChild(cssReset);
+
         return SearchBar.shadowRoot;
+    }
+
+    static setOptions(_startLeft, _startTop, _horizontal)
+    {
+        const style = SearchBar.getShadowRoot().style;
+
+        style.top = _startTop ? "0px" : "";
+        style.bottom = _startTop ? "" : "0px";
+        style.left = _startLeft ? "0px" : "";
+        style.right = _startLeft ? "" : "0px";
+
+        if (_horizontal)
+        {
+            style.flexDirection = _startLeft ? "row" : "row-reverse";
+            style.flexWrap = _startTop ? "wrap" : "wrap-reverse";
+        }
+        else
+        {
+            style.flexDirection = _startTop ? "column" : "column-reverse";
+            style.flexWrap = _startLeft ? "wrap" : "wrap-reverse";
+        }
     }
 
     constructMainDiv()
     {
-        let main = document.createElement("div");
-        main.setAttribute("class", `TFSearchBar`);
-        main.setAttribute("id", `TFSearchBar${this.id}`);
-        main.style = `  
-              top: 10px; right: 10px; min-width: 300px; padding: 10px; z-index: 147483647;
-              background-color: ${this.state.color};`
+       
         return main;
     }
     //#endregion
@@ -208,7 +235,7 @@ class SearchBar
         if (_state.searchString != "")
         {
             this.highlighter = new Highlighter(_id, this.mainDiv,
-                _state.color, _state.secondaryColor);
+                _state.primaryColor, _state.tetriaryColor);
 
             this.domSearcher = new DOMSearcher(_id,
                 _state.searchString, _state.getRegex(false),
@@ -232,39 +259,26 @@ class SearchBar
 
     updateLabels(_indexChange)
     {
-        let matchesLength  = this.domSearcher?.getCount();
-        if (matchesLength && matchesLength > 0)
+        const matchesLength = this.domSearcher?.getCount() || 0;
+
+        const oldValue = this.selectedIndex;
+
+        if (matchesLength > 0)
+            this.selectedIndex = (this.selectedIndex || 0) + (_indexChange || 0);
+
+        if (this.selectedIndex)
+            this.selectedIndex = Math.min(Math.max(this.selectedIndex, 0), matchesLength - 1);
+
+        if (oldValue !== this.selectedIndex)
+            this.highlighter.selectHighlight(this.selectedIndex);
+
+        if (!this.totalMatches)
         {
-            let oldValue = this.selectedIndex;
-
-            if (this.selectedIndex == null)
-                this.selectedIndex = 0;
-
-            if (_indexChange)
-                this.selectedIndex += _indexChange;
-
-            if (this.selectedIndex >= matchesLength)
-                this.selectedIndex = 0;
-
-            if (this.selectedIndex < 0)
-                this.selectedIndex = matchesLength - 1;
-
-            if (oldValue != this.selectedIndex)
-                this.highlighter.selectHighlight(this.selectedIndex);
+            this.totalMatchesLabel = this.mainDiv.querySelector('.totalMatches');
+            this.selectedMatchLabel = this.mainDiv.querySelector('.selectedMatch');
         }
-
-        if (!this.progressLabel)
-            this.progressLabel = this.mainDiv.querySelector(`.matchesLabel`);
-
-        if (this.selectedIndex == null && this.domSearcher?.getCount() > 0)
-        {
-            this.selectedIndex = 0;
-            this.domSearcher.selectHighlight(this.selectedIndex);
-        }
-
-        const labelText = (this.selectedIndex == null ? '0' : (this.selectedIndex + 1))
-            + `/` + (this.domSearcher == null ? 0 : this.domSearcher.getCount());
-        this.progressLabel.textContent = labelText;
+        this.selectedMatchLabel.textContent = matchesLength == 0 ? "0" : `${this.selectedIndex + 1}`;
+        this.totalMatchesLabel.textContent = matchesLength;
     }
 }
 

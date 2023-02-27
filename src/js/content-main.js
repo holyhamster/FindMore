@@ -3,50 +3,62 @@ import SearchState from './modules/searchState.js';
 
 export function main()
 {
+    var tabId;
+    var searchesMap = new Map();    //key is ID (integer)
+    var barsMap = new Map();    //key is ID (integer)
 
-    var ThisTabId;
-    var searchesMap = new Map();
-    var barsMap = new Map();
-
-   
-    document.addEventListener("tf-bar-closed", function (e)
+    //#region document events
+    document.addEventListener("tf-bar-closed", function (_args)
     {
-        
-        if (barsMap.get(e.id))
+        if (barsMap.get(_args.id))
         {
-            searchesMap.delete(e.id);
-            barsMap.delete(e.id);
+            searchesMap.delete(_args.id);
+            barsMap.delete(_args.id);
         }
 
-        reorderBars(barsMap);
-        
         cacheData();
     });
 
-    document.addEventListener("tf-search-changed", function (e)
+    document.addEventListener("tf-search-changed", function ()
     {
         cacheData();
     });
 
-    document.addEventListener('keydown', function (e)
+    document.addEventListener('keydown', function (_args)
     {
-        if (e.key == "Escape")
+        if (_args.key == "Escape")
         {
-            barsMap.forEach(function (_val) { _val.close() });
-            barsMap = new Map();
-            searchesMap = new Map();
+            searchesMap.forEach(function (_val, _key)
+            {
+                if (!_val.pinned)
+                {
+                    barsMap.get(_key).close();
+                    barsMap.delete(_key);
+                    searchesMap.delete(_key);
+                }
+            });
             cacheData();
         }
     });
+    //#endregion
 
     chrome.runtime.onMessage.addListener(
         function (request, sender)
         {
-            ThisTabId = request.tabId;
+            tabId = request.tabId;
+            console.log(JSON.stringify(request));
 
             switch (request.message)
             {
+                case "tf-options-update":
+                    if (request.options)
+                        loadOptions(request.options);
+                    break
+
                 case "tf-new-search":
+                    if (request.options)
+                        loadOptions(request.options);
+
                     let id = getNewID();
                     let newSearch = new SearchState("");
                     searchesMap.set(id, newSearch)
@@ -55,9 +67,11 @@ export function main()
                     break;
 
                 case "tf-update-search":
+                    if (request.options)
+                        loadOptions(request.options);
+
                     if (!request.data)
                         return;
-
                     barsMap.forEach(function (_val) { _val.close() });
                     barsMap = new Map();
                     searchesMap = new Map();
@@ -72,7 +86,7 @@ export function main()
                         searchesMap.set(newId, _state);
 
                         barsMap.set(newId,
-                            new SearchBar(newId, _state, barsMap.size));
+                            new SearchBar(newId, _state));
                     });
                     break;
 
@@ -82,14 +96,12 @@ export function main()
         }
     );
 
-    function reorderBars(_map)
+    function loadOptions(_options)
     {
-        let order = 0;
-        barsMap.forEach(function (_val, _key)
-        {
-            _val.setPosition(order);
-            order += 1;
-        });
+        let startTop = _options?.corner ? _options.corner < 2 : true;
+        let startLeft = _options?.corner ? (_options.corner == 0 || _options.corner == 2) : false;
+        let horizontal = _options?.alignment ? _options.alignment == 1 : false;
+        SearchBar.setOptions(startLeft, startTop, horizontal);
     }
 
     function getNewID()
@@ -116,10 +128,11 @@ export function main()
     function cacheData()
     {
         let message = {
-            message: "tf-update-state", tabId: ThisTabId,
+            message: "tf-content-update-state", tabId: tabId,
             data: serializeMap(searchesMap)
         };
         chrome.runtime.sendMessage(message);
+        console.log(message);
     }
 
     chrome.runtime.sendMessage({ message: "tf-content-script-loaded" });

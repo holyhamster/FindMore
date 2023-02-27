@@ -7,7 +7,7 @@ class Highlighter
     iframeCSSMap = new Map();
     dirtyContainers = [];
 
-    constructor(_id, _eventElem, _primaryColor, _secondaryColor, )
+    constructor(_id, _eventElem, _primaryColor, _secondaryColor )
     {
         this.id = _id;
 
@@ -19,16 +19,7 @@ class Highlighter
             this.intersectionObserver.unobserve(entries[0].target)
         });
 
-        this.cssString =
-            `.TFC${this.id} { position: absolute; }` +
-            `.TFCR${this.id} { position: relative; }` +
-            `.TFH${this.id} { position: absolute; background-color: ${_primaryColor};` +
-                ` opacity: 0.8; z-index: 147483647;}` +
-            `.TFHS${this.id} { border: 5px solid ${_secondaryColor}; padding: 0px;}`
-
-        let cssSheet = new CSSStyleSheet();
-        cssSheet.replaceSync(this.cssString);
-        document.adoptedStyleSheets = [...document.adoptedStyleSheets, cssSheet];
+        this.recolor(_primaryColor, _secondaryColor);
 
         let newMatchesEvent = new Event(`tf-matches-update`);
         this.onNewMatches = (_matches) =>
@@ -48,6 +39,22 @@ class Highlighter
         {
             addCSSToIFrame(_args.iframe, this.cssString, this.iframeCSSMap)
         }.bind(this));
+    }
+
+    recolor(_primaryColor, _tetriary)
+    {
+        if (!this.cssSheet || !document.adoptedStyleSheets.includes(this.cssSheet))
+        {
+            this.cssSheet = new CSSStyleSheet();
+            document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.cssSheet];
+        }
+        const cssString = `.TFC${this.id} { all:initial; position: absolute; } ` +
+            `.TFCR${this.id} { all:initial;; position: relative; } ` +
+            `.TFH${this.id} { position: absolute; background-color: ${_primaryColor};` +
+            ` opacity: 0.8; z-index: 147483647; } ` +
+            `.TFHS${this.id} { background-color: ${_tetriary}; }`;
+        console.log(cssString);
+        this.cssSheet.replaceSync(cssString);
     }
 
     getIFrameEvent()
@@ -111,8 +118,10 @@ class Highlighter
     selectHighlight(_index)
     {
         if (this.selectedIndex != null)
+        {
+            console.log(`reset ${this.selectedIndex}`);
             this.containers[this.selectedIndex].resetSelection(this.selectedIndex);
-
+        }
         this.selectedIndex = _index;
 
 
@@ -120,6 +129,7 @@ class Highlighter
         if (selectionSpans.length > 0)
             this.intersectionObserver.observe(selectionSpans[0]);
     }
+
     clearAll()
     {
         removeDOMClass(document, `TFC${this.id}`);

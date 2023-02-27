@@ -2,18 +2,18 @@
 
 class SearchRegion
 {
-    constructor(_treeWalk, _searchString, _regexp) {
+    constructor(_searchString, _regexp, _onNewIFrame) {
         this.searchString = _searchString;
         this.regexp = _regexp;
 
         this.string = "";
         this.nodes = [];
-        this.offset = 0;
-        this.walk = _treeWalk;
+        this.offset = 0;    //offset of the string from the start of the first node
+        this.treeWalk = getTreeWalk(_onNewIFrame);
     }
 
     addNextNode() {
-        let newNode = this.walk.nextNodePlus();
+        let newNode = this.treeWalk.nextNodePlus();
 
         if (!newNode)
             return false;
@@ -26,9 +26,10 @@ class SearchRegion
     }
 
     trim() {
-        let SEARCH_REGION_IS_UNNESESARY_LOG;
-        while (SEARCH_REGION_IS_UNNESESARY_LOG = (this.nodes.length > 0 &&
-            ((this.string.length) - this.nodes[0].textContent.length > this.searchString.length - 1))) {
+        let SEARCH_REGION_IS_TOO_LONG;
+        while (SEARCH_REGION_IS_TOO_LONG = (this.nodes.length > 0 &&
+            ((this.string.length - this.nodes[0].textContent.length) > this.searchString.length - 1))) 
+        {
             this.string = this.string.substring(this.nodes[0].textContent.length);
             this.nodes.shift();
             this.offset = 0;
@@ -37,12 +38,9 @@ class SearchRegion
 
     trimToPoint(_nodeIndex, _offset) {
         this.offset = _offset;
-        //console.log(`trimmed until:`);
-        //console.log(_nodeIndex);
         this.nodes = this.nodes.slice(_nodeIndex);
         this.string = "";
-        for (let i = 0; i < this.nodes.length; i++)
-            this.string += this.nodes[i].textContent;
+        this.nodes.forEach((_nodes) => { this.string += _nodes.textContent });
     }
 
     getMatches(_amount)
@@ -52,30 +50,98 @@ class SearchRegion
         
         let matches = [...this.string.substring(this.offset).matchAll(this.regexp)];
         matches = matches.splice(0, _amount);
-        let previousNodesOffset = 0, j = 0;
-        for (let i = 0; i < matches.length; i++) {
-            matches[i].index += this.offset;
-            let MATCH_INSIDE_I_NODE;
+        let charOffset = 0, nodeOffset = 0;
 
-            while (MATCH_INSIDE_I_NODE = (previousNodesOffset + this.nodes[j].textContent.length) <= matches[i].index) {
-                previousNodesOffset += this.nodes[j].textContent.length;
-                j += 1;
+        matches.forEach((_match) =>
+        {
+            _match.index += this.offset;
+            let MATCH_INSIDE_NODE;
+
+            while (MATCH_INSIDE_NODE =
+                (charOffset + this.nodes[nodeOffset].textContent.length)
+            <= _match.index)
+            {
+                charOffset += this.nodes[nodeOffset].textContent.length;
+                nodeOffset += 1;
             }
 
-            matches[i].startIndex = j;
-            matches[i].startNode = this.nodes[j];
-            matches[i].startOffset = matches[i].index - previousNodesOffset;
+            _match.startNode = this.nodes[nodeOffset];
+            _match.startOffset = _match.index - charOffset;
 
-            while (MATCH_INSIDE_I_NODE = (previousNodesOffset + this.nodes[j].textContent.length < matches[i].index + this.searchString.length)) {
-                previousNodesOffset += this.nodes[j].textContent.length;
-                j += 1;
+            while (MATCH_INSIDE_NODE =
+                (charOffset + this.nodes[nodeOffset].textContent.length <
+                    _match.index + this.searchString.length))
+            {
+                charOffset += this.nodes[nodeOffset].textContent.length;
+                nodeOffset += 1;
             }
-            matches[i].endIndex = j;
-            matches[i].endNode = this.nodes[j];
-            matches[i].endOffset = matches[i].index + this.searchString.length - previousNodesOffset;
-        }
+            _match.endNode = this.nodes[nodeOffset];
+            _match.endOffset = _match.index + this.searchString.length - charOffset;
+        });
         return matches;
     }
+}
+
+const treeWalkerCondition = {
+    acceptNode: (node) =>
+    {
+        if (node.nodeName.toUpperCase() == "IFRAME")
+            return NodeFilter.FILTER_ACCEPT;
+
+        if (node.nodeName.toUpperCase() == "STYLE" ||
+            node.nodeName.toUpperCase() == "SCRIPT")
+            return NodeFilter.FILTER_REJECT;
+
+        if (node.nodeType == Node.ELEMENT_NODE)
+        {
+            let classes = node.id.toString().split(/\s+/);
+            let NODE_IS_SEARCHBAR_SHADOWROOT = classes.includes(`TFShadowRoot`);
+            if (NODE_IS_SEARCHBAR_SHADOWROOT)
+                return NodeFilter.FILTER_REJECT;
+        }
+
+        if (node.nodeName.toUpperCase() == "#TEXT" && node.textContent)
+            return NodeFilter.FILTER_ACCEPT;
+
+        return NodeFilter.FILTER_SKIP;
+    }
+};
+
+function getTreeWalk(_onNewIFrame)
+{
+    let treeWalker = document.createTreeWalker(
+        document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
+    treeWalker.que = [treeWalker];
+
+    treeWalker.nextNodePlus = function ()
+    {
+        if (this.que.length == 0)
+            return null;
+
+        let nextNode = this.que.slice(-1)[0].nextNode();
+
+        if (!nextNode)
+        {
+            this.que.pop();
+            //console.log(`surfacing back to ${this.que.length}-level frame`);
+            return this.nextNodePlus();
+        }
+
+        if (nextNode.nodeName.toUpperCase() == 'IFRAME' &&
+            nextNode.contentDocument)
+        {
+            let iframeDoc = nextNode.contentDocument;
+            let iframeWalker = iframeDoc.createTreeWalker(
+                iframeDoc.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
+            _onNewIFrame(nextNode);
+            this.que.push(iframeWalker);
+            //console.log(`diving deeper into ${this.que.length}-level frame`);
+            return this.nextNodePlus();
+        }
+
+        return nextNode;
+    };
+    return treeWalker;
 }
 
 export default SearchRegion;

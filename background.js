@@ -1,11 +1,16 @@
 
 var TabsData = new Map();
+var options;
+loadOptions();
 
 chrome.commands.onCommand.addListener(function (_HOTKEY_COMMAND) {
     if (_HOTKEY_COMMAND === 'toggle-search')
     {
-        obtainActiveID(function(_id) {
-            chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id });
+        console.log("here");
+        obtainActiveID(function (_id)
+        {
+            console.log(_id);
+            chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id, options: options });
         });
     };
 });
@@ -14,9 +19,23 @@ chrome.runtime.onMessage.addListener(function (_RUNTIME_EVENT, _sender)
 {
     switch (_RUNTIME_EVENT.message)
     {
+        case "tf-popup-options-change":
+            {
+                if (!_RUNTIME_EVENT.options)
+                    return;
+
+                options = _RUNTIME_EVENT.options;
+                obtainActiveID(function (_id)
+                {
+                    chrome.tabs.sendMessage(_id,
+                        { message: "tf-options-update", tabId: _id, options: options });
+                });
+            }
+            break;
         case "tf-popup-new-search":
-            obtainActiveID(function (_id) {
-                chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id });
+            obtainActiveID(function (_id)
+            {
+                chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id, options: options });
             });
             break;
 
@@ -36,20 +55,19 @@ chrome.runtime.onMessage.addListener(function (_RUNTIME_EVENT, _sender)
                 {
                     let searchData = _storage.tfSavedSearch;
                     TabsData.set(_id, searchData);
-                    updateSearch(_id, searchData, FORCED = true, PINNED_ONLY = false);
+                    sendSearchData(_id, searchData, FORCED = true, PINNED_ONLY = false);
                 });
             });
             break;
 
-        case "tf-update-state":
+        case "tf-content-update-state":
             TabsData.set(_RUNTIME_EVENT.tabId, _RUNTIME_EVENT.data);
             break;
 
         case "tf-content-script-loaded":
-            const tabData = TabsData.get(_sender.tab.id);
-            console.log(tabData);
-            if (tabData)
-                updateSearch(_sender.tab.id, tabData, FORCED_UPDATE = false, PINNED_ONLY = true);
+            const previousTabData = TabsData.get(_sender.tab.id);
+            if (previousTabData)
+                sendSearchData(_sender.tab.id, previousTabData, FORCED_UPDATE = false, PINNED_ONLY = true);
             break;
     }
 });
@@ -59,38 +77,33 @@ chrome.windows.onBoundsChanged.addListener(function () {
 
     TabsData.forEach(function (_data, _id)
     {
-        updateSearch(_id, _data, FORCED_UPDATE = true, PINNED_ONLY = false);
+        sendSearchData(_id, _data, FORCED_UPDATE = true, PINNED_ONLY = false);
     });
 });
 
 chrome.tabs.onUpdated.addListener(function (tabId, changeinfo) {
-    //console.log("updating page");
-    //console.log(changeinfo);
     if (false && changeinfo.status && changeinfo.status == "complete" && TabsData.has(tabId)) {
-        updateSearch(tabId, TabsData.get(tabId));
+        sendSearchData(tabId, TabsData.get(tabId));
     }
-    //chrome.tabs.sendMessage(tabId, {message:"page_reloaded"});
 });
 
 function obtainActiveID(_giveActiveId, _onNoActive)
 {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) =>
     {
-        if (!tabs || tabs.length == 0)
+        if (!tabs || tabs.length == 0 || tabs[0].url.startsWith('chrome://'))
         {
             if (_onNoActive)
                 _onNoActive();
             return;
         }
-
-        let activeId = (Number)(tabs[0].id);
-        _giveActiveId(activeId);
+        _giveActiveId((Number)(tabs[0].id));
     });
 }
 
-function updateSearch(_tabId, _tabData, _forced, _pinnedOnly)
+function sendSearchData(_tabId, _tabData, _forced, _pinnedOnly)
 {
-    var message = { message: "tf-update-search", tabId: _tabId };
+    var message = { message: "tf-update-search", tabId: _tabId, options: options };
 
     message.data = _tabData;
     message.forcedUpdate = _forced;
@@ -98,6 +111,18 @@ function updateSearch(_tabId, _tabData, _forced, _pinnedOnly)
     console.log(`update event sent`);
     console.log(JSON.stringify(message));
     chrome.tabs.sendMessage(_tabId, message);
+}
+
+function loadOptions()
+{
+    
+    chrome.storage.sync.get("tfSavedOptions", function (_storage)
+    {
+        if (_storage.tfSavedOptions)
+        {
+            options = _storage.tfSavedOptions;
+        }
+    });
 }
 
 //run when extension is loaded

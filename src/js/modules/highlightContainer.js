@@ -110,8 +110,7 @@ class HighlightContainer
     createAnchoredSpan(_rect)
     {
         let span = document.createElement('SPAN');
-        span.classList.add('TFHighlight');
-        span.classList.add(`TFH${this.id}`);
+        span.classList.add(`TFHighlight`, `TFH${this.id}`);
 
         span.style.height = _rect.height + 'px';
         span.style.width = _rect.width + 'px';
