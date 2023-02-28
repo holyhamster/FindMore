@@ -51,10 +51,9 @@ class SearchState
             : this.searchString;
 
         if (this.wholeWord)
-            regString = '\b' + regString + '\b';
+            regString = `\\b${regString}\\b`;
 
         let regOptions = this.caseSensitive ? "g" : "gi";
-
         return new RegExp(regString, regOptions);
     }
 }

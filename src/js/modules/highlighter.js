@@ -96,7 +96,6 @@ class Highlighter
 
         if (dirtyContainers.length > 0)
             this.onNewMatches(this.containers.length);
-        console.log(this.matches.length);
         dirtyContainers.forEach((_container) => { _container.commit(); })
 
         if (this.matches.length != this.containers.length & !this.invoked)

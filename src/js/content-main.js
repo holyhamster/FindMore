@@ -47,7 +47,6 @@ export function main()
         function (request, sender)
         {
             tabId = request.tabId;
-            console.log(JSON.stringify(request));
 
             switch (request.message)
             {
@@ -133,7 +132,6 @@ export function main()
             data: serializeMap(searchesMap)
         };
         chrome.runtime.sendMessage(message);
-        console.log(message);
     }
 
     chrome.runtime.sendMessage({ message: "tf-content-script-loaded" });

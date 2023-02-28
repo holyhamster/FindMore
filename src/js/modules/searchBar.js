@@ -63,7 +63,6 @@ class SearchBar
             </div>`;
 
         mainDiv.querySelector(`.searchInput`).focus();
-        console.log(_state)
         return mainDiv;
     }
 
