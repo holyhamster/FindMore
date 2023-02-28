@@ -2,17 +2,26 @@
 
 class SearchRegion
 {
-    constructor(_searchString, _regexp, _onNewIFrame) {
+    constructor(_searchString, _regexp, _eventElem) {
         this.searchString = _searchString;
         this.regexp = _regexp;
 
         this.string = "";
         this.nodes = [];
         this.offset = 0;    //offset of the string from the start of the first node
-        this.treeWalk = getTreeWalk(_onNewIFrame);
+        
+
+        const newIFramesEvent = new Event(`tf-iframe-style-update`);
+        const onNewIFrame = (_iframe) =>
+        {
+            newIFramesEvent.iframe = _iframe;
+            _eventElem.dispatchEvent(newIFramesEvent);
+        };
+
+        this.treeWalk = getTreeWalk(onNewIFrame);
     }
 
-    addNextNode() {
+    expand() {
         let newNode = this.treeWalk.nextNodePlus();
 
         if (!newNode)
@@ -47,9 +56,8 @@ class SearchRegion
     {
         if (this.nodes.length == 0 | _amount == 0)
             return [];
-        
-        let matches = [...this.string.substring(this.offset).matchAll(this.regexp)];
-        matches = matches.splice(0, _amount);
+
+        let matches = [...this.string.substring(this.offset).matchAll(this.regexp)].splice(0, _amount);
         let charOffset = 0, nodeOffset = 0;
 
         matches.forEach((_match) =>
@@ -58,8 +66,7 @@ class SearchRegion
             let MATCH_INSIDE_NODE;
 
             while (MATCH_INSIDE_NODE =
-                (charOffset + this.nodes[nodeOffset].textContent.length)
-            <= _match.index)
+                (charOffset + this.nodes[nodeOffset].textContent.length) <= _match.index)
             {
                 charOffset += this.nodes[nodeOffset].textContent.length;
                 nodeOffset += 1;
@@ -69,8 +76,7 @@ class SearchRegion
             _match.startOffset = _match.index - charOffset;
 
             while (MATCH_INSIDE_NODE =
-                (charOffset + this.nodes[nodeOffset].textContent.length <
-                    _match.index + this.searchString.length))
+                ((charOffset + this.nodes[nodeOffset].textContent.length) < (_match.index + this.searchString.length)))
             {
                 charOffset += this.nodes[nodeOffset].textContent.length;
                 nodeOffset += 1;
@@ -78,6 +84,12 @@ class SearchRegion
             _match.endNode = this.nodes[nodeOffset];
             _match.endOffset = _match.index + this.searchString.length - charOffset;
         });
+
+        if (matches.length > 0)
+        {
+            const lastMatch = matches[matches.length - 1];
+            this.trimToPoint(lastMatch.endIndex, lastMatch.endOffset);
+        }
         return matches;
     }
 }

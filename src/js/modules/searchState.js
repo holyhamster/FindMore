@@ -2,11 +2,10 @@
 
 class SearchState
 {
-    constructor(_searchString)
+    constructor(_searchString, _colorHue)
     {
         this.searchString = _searchString;
-
-        this.recolor();
+        this.hue = isNaN(_colorHue) ? Math.floor(Math.random() * 360) : _colorHue;
 
         this.pinned = false;
         this.caseSensitive = false;
@@ -20,23 +19,30 @@ class SearchState
 
     static load(_state)
     {
-        let result = new SearchState(_state.searchString);
+        let result = new SearchState(_state.searchString, _state.hue);
         result.pinned = _state.pinned;
         result.caseSensitive = _state.caseSensitive;
         result.wholeWord = _state.wholeWord;
-        result.primaryColor = _state.primaryColor;
-        result.secondaryColor = _state.secondaryColor;
-        result.tetriaryColor = _state.tetriaryColor;
         return result;
     }
-
-    recolor()
+    recolor(_forward)
     {
-        const scheme = getRandomScheme();
+        this.hue += _forward ? 25 : -25;
+    }
 
-        this.primaryColor = scheme.primary;
-        this.secondaryColor = scheme.secondary;
-        this.tetriaryColor = scheme.tetriary;
+    getColor()
+    {
+        return hslToHex(this.hue, 75, 75);
+    }
+
+    getDarkColor()
+    {
+        return hslToHex(this.hue, 60, 15);
+    }
+
+    getAccentedColor()
+    {
+        return hslToHex(this.hue, 100, 35);
     }
 
     getRegex(_escape = true)
@@ -56,6 +62,11 @@ class SearchState
 
 function hslToHex(h, s, l)
 {
+    while (h < 0 || h > 360)
+        h -= Math.sign(h) * 360
+    s = Math.max(0, Math.min(s, 100));
+    l = Math.max(0, Math.min(l, 100));
+
     l /= 100;
     const a = s * Math.min(l, 1 - l) / 100;
     const f = n =>
@@ -66,17 +77,4 @@ function hslToHex(h, s, l)
     };
     return `#${f(0)}${f(8)}${f(4)}`;
 }
-
-function getRandomScheme()
-{
-    let result = new Object();
-    let h = Math.floor(Math.random() * 360);
-    const s = Math.floor(Math.random() * 40 + 40);
-
-    result.primary = hslToHex(h, 75, 75);
-    result.secondary = hslToHex(h, 60, 15);
-    result.tetriary = hslToHex(h, 100, 35);
-    return result;
-}
-
 export default SearchState;

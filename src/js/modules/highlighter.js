@@ -1,10 +1,10 @@
-import HighlightContainer from './highlightContainer.js';
+import container from './container.js';
 
 class Highlighter
 {
-    nodeToContainerMap = new Map();
-    containers = [];            //index of the array is the index of the match
-    iframeCSSMap = new Map();
+    matches = [];       //list of matches from domsearcher
+    containers = [];    //highlight spans, index = index in the matches array
+    iframeStylesMap = new Map();
     dirtyContainers = [];
 
     constructor(_id, _eventElem, _primaryColor, _secondaryColor )
@@ -19,57 +19,102 @@ class Highlighter
             this.intersectionObserver.unobserve(entries[0].target)
         });
 
-        this.recolor(_primaryColor, _secondaryColor);
+        this.setColors(_primaryColor, _secondaryColor);
 
-        let newMatchesEvent = new Event(`tf-matches-update`);
+        const newMatchesEvent = new Event(`tf-new-matches-update`);
         this.onNewMatches = (_matches) =>
         {
             newMatchesEvent.length = _matches;
             _eventElem.dispatchEvent(newMatchesEvent);
         };
 
-        let newIFramesEvent = new Event(`tf-iframe-style-update`);
-        this.onNewIFrame = (_iframe) =>
-        {
-            newIFramesEvent.iframe = _iframe;
-            _eventElem.dispatchEvent(newIFramesEvent);
-        };
-
         _eventElem.addEventListener(`tf-iframe-style-update`, function (_args) 
         {
-            addCSSToIFrame(_args.iframe, this.cssString, this.iframeCSSMap)
+            const iframe = _args.iframe;
+            this.iframeStylesMap.get(iframe)?.remove();
+            const newStyle = addStyleTag(iframe, getCSSString(this.id, this.primary, this.accent))
+            this.iframeStylesMap.set(iframe, newStyle);
         }.bind(this));
     }
 
-    recolor(_primaryColor, _tetriary)
+    setColors(_primaryColor, _accent)
     {
-        if (!this.cssSheet || !document.adoptedStyleSheets.includes(this.cssSheet))
+        this.primary = _primaryColor;
+        this.accent = _accent;
+        const cssString = getCSSString(this.id, this.primary, this.accent);
+
+        if (!this.adoptedSheet || !document.adoptedStyleSheets.includes(this.adoptedSheet))
         {
-            this.cssSheet = new CSSStyleSheet();
-            document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.cssSheet];
+            this.adoptedSheet = new CSSStyleSheet();
+            document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.adoptedSheet];
         }
-        const cssString = `.TFC${this.id} { all:initial; position: absolute; } ` +
-            `.TFCR${this.id} { all:initial;; position: relative; } ` +
-            `.TFH${this.id} { position: absolute; background-color: ${_primaryColor};` +
-            ` opacity: 0.8; z-index: 147483647; } ` +
-            `.TFHS${this.id} { background-color: ${_tetriary}; }`;
-        console.log(cssString);
-        this.cssSheet.replaceSync(cssString);
+        this.adoptedSheet.replaceSync(cssString);
+
+        this.iframeStylesMap.forEach((_oldStyle, _iframe) =>
+        {
+            _oldStyle.remove();
+            this.iframeStylesMap.set(_iframe, addStyleTag(_iframe, cssString));
+        })
     }
 
-    getIFrameEvent()
+    invoked;
+    queMatch(_match)
     {
-        return this.onNewIFrame;
+        this.matches.push(_match);
+        if (!this.invoked)
+        {
+            this.invoked = true;
+            setTimeout(function () { this.processHighlights.call(this) }.bind(this), 1);
+        }
     }
 
-    addMatch(_match, _range)
+    interrupted;
+    consequtiveCalls = 100;
+    processHighlights()
+    {
+        let HAS_UNPROCESSED_MATCHES, callsLeft = this.consequtiveCalls;
+        const range = document.createRange(), timeoutInterval = 1, dirtyContainers = [];
+        this.invoked = false;
+
+        while ((callsLeft -= 1) > 0 &&
+            (HAS_UNPROCESSED_MATCHES = (this.matches.length > this.containers.length)))
+        {
+            const matchID = this.containers.length, match = this.matches[matchID];
+            const container = this.createContainer(match, range);
+            if (container)
+            {
+                this.containers.push(container);
+                if (!dirtyContainers.includes(container))
+                    dirtyContainers.push(container);
+            }
+            else
+                this.matches.splice(matchID, 1);
+        }
+
+        if (this.interrupted)
+            return;
+
+        if (dirtyContainers.length > 0)
+            this.onNewMatches(this.containers.length);
+        console.log(this.matches.length);
+        dirtyContainers.forEach((_container) => { _container.commit(); })
+
+        if (this.matches.length != this.containers.length & !this.invoked)
+        {
+            this.invoked = true;
+            setTimeout(function () { this.processHighlights.call(this) }.bind(this), timeoutInterval);
+        }
+    }
+
+    nodeToContainerMap = new Map();
+    createContainer(_match, _range)
     {
         let rects = this.getRects(_match, _range);
 
         let hlContainer = this.nodeToContainerMap.get(_match.endNode.parentNode);
         if (!hlContainer)
         {
-            hlContainer = new HighlightContainer(_match.endNode.parentNode, this.id);
+            hlContainer = new container(_match.endNode.parentNode, this.id);
             this.nodeToContainerMap.set(_match.endNode.parentNode, hlContainer);
         }
 
@@ -78,12 +123,10 @@ class Highlighter
 
         if (visible)
         {
-            this.containers.push(hlContainer);
-            if (!this.dirtyContainers.includes(hlContainer))
-                this.dirtyContainers.push(hlContainer);
+            return hlContainer;
         }
 
-        return visible;
+        return;
     }
 
     getRects(_match, _range)
@@ -99,42 +142,49 @@ class Highlighter
 
         return nonEmptyRects;
     }
-
-    commitDirtySpans()
+    getTotalCount()
     {
-        for (let i = 0; i < this.dirtyContainers.length; i++)
-            this.dirtyContainers[i].commit();
-
-        if (this.dirtyContainers.length > 0)
-            this.onNewMatches(this.containers.length);
-        this.dirtyContainers = [];
-    }
-
-    isDirty()
-    {
-        return this.dirtyContainers.length > 0;
+        return this.matches.length;
     }
 
     selectHighlight(_index)
     {
-        if (this.selectedIndex != null)
+        const lastSelectedContainer = this.selectedIndex == null? null : this.containers[this.selectedIndex];
+        if (lastSelectedContainer)
         {
-            console.log(`reset ${this.selectedIndex}`);
-            this.containers[this.selectedIndex].resetSelection(this.selectedIndex);
+            lastSelectedContainer.setSelectionAt(this.selectedIndex, false);
+            this.selectedIndex = null;
         }
-        this.selectedIndex = _index;
 
+        if (_index >= this.matches.length)
+            return;
 
-        let selectionSpans = this.containers[this.selectedIndex].selectAt(_index);
-        if (selectionSpans.length > 0)
-            this.intersectionObserver.observe(selectionSpans[0]);
+        let focusTarget, INDEX_IS_BEING_PROCESSED = _index >= this.containers.length;
+
+        
+        if (INDEX_IS_BEING_PROCESSED)
+        {
+            console.log(this.matches[_index].startNode.parentNode);
+            focusTarget = this.matches[_index].startNode.parentNode;
+        }
+        else
+        {
+            this.selectedIndex = _index;
+            const selectionSpans = this.containers[this.selectedIndex].setSelectionAt(_index, true);
+            if (selectionSpans.length > 0)
+                focusTarget = selectionSpans[0];
+        }
+        
+        if (focusTarget)
+            this.intersectionObserver.observe(focusTarget);
     }
 
     clearAll()
     {
+        this.interrupted = true;
         removeDOMClass(document, `TFC${this.id}`);
         removeDOMClass(document, `TFCR${this.id}`);
-        this.iframeCSSMap.forEach(function (_sheets, _iframe)
+        this.iframeStylesMap.forEach(function (_sheets, _iframe)
         {
             removeDOMClass(_iframe.contentDocument, `TFC${this.id}`);
             removeDOMClass(_iframe.contentDocument, `TFCR${this.id}`);
@@ -143,21 +193,26 @@ class Highlighter
     }
 }
 
-function addCSSToIFrame(_iframe, _cssString, _iframeToStylesMap)
+function addStyleTag(_iframe, _cssString)
 {
-    let existingStyle = _iframeToStylesMap.get(_iframe);
-    if (!existingStyle)
+    let style = _iframe.contentDocument.createElement("style");
+    style.setAttribute("class", "TFIframeStyle");
+    style.innerHTML = _cssString;
+    if (style.parentNode != _iframe.contentDocument.head)
     {
-        existingStyle = _iframe.contentDocument.createElement("style");
-        existingStyle.setAttribute("class", "TFIframeStyle");
-        existingStyle.innerHTML = _cssString;
-        _iframeToStylesMap.set(_iframe, existingStyle)
+        _iframe.contentDocument.head.appendChild(style);
     }
 
-    if (existingStyle.parentNode != _iframe.contentDocument.head)
-    {
-        _iframe.contentDocument.head.appendChild(existingStyle);
-    }
+    return style;
+}
+
+function getCSSString(_id, _primary, _accent)
+{
+    return `.TFC${_id} { all:initial; position: absolute; } ` +
+        `.TFCR${_id} { all:initial;; position: relative; } ` +
+        `.TFH${_id} { position: absolute; background-color: ${_primary};` +
+        ` opacity: 0.7; z-index: 2147483646; } ` +
+        `.TFHS${_id} { background-color: ${_accent}; }`;
 }
 function removeDOMClass(_document, _className)
 {

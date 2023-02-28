@@ -8,13 +8,13 @@ class DomSearcher
     regexp;
     walker;
 
-    matchesCount = 0;
+    hitCount = 0; //not all hits will be visible
     id;
     onNewMatches;
     
     selectedIndex;
 
-    constructor(_id, _searchString, _regex, _onNewIFrames, _highlighter)
+    constructor(_id, _searchString, _regex, _eventElem, _highlighter)
     {
         this.id = _id;
         this.searchString = _searchString;
@@ -23,9 +23,8 @@ class DomSearcher
 
         setTimeout(function ()
         {
-            let region = new SearchRegion(
-                this.searchString, this.regexp, _onNewIFrames);
-            this.searchRecursive(region, _highlighter)
+            let region = new SearchRegion(this.searchString, this.regexp, _eventElem);
+            this.search(region, _highlighter)
         }.bind(this), this.interval);
     }
 
@@ -34,50 +33,23 @@ class DomSearcher
         this.interrupted = true;
     }
 
-    interval = 1;
-    consecutiveCalls = 100;
-    searchRecursive(_searchRegion, _highlighter)
+    search(_searchRegion, _highlighter)
     {
-        let callsLeft = this.consecutiveCalls;
-        let range = document.createRange();
-        let WALK_IN_PROGRESS = true;
+        const sleepInterval = 1, consecutiveCalls = 10000;
+        let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
 
-        let matches = _searchRegion.getMatches(callsLeft);
-
-        while (callsLeft >= 0 && WALK_IN_PROGRESS)
+        while ((callsLeft -= 1) >= 0 && (WALK_IN_PROGRESS = _searchRegion.expand()))
         {
             callsLeft -= 1;
-            let match = matches.shift();
-            if (match && _highlighter.addMatch(match, range))
-                this.matchesCount += 1;
-
-            if (matches.length == 0)
-            {
-                if (match)
-                    _searchRegion.trimToPoint(match.endIndex, match.endOffset);
-
-                if (callsLeft > 0)
-                {
-                    WALK_IN_PROGRESS = _searchRegion.addNextNode();
-                    matches = _searchRegion.getMatches(callsLeft);
-                }
-            }
+            const matches = _searchRegion.getMatches(callsLeft);
+            matches.forEach((_match) => _highlighter.queMatch(_match));
+            this.hitCount += matches.length;
         }
         
-        if (this.interrupted)
-            return;
- 
-        _highlighter.commitDirtySpans();
-        
-        if (WALK_IN_PROGRESS)
+        if (!this.interrupted && WALK_IN_PROGRESS)
             setTimeout(function (){
-                this.searchRecursive.call(this, _searchRegion, _highlighter) }.bind(this),
-                this.interval);
-    }
-
-    getCount()
-    {
-        return this.matchesCount;
+                this.search.call(this, _searchRegion, _highlighter) }.bind(this),
+                sleepInterval);
     }
 }
 

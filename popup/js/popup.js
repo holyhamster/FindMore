@@ -5,8 +5,6 @@ console.log("popup script loaded");
 
 document.addEventListener('DOMContentLoaded', function ()
 {
-    var options = new Object();
-
     var findButton = document.getElementById('findButton');
     findButton.addEventListener('click', function ()
     {
@@ -28,31 +26,23 @@ document.addEventListener('DOMContentLoaded', function ()
         close();
     });
 
-    var cornerDropdown = document.getElementById('tabsCorner');
-    cornerDropdown.addEventListener("change", (_event) =>
+    const optionChange = () => 
     {
-        if (_event.target?.selectedIndex >= 0)
-        {
-            saveOptions();
-            sendOptions();
-        }
-    });
+        const options = buildOptions();
+        saveOptions(options);
+        sendOptions(options);
+    };
+    document.getElementById('tabsCorner')?.addEventListener("change", optionChange);
+    document.getElementById('tabsAlignment')?.addEventListener("change", optionChange);
+    document.getElementById('startPinned')?.addEventListener("change", optionChange);
+    document.getElementById('opacity')?.addEventListener("change", optionChange);
 
-    document.getElementById('tabsAlignment').addEventListener("change", (_event) =>
-    {
-        if (_event.target?.selectedIndex >= 0)
-        {
-            saveOptions();
-            sendOptions();
-        }
-    });
-
-    loadOptions();
+    loadOptions((_options) => { fillUI(_options); });
 });
 
-function sendOptions()
+function sendOptions(_options)
 {
-    chrome.runtime.sendMessage({ message: "tf-popup-options-change", options: buildOptions() });
+    chrome.runtime.sendMessage({ message: "tf-popup-options-change", options: _options });
 }
 
 function buildOptions()
@@ -61,23 +51,32 @@ function buildOptions()
 
     options.corner = document.getElementById('tabsCorner').selectedIndex;
     options.alignment = document.getElementById('tabsAlignment').selectedIndex;
+    options.startPinned = new Boolean(document.getElementById('startPinned').checked);
+    options.opacity = document.getElementById('opacity').value;
+
     return options;
 }
 
-function loadOptions()
+function loadOptions(_onLoad)
 {
+    console.log("ya1");
     chrome.storage.sync.get("tfSavedOptions", function (_storage)
     {
+        console.log("ya2");
         let options = _storage.tfSavedOptions;
-        if (!options)
-            return;
-        console.log("loaded");
-        document.getElementById('tabsCorner').selectedIndex = options.corner;
-        document.getElementById('tabsAlignment').selectedIndex = options.alignment
+        if (options)
+            _onLoad(options);
     });
 }
-
-function saveOptions()
+function fillUI(_options)
 {
-    chrome.storage.sync.set({ "tfSavedOptions": buildOptions() });
+    console.log("ya3");
+    document.getElementById('tabsCorner').selectedIndex = _options.corner;
+    document.getElementById('tabsAlignment').selectedIndex = _options.alignment;
+    document.getElementById('startPinned').checked = _options.startPinned;
+    document.getElementById('opacity').value = _options.opacity;
+}
+function saveOptions(_options)
+{
+    chrome.storage.sync.set({ "tfSavedOptions": _options });
 }

@@ -6,6 +6,7 @@ export function main()
     var tabId;
     var searchesMap = new Map();    //key is ID (integer)
     var barsMap = new Map();    //key is ID (integer)
+    var options = new Object();
 
     //#region document events
     document.addEventListener("tf-bar-closed", function (_args)
@@ -59,8 +60,10 @@ export function main()
                     if (request.options)
                         loadOptions(request.options);
 
-                    let id = getNewID();
-                    let newSearch = new SearchState("");
+                    const id = getNewID();
+                    const newSearch = new SearchState("");
+                    newSearch.pinned = options.startPinned;
+
                     searchesMap.set(id, newSearch)
                     barsMap.set(id, new SearchBar(id, newSearch, barsMap.size));
                     cacheData();
@@ -98,10 +101,8 @@ export function main()
 
     function loadOptions(_options)
     {
-        let startTop = _options?.corner ? _options.corner < 2 : true;
-        let startLeft = _options?.corner ? (_options.corner == 0 || _options.corner == 2) : false;
-        let horizontal = _options?.alignment ? _options.alignment == 1 : false;
-        SearchBar.setOptions(startLeft, startTop, horizontal);
+        console.log(_options);
+        SearchBar.getShadowRoot().setStyleFromOptions(_options);
     }
 
     function getNewID()

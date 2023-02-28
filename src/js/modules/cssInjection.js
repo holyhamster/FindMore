@@ -2,8 +2,7 @@
 const ShadowrootCSS = `
 #TFBarsContainer {
     --scale-ratio: 1;
-    --primary-color: white;
-    --secondary-color: black;
+    --themeAlpha: .95;
     font-family: Verdana, sans-serif;
     color: var(--secondary-color);
     font-size: calc(var(--scale-ratio) * 15px);
@@ -24,37 +23,51 @@ const ShadowrootCSS = `
 }
 
 .TFSearchBar {
-    pointer-events:auto;
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
     align-content: flex-start;
     flex-wrap: wrap;
-    border-radius: calc(var(--scale-ratio) * .2em);
-    min-width: calc(var(--scale-ratio) * 18em); 
     padding: calc(var(--scale-ratio) * .2em);
-    min-height: calc(var(--scale-ratio) * 3em); 
+    min-width: calc(var(--scale-ratio) * 18em);
+    min-height: calc(var(--scale-ratio) * 3em);
+    border-radius: calc(var(--scale-ratio) * .2em);
     border-style: solid;
     border-width: calc(var(--scale-ratio) * .2em);
     border-color: transparent;
-    opacity: 0.9;
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    --themeHue: 0;
+    --primary-color: hsl(var(--themeHue), 75%, 75%, var(--themeAlpha));
+    --secondary-color: hsl(var(--themeHue), 60%, 15%, var(--themeAlpha));
+    pointer-events: auto;
 }
-
+.TFSearchBarBG {
+    position:absolute;
+    height: 100%;
+    width: 100%;
+    background-color:black;
+    left:0px;
+    top:0px;
+}
 .TFSearchBarRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-
+.TFSearchBarRow > *:hover
+{
+    --themeAlpha: 1;
+}
 .pinned {
     border-color: var(--secondary-color);
 }
 
 button {
     border-radius: 20px;
+    color:var(--secondary-color);
     background-color: transparent;
     border-style: none;
-    color:var(--secondary-color);
     margin-left: 5px;
     min-width:24px;
     min-height:24px;
@@ -63,14 +76,17 @@ button {
 }
 
 button:hover {
-  color: var(--primary-color);
-  background-color: var(--secondary-color);
+    color: hsla(var(--themeHue), 75%, 75%, var(--themeAlpha));
+    background-color: hsla(var(--themeHue), 60%, 15%, var(--themeAlpha));
 }
 .searchInput {
-    color:var(--secondary-color);
+    color: hsl(var(--themeHue), 60%, 15%, 1);
+    background-color: hsla(0, 0%, 100%, var(--themeAlpha));
     border-radius: 5px;
 }
-
+.caseCheck, .wordCheck {
+    accent-color: hsl(0, 100%, 100%, var(--themeAlpha));
+}
 .upButton {
     margin-left: 0px;
     margin-right: auto;
