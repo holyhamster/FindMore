@@ -121,6 +121,7 @@ class SearchBar
 
         mainDiv.querySelector(`.caseCheck`).addEventListener("input", function (_args)
         {
+            
             let stateChange = this.state.caseSensitive != _args.target.checked;
             this.state.caseSensitive = _args.target.checked;
             this.restartSearch(this.state, this.id, stateChange);
@@ -182,7 +183,7 @@ class SearchBar
     close()
     {
         this.clearPreviousSearch(this.id);
-
+        this.highlighter?.clearStyles();
         if (document.adoptedStyleSheets.includes(this.highlightCSS))
         {
             let sheets = [];
@@ -213,7 +214,7 @@ class SearchBar
         
         if (_state.searchString != "")
         {
-            this.highlighter = new Highlighter(_id, this.mainDiv,
+            this.highlighter = this.highlighter || new Highlighter(_id, this.mainDiv,
                 _state.getColor(), _state.getAccentedColor());
 
             this.domSearcher = new DOMSearcher(_id,
@@ -231,7 +232,7 @@ class SearchBar
         this.domSearcher.interrupt();
         this.domSearcher = null;
 
-        this.highlighter.clearAll();
+        this.highlighter.clearSelection();
 
         this.selectedIndex = null;
     }
@@ -251,7 +252,7 @@ class SearchBar
             this.selectedIndex = 0;
 
         if (oldValue !== this.selectedIndex)
-            this.highlighter.selectHighlight(this.selectedIndex);
+            this.highlighter.accentMatch(this.selectedIndex);
 
         if (!this.totalMatches)
         {

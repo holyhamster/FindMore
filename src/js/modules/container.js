@@ -97,7 +97,7 @@ class container
         {
             this.setAppendance(false);
         }
-
+        
         while (this.uncommittedSpans.length > 0)
             this.headSpan.appendChild(this.uncommittedSpans.shift())
 
@@ -105,7 +105,10 @@ class container
 
         this.updatedAfterCommit = false;
     }
-
+    remove()
+    {
+        this.setAppendance(false);
+    }
     setAppendance(_appended)
     {
         if (this.containerAppended == _appended)
