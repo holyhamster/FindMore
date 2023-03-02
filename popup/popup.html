@@ -1,33 +1,62 @@
 <html>
+<head>
+    <style>
+        button {
+            margin:5px;
+        }
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            align-content: center;
+            align-items: center;
+        }
+        .stateButtons {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-evenly;
+        }
+    </style>
+</head>
 <body>
     <script src="js/popup.js"></script>
 
     <h1>Hello!</h1>
+    <div class="buttons">
+        <button id="findButton">Find</button>
 
-    <button id="findButton">Find</button>
-    <button id="saveButton">Save</button>
-    <button id="loadButton">Load</button>
+        <div class="stateButtons">
+            <button id="saveButton">Save</button>
+            <button id="loadButton">Load</button>
+        </div>
+    </div>
+    <div id="optionsContainer">
+        <div id="optionsToggle">
+            <span>Options</span>
+        </div>
 
-    <select id="tabsCorner">
-        <option value="0">Top-left</option>
-        <option value="1">Top-right</option>
-        <option value="2">Bottom-left</option>
-        <option value="3">Bottom-right</option>
-    </select>
+        <div id="optionsExpanding" style="display: none;">
+            <select id="tabsCorner">
+                <option value="0">Top-left</option>
+                <option value="1">Top-right</option>
+                <option value="2">Bottom-left</option>
+                <option value="3">Bottom-right</option>
+            </select>
 
-    <select id="tabsAlignment">
-        <option value="0">Vertical</option>
-        <option value="1">Horizontal</option>
-    </select>
+            <select id="tabsAlignment">
+                <option value="0">Vertical</option>
+                <option value="1">Horizontal</option>
+            </select>
 
-    <input type="checkbox" name="startPinned" id="startPinned">
+            <input type="checkbox" name="startPinned" id="startPinned">
 
-    <label for="startPinned">start pinned</label>
+            <label for="startPinned">start pinned</label>
 
+            <input type="number" id="opacity" value=".95" name="opacity" min=".5" max="1" step=".025">
+            <label for="opacity">opacity</label>
 
-
-    <input type="number" id="opacity" value=".95" name="opacity" min=".5" max="1" step=".025">
-    <label for="opacity">opacity</label>
-
+            <input type="number" id="scale" value="1" name="scale" min=".5" max="4" step=".05">
+            <label for="scale">scale</label>
+        </div>
+    </div>
 </body>
 </html>

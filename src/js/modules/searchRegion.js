@@ -52,12 +52,12 @@ class SearchRegion
         this.nodes.forEach((_nodes) => { this.string += _nodes.textContent });
     }
 
-    getMatches(_amount)
+    getMatches()
     {
-        if (this.nodes.length == 0 | _amount == 0)
+        if (this.nodes.length == 0)
             return [];
 
-        let matches = [...this.string.substring(this.offset).matchAll(this.regexp)].splice(0, _amount);
+        const matches = [...this.string.substring(this.offset).matchAll(this.regexp)];
         let charOffset = 0, nodeOffset = 0;
 
         matches.forEach((_match) =>
@@ -106,8 +106,8 @@ const treeWalkerCondition = {
 
         if (node.nodeType == Node.ELEMENT_NODE)
         {
-            let classes = node.id.toString().split(/\s+/);
-            let NODE_IS_SEARCHBAR_SHADOWROOT = classes.includes(`TFShadowRoot`);
+            const classes = node.id.toString().split(/\s+/);
+            const NODE_IS_SEARCHBAR_SHADOWROOT = classes.includes(`TFShadowRoot`);
             if (NODE_IS_SEARCHBAR_SHADOWROOT)
                 return NodeFilter.FILTER_REJECT;
         }
@@ -121,7 +121,7 @@ const treeWalkerCondition = {
 
 function getTreeWalk(_onNewIFrame)
 {
-    let treeWalker = document.createTreeWalker(
+    const treeWalker = document.createTreeWalker(
         document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
     treeWalker.que = [treeWalker];
 
@@ -130,7 +130,7 @@ function getTreeWalk(_onNewIFrame)
         if (this.que.length == 0)
             return null;
 
-        let nextNode = this.que.slice(-1)[0].nextNode();
+        const nextNode = this.que[this.que.length - 1].nextNode();
 
         if (!nextNode)
         {
@@ -142,8 +142,8 @@ function getTreeWalk(_onNewIFrame)
         if (nextNode.nodeName.toUpperCase() == 'IFRAME' &&
             nextNode.contentDocument)
         {
-            let iframeDoc = nextNode.contentDocument;
-            let iframeWalker = iframeDoc.createTreeWalker(
+            const iframeDoc = nextNode.contentDocument;
+            const iframeWalker = iframeDoc.createTreeWalker(
                 iframeDoc.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
             _onNewIFrame(nextNode);
             this.que.push(iframeWalker);

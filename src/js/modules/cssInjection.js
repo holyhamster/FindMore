@@ -1,7 +1,7 @@
 //for a direct css injection
 const ShadowrootCSS = `
 #TFBarsContainer {
-    --scale-ratio: 2;
+    --scale-ratio: 1;
     --themeAlpha: .95;
     font-family: Verdana, sans-serif;
     color: var(--secondary-color);
@@ -28,7 +28,7 @@ const ShadowrootCSS = `
     justify-content: space-evenly;
     align-content: flex-start;
     flex-wrap: wrap;
-    padding: calc(var(--scale-ratio) * .2em);
+    padding: calc(var(--scale-ratio) * 4px);
     min-width: calc(var(--scale-ratio) * 180px);
     min-height: calc(var(--scale-ratio) * 30px);
     border-radius: calc(var(--scale-ratio) * 5px);
@@ -41,6 +41,7 @@ const ShadowrootCSS = `
     --primary-color: hsl(var(--themeHue), 75%, 75%, var(--themeAlpha));
     --secondary-color: hsl(var(--themeHue), 60%, 15%, var(--themeAlpha));
     pointer-events: auto;
+    user-select: none;
 }
 .TFSearchBarBG {
     position:absolute;
@@ -92,10 +93,6 @@ button:hover {
 .upButton {
     margin-left: 0px;
     margin-right: auto;
-}
-
-span {
-    user-select: none;
 }
 
 .selectedMatch {

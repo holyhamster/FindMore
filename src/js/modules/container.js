@@ -1,5 +1,5 @@
 //container for a single DOM parent, handles all highlight rectangles for it
-class container
+class Container
 {
     parentNode;
     headSpan;
@@ -147,4 +147,4 @@ function hasRelativeAncestor(_node)
     }
     return false;
 }
-export default container;
+export default Container;

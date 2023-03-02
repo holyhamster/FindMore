@@ -25,10 +25,9 @@ chrome.runtime.onMessage.addListener(function (_RUNTIME_EVENT, _sender)
                     return;
 
                 options = _RUNTIME_EVENT.options;
-                obtainActiveID(function (_id)
+                obtainActiveID((_id) =>
                 {
-                    chrome.tabs.sendMessage(_id,
-                        { message: "tf-options-update", tabId: _id, options: options });
+                    sendSearchData(_id);
                 });
             }
             break;
@@ -108,8 +107,6 @@ function sendSearchData(_tabId, _tabData, _forced, _pinnedOnly)
     message.data = _tabData;
     message.forcedUpdate = _forced;
     message.pinnedOnly = _pinnedOnly;
-    console.log(`update event sent`);
-    console.log(JSON.stringify(message));
     chrome.tabs.sendMessage(_tabId, message);
 }
 

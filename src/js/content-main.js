@@ -6,7 +6,6 @@ export function main()
     var tabId;
     var searchesMap = new Map();    //key is ID (integer)
     var barsMap = new Map();    //key is ID (integer)
-    var options = new Object();
 
     //#region document events
     document.addEventListener("tf-bar-closed", function (_args)
@@ -46,22 +45,16 @@ export function main()
     chrome.runtime.onMessage.addListener(
         function (request, sender)
         {
-            tabId = request.tabId;
+            tabId = tabId || request.tabId;
+            if (request.options)
+                loadOptions(request.options);
 
             switch (request.message)
             {
-                case "tf-options-update":
-                    if (request.options)
-                        loadOptions(request.options);
-                    break
-
                 case "tf-new-search":
-                    if (request.options)
-                        loadOptions(request.options);
-
                     const id = getNewID();
                     const newSearch = new SearchState("");
-                    newSearch.pinned = options.startPinned;
+                    newSearch.pinned = request.options?.startPinned || false;
 
                     searchesMap.set(id, newSearch)
                     barsMap.set(id, new SearchBar(id, newSearch, barsMap.size));
@@ -69,22 +62,19 @@ export function main()
                     break;
 
                 case "tf-update-search":
-                    if (request.options)
-                        loadOptions(request.options);
-
                     if (!request.data)
                         return;
                     barsMap.forEach(function (_val) { _val.close() });
                     barsMap = new Map();
                     searchesMap = new Map();
 
-                    let loadedMap = deserializeIntoMap(request.data);
+                    const loadedMap = deserializeIntoMap(request.data);
                     loadedMap.forEach(function (_state)
                     {
                         if (request.pinnedOnly && !_state.pinned)
                             return;
 
-                        let newId = getNewID();
+                        const newId = getNewID();
                         searchesMap.set(newId, _state);
 
                         barsMap.set(newId,
@@ -100,7 +90,6 @@ export function main()
 
     function loadOptions(_options)
     {
-        console.log(_options);
         SearchBar.getShadowRoot().setStyleFromOptions(_options);
     }
 
@@ -118,7 +107,7 @@ export function main()
     }
     function deserializeIntoMap(_string)
     {
-        let map = new Map(JSON.parse(_string));
+        const map = new Map(JSON.parse(_string));
         map.forEach(function (_val, _key, _map)
         {
             _map.set(_key, SearchState.load(_val));

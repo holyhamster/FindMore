@@ -1,4 +1,5 @@
 import SearchRegion from './searchRegion.js';
+import PerformanceMeasurer from './performanceMeasurer.js';
 
 //recursively searches DOM, sends matches to highlighter
 class DomSearcher
@@ -9,23 +10,17 @@ class DomSearcher
     walker;
 
     hitCount = 0; //not all hits will be visible
-    id;
     onNewMatches;
     
     selectedIndex;
 
-    constructor(_id, _searchString, _regex, _eventElem, _highlighter)
+    constructor(_searchString, _regex, _eventElem, _highlighter)
     {
-        this.id = _id;
-        this.searchString = _searchString;
-        this.regexp = _regex;
-        this.interrupted = false;
-
-        setTimeout(function ()
+        setTimeout(() =>
         {
-            let region = new SearchRegion(this.searchString, this.regexp, _eventElem);
+            const region = new SearchRegion(_searchString, _regex, _eventElem);
             this.search(region, _highlighter)
-        }.bind(this), this.interval);
+        }, this.interval);
     }
 
     interrupt()
@@ -33,42 +28,41 @@ class DomSearcher
         this.interrupted = true;
     }
 
-    search(_searchRegion, _highlighter)
+    search(_searchRegion, _highlighter, _executionTime = 0)
     {
-        const sleepInterval = 5, consecutiveCalls = 1000;
+        const sleepInterval = 5, consecutiveCalls = 200, msInterrupt = 200;
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
+        const measurer = new PerformanceMeasurer();
 
         while ((callsLeft -= 1) >= 0 && (WALK_IN_PROGRESS = _searchRegion.expand()))
         {
-            callsLeft -= 1;
-            const matches = _searchRegion.getMatches(callsLeft);
-            matches.forEach((_match) => _highlighter.queMatch(_match));
-            this.hitCount += matches.length;
+            const matches = _searchRegion.getMatches();
+            if (this.interrupted)
+                return;
+
+            _highlighter.queMatches(matches);
         }
-        
-        if (!this.interrupted && WALK_IN_PROGRESS)
-            setTimeout(function (){
-                this.search.call(this, _searchRegion, _highlighter) }.bind(this),
-                sleepInterval);
+
+        if (!WALK_IN_PROGRESS)
+            return;
+        _executionTime = _executionTime + measurer.get();
+        if (_executionTime < msInterrupt)
+        {
+            this.search(_searchRegion, _highlighter, _executionTime)
+        }
+        else
+        {
+            setTimeout(() =>
+            {
+                this.search(_searchRegion, _highlighter)
+            }, sleepInterval);
+        }   
     }
 }
 
 
 
-class PerformanceMesurer
-{
-    constructor()
-    {
-        this.last = performance.now();
-    }
 
-    get()
-    {
-        let val = performance.now() - this.last;
-        this.last = performance.now();
-        return val;
-    }
-}
 
 export default DomSearcher;
 

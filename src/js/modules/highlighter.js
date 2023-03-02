@@ -1,4 +1,5 @@
-import container from './container.js';
+import Container from './container.js';
+import PerformanceMeasurer from './performanceMeasurer.js';
 
 class Highlighter
 {
@@ -85,10 +86,10 @@ class Highlighter
 
     static getCSSString(_id, _primary, _accent)
     {
-        return `.TFC${_id} { all:initial; display:inline-block; position: absolute; } ` +
+        return `.TFC${_id} { all:initial; display:inline-block; position: absolute;  } ` +
             `.TFCR${_id} { all:initial; display:inline-block; position: relative; } ` +
             `.TFH${_id} { position: absolute; background-color: ${_primary};` +
-            ` opacity: 0.7; z-index: 2147483646; } ` +
+            ` opacity: 0.7; z-index: 2147483646; pointer-events: none;} ` +
             `.TFHS${_id} { background-color: ${_accent}; }`;
     }
 
@@ -99,26 +100,30 @@ class Highlighter
     matches = [];       //que of DOMSearcher matches for processing
     containers = [];    //processed matches
     invoked;
-    queMatch(_match)
+    queMatches(_matches)
     {
-        this.matches.push(_match);
+        this.matches = [...this.matches, ..._matches];
+        this.interrupted = false;
         if (this.invoked)
             return;
 
         this.invoked = true;
-        setTimeout(function () { this.processHighlights.call(this) }.bind(this), 1);
+        setTimeout(() => { this.processHighlights() }, 1);
     }
 
     interrupted;
     consequtiveCalls = 100;
     processHighlights()
     {
-        let callsLeft = this.consequtiveCalls;
-        const range = document.createRange(), timeoutInterval = 1, dirtyContainers = [];
+        const perfMeasurer = new PerformanceMeasurer(), msPerCall = 200, msTimeout = 5;
+        let totalTime = 0;
+        const range = document.createRange(), dirtyContainers = [];
+
         this.invoked = false;
         
-        while ((callsLeft -= 1) >= 0 && (this.matches.length > 0))
+        while ((totalTime += perfMeasurer.get()) < msPerCall && (this.matches.length > 0) && !this.interrupted)
         {
+            
             const match = this.matches.shift();
             const container = this.createContainer(match, range);
             if (container)
@@ -142,7 +147,7 @@ class Highlighter
         if (!this.invoked && !this.interrupted && this.matches.length > 0)
         {
             this.invoked = true;
-            setTimeout(function () { this.processHighlights.call(this) }.bind(this), timeoutInterval);
+            setTimeout(() => { this.processHighlights() }, msTimeout);
         }
     }
 
@@ -154,7 +159,7 @@ class Highlighter
         let hlContainer = this.nodeToContainerMap.get(_match.endNode.parentNode);
         if (!hlContainer)
         {
-            hlContainer = new container(_match.endNode.parentNode, this.id);
+            hlContainer = new Container(_match.endNode.parentNode, this.id);
             this.nodeToContainerMap.set(_match.endNode.parentNode, hlContainer);
         }
 
@@ -229,6 +234,7 @@ class Highlighter
     oldContainers = [];
     clearSelection()
     {
+        this.interrupted = true;
         this.oldContainers = [...this.oldContainers, ...Array.from(this.nodeToContainerMap.values())];
 
         setTimeout(() => this.removeOldContainers(), 100);

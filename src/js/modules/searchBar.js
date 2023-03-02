@@ -216,7 +216,7 @@ class SearchBar
             this.highlighter = this.highlighter || new Highlighter(_id, this.mainDiv,
                 _state.getColor(), _state.getAccentedColor());
 
-            this.domSearcher = new DOMSearcher(_id,
+            this.domSearcher = new DOMSearcher(
                 _state.searchString, _state.getRegex(true),
                 this.mainDiv, this.highlighter);
         }
@@ -297,6 +297,7 @@ function setStyleFromOptions(_shadowRoot, _options)
     }
     
     style.setProperty("--themeAlpha", _options?.opacity ? _options.opacity : .95);
+    style.setProperty("--scale-ratio", _options?.scale ? _options.scale : 1);
 }
 
 export default SearchBar;
