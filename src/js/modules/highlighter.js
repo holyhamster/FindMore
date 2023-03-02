@@ -2,21 +2,10 @@ import container from './container.js';
 
 class Highlighter
 {
-    matches = [];       //list of matches from domsearcher
-    containers = [];    //highlight spans, index = index in the matches array
-    
-
     constructor(_id, _eventElem, _primaryColor, _secondaryColor )
     {
         this.id = _id;
         this.parentElement = _eventElem;
-
-        this.intersectionObserver = new IntersectionObserver(entries =>
-        {
-            if (!entries[0].isIntersecting)
-                entries[0].target.scrollIntoView({ block: "center" });
-            this.intersectionObserver.unobserve(entries[0].target)
-        });
 
         const newMatchesEvent = new Event(`tf-new-matches-update`);
         this.onNewMatches = (_newMatchCount) =>
@@ -26,7 +15,6 @@ class Highlighter
         };
 
         this.setColors(_primaryColor, _secondaryColor);
-       ;
     }
 
     //#region CSS STYLING
@@ -47,6 +35,18 @@ class Highlighter
         }
         this.adoptedSheet.replaceSync(_css);
     }
+    removeAdoptedStyle()
+    {
+        const adoptedCSSIndex = Array.from(document.adoptedStyleSheets).
+            findIndex((_style) => { return _style === this.adoptedSheet; });
+        if (adoptedCSSIndex >= 0)
+        {
+            const adopts = Array.from(document.adoptedStyleSheets);
+            adopts.splice(adoptedCSSIndex, 1);
+            document.adoptedStyleSheets = adopts;
+            this.adoptedSheet = null;
+        }
+    }
 
     iframeStylesMap = new Map();
     setIFramesStyle(_css)
@@ -63,11 +63,24 @@ class Highlighter
         this.iFrameListener = (_args) => {
             const iframe = _args.iframe;
             this.iframeStylesMap.get(iframe)?.remove();
-            const newStyle = addStyleTag(iframe, _css)
+            const newStyle = Highlighter.addStyleTag(iframe, _css)
             this.iframeStylesMap.set(iframe, newStyle);
         };
 
         this.parentElement.addEventListener(`tf-iframe-style-update`, this.iFrameListener);
+    }
+
+    static addStyleTag(_iframe, _cssString)
+    {
+        let style = _iframe.contentDocument.createElement("style");
+        style.setAttribute("class", "TFIframeStyle");
+        style.innerHTML = _cssString;
+        if (style.parentNode != _iframe.contentDocument.head)
+        {
+            _iframe.contentDocument.head.appendChild(style);
+        }
+
+        return style;
     }
 
     static getCSSString(_id, _primary, _accent)
@@ -79,21 +92,12 @@ class Highlighter
             `.TFHS${_id} { background-color: ${_accent}; }`;
     }
 
-    removeAdoptedStyle()
-    {
-        const adoptedCSSIndex = Array.from(document.adoptedStyleSheets).
-            findIndex((_style) => { return _style === this.adoptedSheet; });
-        if (adoptedCSSIndex >= 0)
-        {
-            const adopts = Array.from(document.adoptedStyleSheets);
-            adopts.splice(adoptedCSSIndex, 1);
-            document.adoptedStyleSheets = adopts;
-            this.adoptedSheet = null;
-        }
-    }
+    
     //#endregion
 
     //#region RECURSIVE HIGHLIGHT 
+    matches = [];       //que of DOMSearcher matches for processing
+    containers = [];    //processed matches
     invoked;
     queMatch(_match)
     {
@@ -109,15 +113,13 @@ class Highlighter
     consequtiveCalls = 100;
     processHighlights()
     {
-        let HAS_UNPROCESSED_MATCHES, callsLeft = this.consequtiveCalls;
+        let callsLeft = this.consequtiveCalls;
         const range = document.createRange(), timeoutInterval = 1, dirtyContainers = [];
         this.invoked = false;
         
-        while ((callsLeft -= 1) > 0 &&
-            (HAS_UNPROCESSED_MATCHES = (this.matches.length > this.containers.length)))
+        while ((callsLeft -= 1) >= 0 && (this.matches.length > 0))
         {
-            
-            const matchID = this.containers.length, match = this.matches[matchID];
+            const match = this.matches.shift();
             const container = this.createContainer(match, range);
             if (container)
             {
@@ -125,35 +127,29 @@ class Highlighter
                 if (!dirtyContainers.includes(container))
                     dirtyContainers.push(container);
             }
-            else
-                this.matches.splice(matchID, 1);
         }
 
-        if (this.interrupted)
-            return;
-
-        if (dirtyContainers.length > 0)
+        if (!this.interrupted)
         {
-            console.log("adding");
-            this.onNewMatches(this.containers.length);
+            dirtyContainers.forEach((_container) => { _container.commit(); })
+            if (dirtyContainers.length > 0)
+                this.onNewMatches(this.getMatchCount());
         }
-        dirtyContainers.forEach((_container) => { _container.commit(); })
 
-        let container;
-        while (container = this.containersToRemove?.shift())       
-            container.remove();
+        this.removeOldContainers();
+        
 
-        if (this.matches.length != this.containers.length & !this.invoked)
+        if (!this.invoked && !this.interrupted && this.matches.length > 0)
         {
             this.invoked = true;
             setTimeout(function () { this.processHighlights.call(this) }.bind(this), timeoutInterval);
         }
     }
 
-    nodeToContainerMap = new Map();
+    nodeToContainerMap = new Map(); //map of container spans that hold highlighted rectangles to their parent nodes
     createContainer(_match, _range)
     {
-        let rects = this.getRects(_match, _range);
+        const rects = this.getHighlightRectangles(_match, _range);
 
         let hlContainer = this.nodeToContainerMap.get(_match.endNode.parentNode);
         if (!hlContainer)
@@ -162,83 +158,90 @@ class Highlighter
             this.nodeToContainerMap.set(_match.endNode.parentNode, hlContainer);
         }
 
-        let highlightID = this.containers.length;
-        let visible = hlContainer.highlightRects(highlightID, rects);
+        const highlightID = this.containers.length;
+        const visible = hlContainer.highlightRects(highlightID, rects);
 
         if (visible)
-        {
             return hlContainer;
-        }
 
         return;
     }
 
-    getRects(_match, _range)
+    getHighlightRectangles(_match, _range)
     {
         _range.setStart(_match.startNode, _match.startOffset);
         _range.setEnd(_match.endNode, _match.endOffset);
 
-        let nonEmptyRects = [], rects = _range.getClientRects();
+        const rects = Array.from(_range.getClientRects()), nonEmptyRects = [];
 
-        for (let i = 0; i < rects.length; i++)
-            if (rects[i].width >= 1 && rects[i].height >= 1)
-                nonEmptyRects.push(rects[i]);
+        while (rects.length > 0)
+        {
+            const rect = rects.shift();
+            if (rect.width >= 1 && rect.height >= 1)
+                nonEmptyRects.push(rect);
+        }
 
         return nonEmptyRects;
     }
     //#endregion
 
-    getTotalCount()
+    getMatchCount(_includeUnprocessed = true)
     {
-        if (this.matches.length != this.containers.length)
-            return roundToLeftDigit(this.matches.length);
-        return this.containers.length;
+        return this.containers.length + (_includeUnprocessed ? this.matches.length: 0);
     }
 
     accentMatch(_index)
     {
-        const lastAccentedContainer = this.accentedIndex == null? null : this.containers[this.accentedIndex];
+        const lastAccentedContainer = this.containers[this.accentedIndex];
         if (lastAccentedContainer)
         {
             lastAccentedContainer.setSelectionAt(this.accentedIndex, false);
             this.accentedIndex = null;
         }
 
-        if (_index >= this.matches.length)
-            return;
-
-        let focusTarget, INDEX_IS_BEING_PROCESSED = _index >= this.containers.length;
-
-        if (INDEX_IS_BEING_PROCESSED)
-        {
-            focusTarget = this.matches[_index].startNode.parentNode;
-        }
-        else
+        let focusTarget;
+        if (_index < this.containers.length)
         {
             this.accentedIndex = _index;
             const accentedRectangles = this.containers[this.accentedIndex].setSelectionAt(_index, true);
-            focusTarget = accentedRectangles.length > 0? accentedRectangles[0]: null;
+            focusTarget = accentedRectangles.length > 0 ? accentedRectangles[0] : null;
         }
-        
-        if (focusTarget)
-            this.intersectionObserver.observe(focusTarget);
+        else if (_index < this.containers.length + this.matches.length)
+        {
+            const match = this.matches[_index - this.containers.length];
+            focusTarget = match?.startNode.parentNode;
+        }
+
+        if (!focusTarget)
+            return;
+
+        this.intersectionObserver = this.intersectionObserver ||
+            new IntersectionObserver(entries => 
+            {
+                if (!entries[0].isIntersecting)
+                    entries[0].target.scrollIntoView({ block: "center" });
+                this.intersectionObserver.unobserve(entries[0].target)
+            });
+
+        this.intersectionObserver.observe(focusTarget);
     }
 
+    oldContainers = [];
     clearSelection()
     {
-        this.containersToRemove = this.containersToRemove || [];
-        this.containersToRemove = [...this.containersToRemove, ...Array.from(this.nodeToContainerMap.values())];
-        console.log("removing");
-        setTimeout(function ()
-        {
-            let container;
-            while (container = this.containersToRemove?.shift())
-                container.remove();
-        }.bind(this), 100);
+        this.oldContainers = [...this.oldContainers, ...Array.from(this.nodeToContainerMap.values())];
+
+        setTimeout(() => this.removeOldContainers(), 100);
         
         this.matches = [];
         this.containers = [];
         this.nodeToContainerMap = new Map();
+    }
+    removeOldContainers()
+    {
+        let container;
+        while (container = this.oldContainers.shift())
+            container.remove();
     }
 
     clearStyles()
@@ -252,26 +255,12 @@ class Highlighter
             document.adoptedStyleSheets = adopts;
             this.adoptedSheet = null;
         }
-        this.iframeStylesMap.forEach(function (_sheets, _iframe)
-        {
-            _sheets.remove();
-        }.bind(this));
+        this.iframeStylesMap.forEach((_sheets, _iframe) => { _sheets.remove();});
         this.iframeStylesMap = new Map();
     }
 }
 
-function addStyleTag(_iframe, _cssString)
-{
-    let style = _iframe.contentDocument.createElement("style");
-    style.setAttribute("class", "TFIframeStyle");
-    style.innerHTML = _cssString;
-    if (style.parentNode != _iframe.contentDocument.head)
-    {
-        _iframe.contentDocument.head.appendChild(style);
-    }
 
-    return style;
-}
 
 function removeDOMClass(_document, _className)
 {

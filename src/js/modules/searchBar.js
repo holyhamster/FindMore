@@ -238,7 +238,7 @@ class SearchBar
 
     updateLabels(_indexChange)
     {
-        const matchesLength = this.highlighter?.getTotalCount() || 0;
+        const matchesLength = this.highlighter?.getMatchCount() || 0;
 
         const oldValue = this.selectedIndex;
 
