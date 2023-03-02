@@ -1,7 +1,7 @@
 //for a direct css injection
 const ShadowrootCSS = `
 #TFBarsContainer {
-    --scale-ratio: 1;
+    --scale-ratio: 2;
     --themeAlpha: .95;
     font-family: Verdana, sans-serif;
     color: var(--secondary-color);
@@ -29,11 +29,11 @@ const ShadowrootCSS = `
     align-content: flex-start;
     flex-wrap: wrap;
     padding: calc(var(--scale-ratio) * .2em);
-    min-width: calc(var(--scale-ratio) * 18em);
-    min-height: calc(var(--scale-ratio) * 3em);
-    border-radius: calc(var(--scale-ratio) * .2em);
+    min-width: calc(var(--scale-ratio) * 180px);
+    min-height: calc(var(--scale-ratio) * 30px);
+    border-radius: calc(var(--scale-ratio) * 5px);
     border-style: solid;
-    border-width: calc(var(--scale-ratio) * .2em);
+    border-width: calc(var(--scale-ratio) * 5px);
     border-color: transparent;
     background-color: var(--primary-color);
     color: var(--secondary-color);
@@ -64,15 +64,16 @@ const ShadowrootCSS = `
 }
 
 button {
-    border-radius: 20px;
+    border-radius: calc(var(--scale-ratio) * 20px);
+    font-size: calc(var(--scale-ratio) * 15px);
     color:var(--secondary-color);
     background-color: transparent;
     border-style: none;
-    margin-left: 5px;
-    min-width:24px;
-    min-height:24px;
+    margin-left: calc(var(--scale-ratio) * 5px);
+    min-width: calc(var(--scale-ratio) * 24px);
+    min-height:calc(var(--scale-ratio) * 24px);
     text-align: center;
-    line-height: 1em;
+    line-height: calc(var(--scale-ratio) * 15px);
 }
 
 button:hover {
@@ -82,7 +83,8 @@ button:hover {
 .searchInput {
     color: hsl(var(--themeHue), 60%, 15%, 1);
     background-color: hsla(0, 0%, 100%, var(--themeAlpha));
-    border-radius: 5px;
+    border-radius: calc(var(--scale-ratio) * 5px);
+    font-size: calc(var(--scale-ratio) * 15px);
 }
 .caseCheck, .wordCheck {
     accent-color: hsl(0, 100%, 100%, var(--themeAlpha));
@@ -98,13 +100,13 @@ span {
 
 .selectedMatch {
     right: 0px;
-    min-width: 40px;
+    min-width: calc(var(--scale-ratio) * 40px);
     display:flex;
     justify-content:flex-end;
 }
 .totalMatches {
     left: 0px;
-    min-width: 40px;
+    min-width: calc(var(--scale-ratio) * 40px);
 }
 
 label 
@@ -118,7 +120,7 @@ label
 }
 
 .wordCheck {
-    margin-left: 10px;
+    margin-left: calc(var(--scale-ratio) * 10px);
 }
 `
 

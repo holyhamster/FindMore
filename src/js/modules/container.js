@@ -44,9 +44,10 @@ class container
 
     isVisible()
     {
-        const parentStyle = window.getComputedStyle(this.parentNode);
+        this.parentStyle = this.parentStyle || window.getComputedStyle(this.parentNode);
 
-        let isVisible = parentStyle.visibility != "hidden" && parentStyle.display != "none";
+        let isVisible =
+            this.parentStyle.visibility != "hidden" && this.parentStyle.display != "none";
 
         if (!isVisible)
             return isVisible;
@@ -104,6 +105,7 @@ class container
         this.setAppendance(true)
 
         this.updatedAfterCommit = false;
+        this.parentStyle = null;
     }
     remove()
     {

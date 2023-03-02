@@ -78,7 +78,6 @@ class SearchBar
             if (!_args?.target)
                 return;
             _args.target.value = formatIncomingString(_args.target.value);
-
             let stateChange = _args.target.value != this.state.searchString;
             this.state.searchString = _args.target.value;
             this.restartSearch(this.state, this.id, stateChange);

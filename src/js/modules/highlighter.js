@@ -4,69 +4,105 @@ class Highlighter
 {
     matches = [];       //list of matches from domsearcher
     containers = [];    //highlight spans, index = index in the matches array
-    iframeStylesMap = new Map();
+    
 
     constructor(_id, _eventElem, _primaryColor, _secondaryColor )
     {
         this.id = _id;
+        this.parentElement = _eventElem;
 
         this.intersectionObserver = new IntersectionObserver(entries =>
         {
             if (!entries[0].isIntersecting)
                 entries[0].target.scrollIntoView({ block: "center" });
-
             this.intersectionObserver.unobserve(entries[0].target)
         });
 
-        this.setColors(_primaryColor, _secondaryColor);
-
         const newMatchesEvent = new Event(`tf-new-matches-update`);
-        this.onNewMatches = (_matches) =>
+        this.onNewMatches = (_newMatchCount) =>
         {
-            newMatchesEvent.length = _matches;
+            newMatchesEvent.length = _newMatchCount;
             _eventElem.dispatchEvent(newMatchesEvent);
         };
 
-        _eventElem.addEventListener(`tf-iframe-style-update`, function (_args) 
-        {
-            const iframe = _args.iframe;
-            this.iframeStylesMap.get(iframe)?.remove();
-            const newStyle = addStyleTag(iframe, getCSSString(this.id, this.primary, this.accent))
-            this.iframeStylesMap.set(iframe, newStyle);
-        }.bind(this));
+        this.setColors(_primaryColor, _secondaryColor);
+       ;
     }
 
+    //#region CSS STYLING
     setColors(_primaryColor, _accent)
     {
-        this.primary = _primaryColor;
-        this.accent = _accent;
-        const cssString = getCSSString(this.id, this.primary, this.accent);
+        const cssString = Highlighter.getCSSString(this.id, _primaryColor, _accent);
 
+        this.setAdoptedStyle(cssString);
+        this.setIFramesStyle(cssString);
+    }
+
+    setAdoptedStyle(_css)
+    {
         if (!this.adoptedSheet || !document.adoptedStyleSheets.includes(this.adoptedSheet))
         {
             this.adoptedSheet = new CSSStyleSheet();
             document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.adoptedSheet];
-            console.log("added");
         }
-        this.adoptedSheet.replaceSync(cssString);
-
-        this.iframeStylesMap.forEach((_oldStyle, _iframe) =>
-        {
-            _oldStyle.remove();
-            this.iframeStylesMap.set(_iframe, addStyleTag(_iframe, cssString));
-        })
+        this.adoptedSheet.replaceSync(_css);
     }
 
+    iframeStylesMap = new Map();
+    setIFramesStyle(_css)
+    {
+        this.iframeStylesMap?.forEach((_oldStyle, _iframe) =>
+        {
+            _oldStyle.remove();
+            this.iframeStylesMap.set(_iframe, addStyleTag(_iframe, _css));
+        })
+
+        if (this.iFrameListener != null)
+            this.parentElement.removeEventListener(`tf-iframe-style-update`, this.iFrameListener);
+
+        this.iFrameListener = (_args) => {
+            const iframe = _args.iframe;
+            this.iframeStylesMap.get(iframe)?.remove();
+            const newStyle = addStyleTag(iframe, _css)
+            this.iframeStylesMap.set(iframe, newStyle);
+        };
+
+        this.parentElement.addEventListener(`tf-iframe-style-update`, this.iFrameListener);
+    }
+
+    static getCSSString(_id, _primary, _accent)
+    {
+        return `.TFC${_id} { all:initial; display:inline-block; position: absolute; } ` +
+            `.TFCR${_id} { all:initial; display:inline-block; position: relative; } ` +
+            `.TFH${_id} { position: absolute; background-color: ${_primary};` +
+            ` opacity: 0.7; z-index: 2147483646; } ` +
+            `.TFHS${_id} { background-color: ${_accent}; }`;
+    }
+
+    removeAdoptedStyle()
+    {
+        const adoptedCSSIndex = Array.from(document.adoptedStyleSheets).
+            findIndex((_style) => { return _style === this.adoptedSheet; });
+        if (adoptedCSSIndex >= 0)
+        {
+            const adopts = Array.from(document.adoptedStyleSheets);
+            adopts.splice(adoptedCSSIndex, 1);
+            document.adoptedStyleSheets = adopts;
+            this.adoptedSheet = null;
+        }
+    }
+    //#endregion
+
+    //#region RECURSIVE HIGHLIGHT 
     invoked;
     queMatch(_match)
     {
-        
         this.matches.push(_match);
-        if (!this.invoked)
-        {
-            this.invoked = true;
-            setTimeout(function () { this.processHighlights.call(this) }.bind(this), 1);
-        }
+        if (this.invoked)
+            return;
+
+        this.invoked = true;
+        setTimeout(function () { this.processHighlights.call(this) }.bind(this), 1);
     }
 
     interrupted;
@@ -80,7 +116,7 @@ class Highlighter
         while ((callsLeft -= 1) > 0 &&
             (HAS_UNPROCESSED_MATCHES = (this.matches.length > this.containers.length)))
         {
-            ;
+            
             const matchID = this.containers.length, match = this.matches[matchID];
             const container = this.createContainer(match, range);
             if (container)
@@ -97,11 +133,14 @@ class Highlighter
             return;
 
         if (dirtyContainers.length > 0)
+        {
+            console.log("adding");
             this.onNewMatches(this.containers.length);
+        }
         dirtyContainers.forEach((_container) => { _container.commit(); })
 
         let container;
-        while (container = this.containersToRemove?.shift())
+        while (container = this.containersToRemove?.shift())       
             container.remove();
 
         if (this.matches.length != this.containers.length & !this.invoked)
@@ -147,6 +186,8 @@ class Highlighter
 
         return nonEmptyRects;
     }
+    //#endregion
+
     getTotalCount()
     {
         if (this.matches.length != this.containers.length)
@@ -187,7 +228,7 @@ class Highlighter
     {
         this.containersToRemove = this.containersToRemove || [];
         this.containersToRemove = [...this.containersToRemove, ...Array.from(this.nodeToContainerMap.values())];
-
+        console.log("removing");
         setTimeout(function ()
         {
             let container;
@@ -199,6 +240,7 @@ class Highlighter
         this.containers = [];
         this.nodeToContainerMap = new Map();
     }
+
     clearStyles()
     {
         const adoptedCSSIndex = Array.from(document.adoptedStyleSheets).
@@ -229,15 +271,6 @@ function addStyleTag(_iframe, _cssString)
     }
 
     return style;
-}
-
-function getCSSString(_id, _primary, _accent)
-{
-    return `.TFC${_id} { all:initial; display:inline-block; position: absolute; } ` +
-        `.TFCR${_id} { all:initial; display:inline-block; position: relative; } ` +
-        `.TFH${_id} { position: absolute; background-color: ${_primary};` +
-        ` opacity: 0.7; z-index: 2147483646; } ` +
-        `.TFHS${_id} { background-color: ${_accent}; }`;
 }
 
 function removeDOMClass(_document, _className)

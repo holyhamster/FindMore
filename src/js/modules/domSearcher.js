@@ -35,7 +35,7 @@ class DomSearcher
 
     search(_searchRegion, _highlighter)
     {
-        const sleepInterval = 1, consecutiveCalls = 10000;
+        const sleepInterval = 5, consecutiveCalls = 1000;
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
 
         while ((callsLeft -= 1) >= 0 && (WALK_IN_PROGRESS = _searchRegion.expand()))
