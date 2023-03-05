@@ -88,7 +88,7 @@ class Highlighter
     {
         return `.TFC${_id} { all:initial; display:inline-block; position: absolute;  } ` +
             `.TFCR${_id} { all:initial; display:inline-block; position: relative; } ` +
-            `.TFH${_id} { position: absolute; background-color: ${_primary};` +
+            `.TFH${_id} { all:initial; position: absolute; background-color: ${_primary};` +
             ` opacity: 0.7; z-index: 2147483646; pointer-events: none;} ` +
             `.TFHS${_id} { background-color: ${_accent}; }`;
     }
@@ -115,7 +115,7 @@ class Highlighter
     consequtiveCalls = 100;
     processHighlights()
     {
-        const perfMeasurer = new PerformanceMeasurer(), msPerCall = 200, msTimeout = 5;
+        const perfMeasurer = new PerformanceMeasurer(), msPerCall = 100, msTimeout = 5;
         let totalTime = 0;
         const range = document.createRange(), dirtyContainers = [];
 
@@ -174,11 +174,12 @@ class Highlighter
 
     getHighlightRectangles(_match, _range)
     {
+        
         _range.setStart(_match.startNode, _match.startOffset);
         _range.setEnd(_match.endNode, _match.endOffset);
 
         const rects = Array.from(_range.getClientRects()), nonEmptyRects = [];
-
+        console.log(rects.length);
         while (rects.length > 0)
         {
             const rect = rects.shift();

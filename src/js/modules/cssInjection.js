@@ -43,14 +43,7 @@ const ShadowrootCSS = `
     pointer-events: auto;
     user-select: none;
 }
-.TFSearchBarBG {
-    position:absolute;
-    height: 100%;
-    width: 100%;
-    background-color:black;
-    left:0px;
-    top:0px;
-}
+
 .TFSearchBarRow {
     display: flex;
     justify-content: space-between;
@@ -80,6 +73,10 @@ button {
 button:hover {
     color: hsla(var(--themeHue), 75%, 75%, var(--themeAlpha));
     background-color: hsla(var(--themeHue), 60%, 15%, var(--themeAlpha));
+}
+button:active {
+    transform: translateY(calc(var(--scale-ratio)*1px));
+    background-color: hsla(0, 0%, 0%, 1);
 }
 .searchInput {
     color: hsl(var(--themeHue), 60%, 15%, 1);

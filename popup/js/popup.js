@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () =>
         sendOptions(options);
     };
 
+    
+
     document.getElementById('findButton')?.addEventListener('click', () =>
     {
         chrome.runtime.sendMessage({ message: "tf-popup-new-search" });
@@ -30,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () =>
         close();
     });
 
-    document.getElementById('optionsToggle').addEventListener('click', () =>
+    document.getElementById('optionsToggle')?.addEventListener('click', () =>
     {
         const optionsStyle = document.getElementById('optionsExpanding').style;
         if (!optionsStyle)
@@ -43,7 +45,66 @@ document.addEventListener('DOMContentLoaded', () =>
         optionChange();
     });
 
-    const optionTogglesID = ["tabsCorner", "tabsAlignment", "startPinned", "opacity", "scale"];
+    const cornerButton = document.getElementById('cornerButton');
+    cornerButton.selectIndex = (_index) =>
+    {
+        cornerButton.selectedIndex = _index || 0;
+        console.log(_index)
+        switch (_index)
+        {
+            case 1:
+                cornerButton.textContent = `\u{25F3}`;
+                break;
+            case 2:
+                cornerButton.textContent = `\u{25F1}`;
+                break;
+            case 3:
+                cornerButton.textContent = `\u{25F2}`;
+                break;
+            default:
+                cornerButton.textContent = `\u{25F0}`;
+
+        }
+    }
+    cornerButton?.addEventListener('click', (_args) =>
+    {
+        const index = (cornerButton.selectedIndex || 0) + 1;
+        cornerButton.selectIndex(index <= 3 ? index : 0);
+        optionChange();
+    });
+    
+
+    const alignmentButton = document.getElementById('alignmentButton');
+    alignmentButton.selectIndex = (_index) =>
+    {
+        alignmentButton.selectedIndex = _index || 0;
+        if (_index === 1)
+            alignmentButton.textContent = `\u{21C6}`;
+        else
+            alignmentButton.textContent = `\u{21C5}`;
+    }
+    alignmentButton?.addEventListener('click', (_args) =>
+    {
+        alignmentButton.selectIndex((alignmentButton.selectedIndex || 0) === 0 ? 1 : 0);
+        optionChange();
+    });
+
+    const pinButton = document.getElementById('pinButton');
+    pinButton.selectIndex = (_index) =>
+    {
+        pinButton.selectedIndex = _index || 0;
+        if (_index === 1)
+            pinButton.textContent = `\u{25A3}`;
+        else
+            pinButton.textContent = `\u{25A2}`;
+    }
+    pinButton?.addEventListener('click', (_args) =>
+    {
+        pinButton.selectIndex((pinButton.selectedIndex || 0) === 0 ? 1 : 0);
+        optionChange();
+    });
+
+    const optionTogglesID = ["opacity", "scale"];
     optionTogglesID.forEach((_id) =>
     {
         document.getElementById(_id)?.addEventListener("change", optionChange)
@@ -61,12 +122,14 @@ function buildOptions()
 {
     let options = new Object();
 
-    options.corner = document.getElementById('tabsCorner')?.selectedIndex;
-    options.alignment = document.getElementById('tabsAlignment')?.selectedIndex;
-    options.startPinned = document.getElementById('startPinned')?.checked;
+    options.corner = document.getElementById('cornerButton')?.selectedIndex || 0;
+    options.alignment = document.getElementById('alignmentButton')?.selectedIndex || 0;
+    options.startPinned = document.getElementById('pinButton')?.selectedIndex === 1;
     options.opacity = document.getElementById('opacity')?.value;
     options.scale = document.getElementById('scale')?.value;
-    options.optionsExpanded = document.getElementById('optionsExpanding')?.style.expanded;
+
+    //options.optionsExpanded = document.getElementById('optionsExpanding')?.style.expanded;
+    
     return options;
 }
 
@@ -76,7 +139,7 @@ function loadOptions(_onLoad)
     chrome.storage.sync.get("tfSavedOptions", function (_storage)
     {
         let options = _storage.tfSavedOptions;
-        console.log(options);
+
         if (options)
             _onLoad(options);
     });
@@ -84,16 +147,15 @@ function loadOptions(_onLoad)
 
 function fillUI(_options)
 {
-    document.getElementById('tabsCorner').selectedIndex = _options.corner;
-    document.getElementById('tabsAlignment').selectedIndex = _options.alignment;
-    document.getElementById('startPinned').checked = _options.startPinned;
+    document.getElementById('cornerButton').selectIndex(_options.corner);
+    document.getElementById('alignmentButton').selectIndex(_options.alignment);
+    document.getElementById('pinButton').selectIndex(_options.startPinned? 1: 0);
     document.getElementById('opacity').value = _options.opacity;
     document.getElementById('scale').value = _options.scale;
 
-    document.getElementById('optionsExpanding').style.expanded = _options.optionsExpanded === true;
-    console.log(document.getElementById('optionsExpanding').style.expanded)
-    if (_options.optionsExpanded === true)
-        document.getElementById('optionsExpanding').style = "block";
+    //document.getElementById('optionsExpanding').style.expanded = _options.optionsExpanded === true;
+    //if (_options.optionsExpanded === true)
+        //document.getElementById('optionsExpanding').style = "block";
 }
 
 function saveOptions(_options)

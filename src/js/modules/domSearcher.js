@@ -20,7 +20,7 @@ class DomSearcher
         {
             const region = new SearchRegion(_searchString, _regex, _eventElem);
             this.search(region, _highlighter)
-        }, this.interval);
+        }, 1);
     }
 
     interrupt()
@@ -30,7 +30,7 @@ class DomSearcher
 
     search(_searchRegion, _highlighter, _executionTime = 0)
     {
-        const sleepInterval = 5, consecutiveCalls = 200, msInterrupt = 200;
+        const sleepInterval = 5, consecutiveCalls = 200, msInterrupt = 100;
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
         const measurer = new PerformanceMeasurer();
 
@@ -45,8 +45,8 @@ class DomSearcher
 
         if (!WALK_IN_PROGRESS)
             return;
-        _executionTime = _executionTime + measurer.get();
-        if (_executionTime < msInterrupt)
+
+        if ((_executionTime += measurer.get()) < msInterrupt)
         {
             this.search(_searchRegion, _highlighter, _executionTime)
         }

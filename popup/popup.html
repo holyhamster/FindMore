@@ -1,62 +1,90 @@
 <html>
 <head>
     <style>
+        body {
+            --main-color: hsl(296,100%,20%);
+            --secondary-color: hsl(296,100%,97%);
+            background-color: var(--secondary-color);
+
+        }
+        input {
+            accent-color: var(--secondary-color);
+            width: 4em;
+        }
         button {
-            margin:5px;
+            margin: 5px;
+            font-size: large;
+            border-radius: 10px;
+            color: var(--main-color);
+            background-color:transparent;
+            min-width: 1em;
         }
-        .buttons {
-            display: flex;
-            flex-direction: column;
-            align-content: center;
-            align-items: center;
+        button:hover {
+            background-color: var(--main-color);
+            color: var(--secondary-color);
         }
-        .stateButtons {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-evenly;
+        button:active {
+            transform: translateY(1px);
+        }
+        .tooltippedButtons {
+            position:relative;
+            margin-bottom: 1.5em;
+        }
+        .tooltip {
+            visibility: hidden;
+            position: absolute;
+            top: 3em;
+            left: 1em;
+        }
+        button:hover + .tooltip {
+            visibility: visible;
+        }
+        footer {
+            margin-top:auto;
+            background-color: gray;
         }
     </style>
 </head>
 <body>
     <script src="js/popup.js"></script>
+    <div style="display: flex; flex-flow: column; justify-content: space-between;">
+        <div style="display:flex; flex-flow:column;">
+            <div style="display:flex;">
+                <h1>
+                    <span style="background: hsl(000, 100%, 85%);">Find</span><span style="background: hsl(100, 100%, 85%);">More</span>
+                </h1>
+            </div>
 
-    <h1>Hello!</h1>
-    <div class="buttons">
-        <button id="findButton">Find</button>
+            <button id="findButton">New search</button>
 
-        <div class="stateButtons">
-            <button id="saveButton">Save</button>
-            <button id="loadButton">Load</button>
+            <div class="tooltippedButtons" style="display: flex; flex-flow: row; justify-content:space-around;">
+                <button id="saveButton">Save</button>
+                <span class="tooltip">Save existing panels</span>
+                <button id="loadButton">Load</button>
+                <span class="tooltip">Load saved panels</span>
+            </div>
+            <div class="tooltippedButtons" display: flex; flex-flow: row; justify-content:space-around;">
+                <button id="cornerButton">X</button>
+                <span class="tooltip">Starting position</span>
+                <button id="alignmentButton">X</button>
+                <span class="tooltip">Layout</span>
+                <button id="pinButton">X</button>
+                <span class="tooltip">Begin as persistent</span>
+            </div>
+
+            <div style="display: flex; flex-flow: row; justify-content:space-around;">
+                <div style="display:flex; flex-flow:column;">
+                    <input type="number" id="opacity" value=".95" name="opacity" min=".5" max="1" step=".02">
+                    <label for="opacity">opacity</label>
+                </div>
+
+                <div style="display: flex; flex-flow: column;">
+                    <input type="number" id="scale" value="1" name="scale" min=".5" max="4" step=".05">
+                    <label for="scale">scale</label>
+                </div>
+            </div>
         </div>
-    </div>
-    <div id="optionsContainer">
-        <div id="optionsToggle">
-            <span>Options</span>
-        </div>
-
-        <div id="optionsExpanding" style="display: none;">
-            <select id="tabsCorner">
-                <option value="0">Top-left</option>
-                <option value="1">Top-right</option>
-                <option value="2">Bottom-left</option>
-                <option value="3">Bottom-right</option>
-            </select>
-
-            <select id="tabsAlignment">
-                <option value="0">Vertical</option>
-                <option value="1">Horizontal</option>
-            </select>
-
-            <input type="checkbox" name="startPinned" id="startPinned">
-
-            <label for="startPinned">start pinned</label>
-
-            <input type="number" id="opacity" value=".95" name="opacity" min=".5" max="1" step=".025">
-            <label for="opacity">opacity</label>
-
-            <input type="number" id="scale" value="1" name="scale" min=".5" max="4" step=".05">
-            <label for="scale">scale</label>
-        </div>
+        <footer>hello</footer>
     </div>
 </body>
 </html>

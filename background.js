@@ -86,17 +86,16 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeinfo) {
     }
 });
 
-function obtainActiveID(_giveActiveId, _onNoActive)
+function obtainActiveID(_onActiveID, _onNoActive)
 {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) =>
     {
         if (!tabs || tabs.length == 0 || tabs[0].url.startsWith('chrome://'))
         {
-            if (_onNoActive)
-                _onNoActive();
+            _onNoActive?.call();
             return;
         }
-        _giveActiveId((Number)(tabs[0].id));
+        _onActiveID((Number)(tabs[0].id));
     });
 }
 

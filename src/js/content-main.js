@@ -4,8 +4,8 @@ import SearchState from './modules/searchState.js';
 export function main()
 {
     var tabId;
-    var searchesMap = new Map();    //key is ID (integer)
-    var barsMap = new Map();    //key is ID (integer)
+    var searchesMap = new Map();    //key -- integer bar ID
+    var barsMap = new Map();    //key -- integer bar ID
 
     //#region document events
     document.addEventListener("tf-bar-closed", function (_args)
@@ -40,7 +40,6 @@ export function main()
             cacheData();
         }
     });
-    //#endregion
 
     chrome.runtime.onMessage.addListener(
         function (request, sender)
@@ -69,7 +68,7 @@ export function main()
                     searchesMap = new Map();
 
                     const loadedMap = deserializeIntoMap(request.data);
-                    loadedMap.forEach(function (_state)
+                    loadedMap?.forEach(function (_state)
                     {
                         if (request.pinnedOnly && !_state.pinned)
                             return;
@@ -108,7 +107,7 @@ export function main()
     function deserializeIntoMap(_string)
     {
         const map = new Map(JSON.parse(_string));
-        map.forEach(function (_val, _key, _map)
+        map?.forEach(function (_val, _key, _map)
         {
             _map.set(_key, SearchState.load(_val));
         });

@@ -9,7 +9,6 @@ class SearchRegion
         this.string = "";
         this.nodes = [];
         this.offset = 0;    //offset of the string from the start of the first node
-        
 
         const newIFramesEvent = new Event(`tf-iframe-style-update`);
         const onNewIFrame = (_iframe) =>
