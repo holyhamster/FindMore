@@ -44,12 +44,12 @@ const ShadowrootCSS = `
     user-select: none;
 }
 
-.TFSearchBarRow {
+.TFSearchBar > div {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-.TFSearchBarRow > *:hover
+.TFSearchBar > div > *:hover
 {
     --themeAlpha: 1;
 }
@@ -87,6 +87,9 @@ button:active {
 .caseCheck, .wordCheck {
     accent-color: hsl(0, 100%, 100%, var(--themeAlpha));
 }
+.wordCheck {
+    margin-left: calc(var(--scale-ratio) * 10px);
+}
 .upButton {
     margin-left: 0px;
     margin-right: auto;
@@ -111,10 +114,6 @@ label
 .wordLabel
 {
     margin-right: auto;
-}
-
-.wordCheck {
-    margin-left: calc(var(--scale-ratio) * 10px);
 }
 `
 

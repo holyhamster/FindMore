@@ -1,25 +1,32 @@
-
+var quedIdsForNewPanels = [];
 var TabsData = new Map();
 var options;
 loadOptions();
 
-chrome.commands.onCommand.addListener(function (_HOTKEY_COMMAND) {
-    if (_HOTKEY_COMMAND === 'toggle-search')
+chrome.commands.onCommand.addListener((_HOTKEY_COMMAND) =>
+{
+    switch (_HOTKEY_COMMAND)
     {
-        console.log("here");
-        obtainActiveID(function (_id)
-        {
-            console.log(_id);
-            chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id, options: options });
-        });
-    };
+        case 'fm-new-search':
+            requestNewSearchOnActiveWindow();
+            break;
+        case 'fm-save-search':
+            savePanelsToMemory();
+            break;
+        case 'fm-load-search':
+            loadPanelsToActive();
+            break;
+    }
 });
 
-chrome.runtime.onMessage.addListener(function (_RUNTIME_EVENT, _sender)
+chrome.runtime.onMessage.addListener((_RUNTIME_EVENT, _sender) =>
 {
+    const tabId = _RUNTIME_EVENT.tabId;
+    const data = _RUNTIME_EVENT.data;
+
     switch (_RUNTIME_EVENT.message)
     {
-        case "tf-popup-options-change":
+        case "fm-popup-options-change":
             {
                 if (!_RUNTIME_EVENT.options)
                     return;
@@ -31,59 +38,68 @@ chrome.runtime.onMessage.addListener(function (_RUNTIME_EVENT, _sender)
                 });
             }
             break;
-        case "tf-popup-new-search":
-            obtainActiveID(function (_id)
-            {
-                chrome.tabs.sendMessage(_id, { message: "tf-new-search", tabId: _id, options: options });
-            });
+
+        case "fm-popup-new-search":
+            requestNewSearchOnActiveWindow();
             break;
 
-        case "tf-popup-save-search":
-            obtainActiveID((_id) =>
-            {
-                if (!TabsData.has(_id))
-                    return;
-                chrome.storage.local.set({ "tfSavedSearch": TabsData.get(_id) });
-            });     
+        case "fm-popup-save-search":
+            savePanelsToMemory();
             break;
 
-        case "tf-popup-load-search":
+        case "fm-popup-load-search":
+            loadPanelsToActive();
+            break;
+
+        case "fm-popup-current-search-request":
+            const message = { message: "fm-popup-current-search-answer", data: false };
             obtainActiveID((_id) =>
             {
-                chrome.storage.local.get("tfSavedSearch", function (_storage)
-                {
-                    let searchData = _storage.tfSavedSearch;
-                    TabsData.set(_id, searchData);
-                    sendSearchData(_id, searchData, FORCED = true, PINNED_ONLY = false);
-                });
+                message.id = _id;
+                message.data = TabsData.has(_id);
+                chrome.runtime.sendMessage(message);
+            }, () =>
+            {
+                chrome.runtime.sendMessage(message);
             });
             break;
 
         case "tf-content-update-state":
-            TabsData.set(_RUNTIME_EVENT.tabId, _RUNTIME_EVENT.data);
+            if (data)
+                TabsData.set(tabId, data);
+            else if (TabsData.has(tabId))
+                TabsData.delete(_RUNTIME_EVENT.tabId)
             break;
 
-        case "tf-content-script-loaded":
-            const previousTabData = TabsData.get(_sender.tab.id);
+        case "fm-content-script-loaded":
+            const newTabId = _sender.tab.id;
+            const previousTabData = TabsData.get(newTabId);
             if (previousTabData)
-                sendSearchData(_sender.tab.id, previousTabData, FORCED_UPDATE = false, PINNED_ONLY = true);
+                sendSearchData(newTabId, previousTabData, FORCED_UPDATE = false, PINNED_ONLY = true);
+
+            for (let i = quedIdsForNewPanels.length; i >= 0; i--)
+            {
+                if (quedIdsForNewPanels[i] === newTabId)
+                {
+                    chrome.tabs.sendMessage(quedIdsForNewPanels[i],
+                        {
+                            message: "tf-new-search",
+                            tabId: quedIdsForNewPanels[i],
+                            options: options
+                        });
+                    quedIdsForNewPanels.splice(i, 1);
+                }
+            }
             break;
     }
 });
 
-chrome.windows.onBoundsChanged.addListener(function () {
-    console.log("bound change event triggered");
-
+chrome.windows.onBoundsChanged.addListener(function ()
+{
     TabsData.forEach(function (_data, _id)
     {
         sendSearchData(_id, _data, FORCED_UPDATE = true, PINNED_ONLY = false);
     });
-});
-
-chrome.tabs.onUpdated.addListener(function (tabId, changeinfo) {
-    if (false && changeinfo.status && changeinfo.status == "complete" && TabsData.has(tabId)) {
-        sendSearchData(tabId, TabsData.get(tabId));
-    }
 });
 
 function obtainActiveID(_onActiveID, _onNoActive)
@@ -101,32 +117,97 @@ function obtainActiveID(_onActiveID, _onNoActive)
 
 function sendSearchData(_tabId, _tabData, _forced, _pinnedOnly)
 {
-    var message = { message: "tf-update-search", tabId: _tabId, options: options };
+    const message = {
+        message: "tf-update-search",
+        tabId: _tabId,
+        options: options,
+        data: _tabData,
+        forcedUpdate: _forced,
+        pinnedOnly: _pinnedOnly
+    };
 
-    message.data = _tabData;
-    message.forcedUpdate = _forced;
-    message.pinnedOnly = _pinnedOnly;
     chrome.tabs.sendMessage(_tabId, message);
 }
 
 function loadOptions()
 {
-    
-    chrome.storage.sync.get("tfSavedOptions", function (_storage)
+
+    chrome.storage.sync.get("fmSavedOptions", function (_storage)
     {
-        if (_storage.tfSavedOptions)
+        if (_storage.fmSavedOptions)
         {
-            options = _storage.tfSavedOptions;
+            options = _storage.fmSavedOptions;
         }
     });
 }
 
-//run when extension is loaded
-chrome.runtime.onInstalled.addListener(() => {
-    console.log("extensions is on")
-    chrome.action.setBadgeText({
-        text: "ON",
-    });
-});
+function savePanelsToMemory()
+{
+    const clearSaveData = () =>
+    {
+        chrome.storage.local.remove(["fmSavedSearch"]);
+    };
+    obtainActiveID(
+        (_id) =>
+        {
+            if (!TabsData.has(_id))
+            {
+                clearSaveData();
+                return;
+            }
+            chrome.storage.local.set({ "fmSavedSearch": TabsData.get(_id) });
+            showSuccessStatus();
+        },
+        () =>
+        {
+            clearSaveData();
+            showSuccessStatus();
+        });
+}
 
-console.log("bg script loaded");
+function loadPanelsToActive()
+{
+    obtainActiveID((_id) =>
+    {
+        chrome.storage.local.get("fmSavedSearch", (_storage) =>
+        {
+            const loadedData = _storage.fmSavedSearch;
+            if (!loadedData)
+                return;
+
+            TabsData.set(_id, loadedData);
+            sendSearchData(_id, loadedData, FORCED = true, PINNED_ONLY = false);
+            showSuccessStatus();
+        });
+    });
+}
+
+function requestNewSearchOnActiveWindow() 
+{
+    obtainActiveID((_id) =>
+    {
+        chrome.tabs.sendMessage(_id,
+            { message: "tf-new-search", tabId: _id, options: options },
+            (_response) =>
+            {
+                const NO_RESPONSE_FROM_CONTENT_SCRIPT = new Boolean(chrome.runtime.lastError);
+                if (NO_RESPONSE_FROM_CONTENT_SCRIPT)
+                    quedIdsForNewPanels.push(_id);
+            });
+
+    });
+}
+
+function showSuccessStatus(_time = 3000)
+{
+    chrome.action.setBadgeText({
+        text: "\u{2713}"
+    });
+
+    setTimeout(() =>
+    {
+        chrome.action.setBadgeText({
+            text: ""
+        });
+    }, _time);
+}

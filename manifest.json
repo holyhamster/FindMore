@@ -1,46 +1,68 @@
 {
   "manifest_version": 3,
-  "name": "TagFind",
-  "description": "Base Level Extension",
+  "name": "FindMore",
+  "description": "Persistent search panels to help your research.",
   "version": "1.0",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": [ "activeTab", "scripting", "storage" ],
 
   "action": {
     "default_popup": "popup/popup.html",
-    "default_icon": "extensionIcon.png"
+    "default_icon": "16.png"
+  },
+
+  "icons": {
+    "16": "16.png",
+    "48": "48.png",
+    "128": "128.png"
   },
 
   "background": {
     "service_worker": "background.js"
   },
 
-  "content_scripts": [{
-    "matches": [ "<all_urls>", "*://*/*" ],
-    "all_frames": false,
-    "js":      ["src/js/content-import.js"]
-    }],
-
-  "web_accessible_resources":[
+  "content_scripts": [
     {
-      "resources": [ "src/js/*", "src/css/*"],
-      "matches": ["<all_urls>"]
+      "matches": [ "<all_urls>", "*://*/*" ],
+      "all_frames": false,
+      "js": [ "src/js/content-import.js" ]
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": [ "src/js/*", "src/css/*" ],
+      "matches": [ "<all_urls>" ]
     }
   ],
 
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Ctrl+Shift+Q",
+        "default": "Ctrl+F",
         "mac": "MacCtrl+Shift+Q"
       },
-      "description":"opens search popup"
+      "description": "opens search popup"
     },
-    "toggle-search": {
+    "fm-new-search": {
       "suggested_key": {
         "default": "Ctrl+Q",
-        "mac": "Command+G"
+        "mac": "Command+Q"
       },
-      "description": "Toggles search bar"
+      "description": "Opens new search pannel"
+    },
+    "fm-save-search": {
+      "suggested_key": {
+        "default": "Ctrl+Y",
+        "mac": "Command+Y"
+      },
+      "description": "Saves search panels on active page"
+    },
+    "fm-load-search": {
+      "suggested_key": {
+        "default": "Ctrl+B",
+        "mac": "Command+B"
+      },
+      "description": "Loads search panels to active pagae"
     }
   }
 }

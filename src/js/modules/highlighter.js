@@ -15,85 +15,105 @@ class Highlighter
             _eventElem.dispatchEvent(newMatchesEvent);
         };
 
-        this.setColors(_primaryColor, _secondaryColor);
+        this.setStyle(_primaryColor, _secondaryColor);
     }
 
     //#region CSS STYLING
-    setColors(_primaryColor, _accent)
+    setStyle(_primaryColor, _accent)
     {
-        const cssString = Highlighter.getCSSString(this.id, _primaryColor, _accent);
+        this.defaultCSS = this.defaultCSS || Highlighter.getDefaultCSSString();
+        this.personalCSS = Highlighter.getPersonalCSSString(this.id, _primaryColor, _accent);
 
-        this.setAdoptedStyle(cssString);
-        this.setIFramesStyle(cssString);
+        this.setAdoptedStyle();
+        this.setIFramesStyle();
     }
 
-    setAdoptedStyle(_css)
+    setAdoptedStyle()
     {
-        if (!this.adoptedSheet || !document.adoptedStyleSheets.includes(this.adoptedSheet))
+        if (!Highlighter.adoptedDefaultSheet)
         {
-            this.adoptedSheet = new CSSStyleSheet();
-            document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.adoptedSheet];
+            Highlighter.adoptedDefaultSheet = new CSSStyleSheet();
+            Highlighter.adoptedDefaultSheet.replaceSync(this.defaultCSS);
+            document.adoptedStyleSheets = [...document.adoptedStyleSheets, Highlighter.adoptedDefaultSheet];
         }
-        this.adoptedSheet.replaceSync(_css);
+
+        if (!this.adoptedPersonslSheet || !document.adoptedStyleSheets.includes(this.adoptedPersonslSheet))
+        {
+            this.adoptedPersonslSheet = new CSSStyleSheet();
+            document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.adoptedPersonslSheet];
+        }
+        this.adoptedPersonslSheet.replaceSync(this.personalCSS);
     }
     removeAdoptedStyle()
     {
         const adoptedCSSIndex = Array.from(document.adoptedStyleSheets).
-            findIndex((_style) => { return _style === this.adoptedSheet; });
+            findIndex((_style) => { return _style === this.adoptedPersonslSheet; });
         if (adoptedCSSIndex >= 0)
         {
             const adopts = Array.from(document.adoptedStyleSheets);
             adopts.splice(adoptedCSSIndex, 1);
             document.adoptedStyleSheets = adopts;
-            this.adoptedSheet = null;
+            this.adoptedPersonslSheet = null;
         }
     }
 
-    iframeStylesMap = new Map();
-    setIFramesStyle(_css)
+    iframes = [];
+    setIFramesStyle()
     {
-        this.iframeStylesMap?.forEach((_oldStyle, _iframe) =>
+        this.iframes.forEach((_iframe) =>
         {
-            _oldStyle.remove();
-            this.iframeStylesMap.set(_iframe, addStyleTag(_iframe, _css));
+            const oldStyle = _iframe.getElementById(`fm-iframe${this.id}`);
+            oldStyle?.remove();
+            const newStyle = _iframe.createElement(`style`);
+            newStyle.setAttribute("id", `fm-iframe${this.id}`);
+            newStyle.innerHTML = this.personalCSS;
+            _iframe.head.appendChild(newStyle);
         })
 
         if (this.iFrameListener != null)
-            this.parentElement.removeEventListener(`tf-iframe-style-update`, this.iFrameListener);
+            return;
 
-        this.iFrameListener = (_args) => {
-            const iframe = _args.iframe;
-            this.iframeStylesMap.get(iframe)?.remove();
-            const newStyle = Highlighter.addStyleTag(iframe, _css)
-            this.iframeStylesMap.set(iframe, newStyle);
+        this.iFrameListener = (_args) =>
+        {
+            const newIFrame = _args.iframe.contentDocument;
+
+            if (!this.iframes.includes(newIFrame))
+                this.iframes.push(newIFrame);
+
+            let defStyle = newIFrame.getElementById(`fm-iframeDefStyle`)
+            if (!defStyle)
+            {
+                defStyle = newIFrame.createElement("style");
+                defStyle.setAttribute("id", "fm-iframeDefStyle");
+                defStyle.innerHTML = this.defaultCSS;
+                newIFrame.head.appendChild(defStyle);
+            }
+            
+            let personalStyle = newIFrame.getElementById(`fm-iframe${this.id}`);
+            if (!personalStyle)
+            {
+                personalStyle = newIFrame.createElement(`style`);
+                personalStyle.setAttribute("id", `fm-iframe${this.id}`);
+                personalStyle.innerHTML = this.personalCSS;
+                newIFrame.head.appendChild(personalStyle);
+            }
         };
 
         this.parentElement.addEventListener(`tf-iframe-style-update`, this.iFrameListener);
     }
 
-    static addStyleTag(_iframe, _cssString)
+    static getDefaultCSSString()
     {
-        let style = _iframe.contentDocument.createElement("style");
-        style.setAttribute("class", "TFIframeStyle");
-        style.innerHTML = _cssString;
-        if (style.parentNode != _iframe.contentDocument.head)
-        {
-            _iframe.contentDocument.head.appendChild(style);
-        }
-
-        return style;
+        return `fm-container { position: absolute; } ` +
+            `fm-container.fm-relative { position: relative; } ` +
+            `fm-highlight { position: absolute; opacity: 0.7; z-index: 2147483646; }`; //` pointer-events: none;`;
     }
 
-    static getCSSString(_id, _primary, _accent)
+    static getPersonalCSSString(_id, _primary, _accent)
     {
-        return `.TFC${_id} { all:initial; display:inline-block; position: absolute;  } ` +
-            `.TFCR${_id} { all:initial; display:inline-block; position: relative; } ` +
-            `.TFH${_id} { all:initial; position: absolute; background-color: ${_primary};` +
-            ` opacity: 0.7; z-index: 2147483646; pointer-events: none;} ` +
-            `.TFHS${_id} { background-color: ${_accent}; }`;
+        return `fm-highlight.fm-${_id} {background-color: ${_primary}; }` +
+            `fm-highlight.fm-${_id}.fm-accented { background-color: ${_accent}; }`;
     }
-
-    
     //#endregion
 
     //#region RECURSIVE HIGHLIGHT 
@@ -179,7 +199,6 @@ class Highlighter
         _range.setEnd(_match.endNode, _match.endOffset);
 
         const rects = Array.from(_range.getClientRects()), nonEmptyRects = [];
-        console.log(rects.length);
         while (rects.length > 0)
         {
             const rect = rects.shift();
@@ -254,16 +273,16 @@ class Highlighter
     clearStyles()
     {
         const adoptedCSSIndex = Array.from(document.adoptedStyleSheets).
-            findIndex((_style) => { return _style === this.adoptedSheet; });
+            findIndex((_style) => { return _style === this.adoptedPersonslSheet; });
         if (adoptedCSSIndex >= 0)
         {
             const adopts = Array.from(document.adoptedStyleSheets);
             adopts.splice(adoptedCSSIndex, 1);
             document.adoptedStyleSheets = adopts;
-            this.adoptedSheet = null;
+            this.adoptedPersonslSheet = null;
         }
-        this.iframeStylesMap.forEach((_sheets, _iframe) => { _sheets.remove();});
-        this.iframeStylesMap = new Map();
+        this.iframes.forEach((_iframe) => { _iframe.getElementById(`fm-iframe${this.id}`)?.remove(); });
+        this.iframes = [];
     }
 }
 

@@ -42,35 +42,36 @@ export function main()
     });
 
     chrome.runtime.onMessage.addListener(
-        function (request, sender)
+        (_request, _sender, _sendResponse) =>
         {
-            tabId = tabId || request.tabId;
-            if (request.options)
-                loadOptions(request.options);
+            tabId = tabId || _request.tabId;
+            if (_request.options)
+                loadOptions(_request.options);
 
-            switch (request.message)
+            switch (_request.message)
             {
                 case "tf-new-search":
                     const id = getNewID();
                     const newSearch = new SearchState("");
-                    newSearch.pinned = request.options?.startPinned || false;
+                    newSearch.pinned = _request.options?.startPinned || false;
 
                     searchesMap.set(id, newSearch)
                     barsMap.set(id, new SearchBar(id, newSearch, barsMap.size));
                     cacheData();
+                    _sendResponse({});
                     break;
 
                 case "tf-update-search":
-                    if (!request.data)
+                    if (!_request.data)
                         return;
                     barsMap.forEach(function (_val) { _val.close() });
                     barsMap = new Map();
                     searchesMap = new Map();
 
-                    const loadedMap = deserializeIntoMap(request.data);
+                    const loadedMap = deserializeIntoMap(_request.data);
                     loadedMap?.forEach(function (_state)
                     {
-                        if (request.pinnedOnly && !_state.pinned)
+                        if (_request.pinnedOnly && !_state.pinned)
                             return;
 
                         const newId = getNewID();
@@ -82,7 +83,7 @@ export function main()
                     break;
 
                 default:
-                    console.log("uncaught message: " + request.message);
+                    console.log("uncaught message: " + _request.message);
             }
         }
     );
@@ -115,12 +116,14 @@ export function main()
     }
     function cacheData()
     {
-        let message = {
-            message: "tf-content-update-state", tabId: tabId,
-            data: serializeMap(searchesMap)
-        };
+        const message = { message: "tf-content-update-state", tabId: tabId };
+
+        if (searchesMap.size > 0)
+            message.data = serializeMap(searchesMap);
         chrome.runtime.sendMessage(message);
     }
+    
 
-    chrome.runtime.sendMessage({ message: "tf-content-script-loaded" });
+    chrome.runtime.sendMessage({ message: "fm-content-script-loaded" });
+
 }

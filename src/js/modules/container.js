@@ -11,12 +11,10 @@ class Container
     {
         this.id = _id;
         this.parentNode = _parentNode;
-        this.headSpan = document.createElement('SPAN');
+        this.headSpan = document.createElement('FM-CONTAINER');
 
-        if (hasRelativeAncestor(_parentNode))
-            this.headSpan.classList.add(`TFC${_id}`)
-        else
-            this.headSpan.classList.add(`TFCR${_id}`)
+        if (!hasRelativeAncestor(_parentNode))
+            this.headSpan.classList.add(`fm-relative`)
     }
 
     highlightRects(_index, _rects)
@@ -72,8 +70,8 @@ class Container
         const spans = this.childSpansMap.get(_index);
 
         const spanOperation = _state ?
-            (_span) => { _span.classList.add(`TFHS${this.id}`) } :
-            (_span) => { _span.classList.remove(`TFHS${this.id}`) };
+            (_span) => { _span.classList.add(`fm-accented`) } :
+            (_span) => { _span.classList.remove(`fm-accented`) };
 
         spans.forEach(spanOperation);
         return spans;
@@ -81,9 +79,8 @@ class Container
 
     createAnchoredSpan(_rect)
     {
-        let span = document.createElement('SPAN');
-        span.classList.add(`TFHighlight`, `TFH${this.id}`);
-
+        let span = document.createElement('FM-HIGHLIGHT');
+        span.classList.add(`fm-${this.id}`)
         span.style.height = _rect.height + 'px';
         span.style.width = _rect.width + 'px';
         span.style.left = _rect.left - this.anchorRect.left + 'px';

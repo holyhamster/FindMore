@@ -1,34 +1,47 @@
 <html>
 <head>
     <style>
+        html {
+            height:20em;
+        }
+
         body {
             --main-color: hsl(296,100%,20%);
             --secondary-color: hsl(296,100%,97%);
             background-color: var(--secondary-color);
-
+            margin: 0px;
+            height: auto;
         }
+
         input {
             accent-color: var(--secondary-color);
             width: 4em;
         }
+
         button {
             margin: 5px;
             font-size: large;
             border-radius: 10px;
             color: var(--main-color);
-            background-color:transparent;
-            min-width: 1em;
+            background-color: transparent;
+            min-width: 1.7em;
         }
+
         button:hover {
             background-color: var(--main-color);
             color: var(--secondary-color);
         }
+
         button:active {
             transform: translateY(1px);
         }
+
         .tooltippedButtons {
-            position:relative;
-            margin-bottom: 1.5em;
+            position: relative;
+            margin-bottom: 3em;
+            display: flex; 
+            flex-flow: row; 
+            justify-content:space-around;
         }
         .tooltip {
             visibility: hidden;
@@ -36,55 +49,73 @@
             top: 3em;
             left: 1em;
         }
-        button:hover + .tooltip {
+
+        .tooltippedButtons button:hover + .tooltip {
             visibility: visible;
         }
-        footer {
-            margin-top:auto;
-            background-color: gray;
+        #findButton:hover + div > #findToolTip  {
+            visibility: visible;
         }
+        .sliderContainer {
+            display: flex; 
+            flex-flow: row; 
+            justify-content:space-around;
+        }
+
+        .sliderContainer > div {
+            display: flex;
+            flex-flow: column;
+        }
+        .sliderContainer label {
+            text-align: center;
+        }
+
+        .footer {
+            display:flex;
+            flex-wrap:wrap;
+        }
+        
     </style>
 </head>
 <body>
     <script src="js/popup.js"></script>
-    <div style="display: flex; flex-flow: column; justify-content: space-between;">
-        <div style="display:flex; flex-flow:column;">
-            <div style="display:flex;">
-                <h1>
-                    <span style="background: hsl(000, 100%, 85%);">Find</span><span style="background: hsl(100, 100%, 85%);">More</span>
-                </h1>
+    <div style="display:flex; flex-flow:column; justify-content:center;">
+        <div style="display: flex; justify-content: center;">
+            <h1>
+                <span style="background: hsl(000, 100%, 85%);">Find</span><span style="background: hsl(100, 100%, 85%);">More</span>
+            </h1>
+        </div>
+
+        <button id="findButton">New search</button>
+
+        <div class="tooltippedButtons">
+            <span class="tooltip" id="findToolTip">Open new panel<br />CTRL + Q</span>
+            <button id="saveButton">Save</button>
+            <span class="tooltip"> <span id="saveTooltip">Save existing panels</span><br />CTRL + Y</span>
+            <button id="loadButton">Load</button>
+            <span class="tooltip">Load saved panels<br />CTRL + B</span>
+        </div>
+        <div class="tooltippedButtons">
+            <button id="cornerButton">X</button>
+            <span class="tooltip">Change position</span>
+            <button id="alignmentButton">X</button>
+            <span class="tooltip">Change layout</span>
+            <button id="pinButton">X</button>
+            <span class="tooltip">Start as persistent <br />between pages</span>
+        </div>
+
+        <div class="sliderContainer">
+            <div>
+                <input type="number" id="opacity" value=".95" name="opacity" min=".5" max="1" step=".02">
+                <label for="opacity">opacity</label>
             </div>
 
-            <button id="findButton">New search</button>
-
-            <div class="tooltippedButtons" style="display: flex; flex-flow: row; justify-content:space-around;">
-                <button id="saveButton">Save</button>
-                <span class="tooltip">Save existing panels</span>
-                <button id="loadButton">Load</button>
-                <span class="tooltip">Load saved panels</span>
-            </div>
-            <div class="tooltippedButtons" display: flex; flex-flow: row; justify-content:space-around;">
-                <button id="cornerButton">X</button>
-                <span class="tooltip">Starting position</span>
-                <button id="alignmentButton">X</button>
-                <span class="tooltip">Layout</span>
-                <button id="pinButton">X</button>
-                <span class="tooltip">Begin as persistent</span>
-            </div>
-
-            <div style="display: flex; flex-flow: row; justify-content:space-around;">
-                <div style="display:flex; flex-flow:column;">
-                    <input type="number" id="opacity" value=".95" name="opacity" min=".5" max="1" step=".02">
-                    <label for="opacity">opacity</label>
-                </div>
-
-                <div style="display: flex; flex-flow: column;">
-                    <input type="number" id="scale" value="1" name="scale" min=".5" max="4" step=".05">
-                    <label for="scale">scale</label>
-                </div>
+            <div>
+                <input type="number" id="scale" value="1" name="scale" min=".5" max="4" step=".05">
+                <label for="scale">scale</label>
             </div>
         </div>
-        <footer>hello</footer>
+        <div class="footer"><h4>by Dmitrii Maslov <br /> Code on github <br /> Report an issue</h4></div>
     </div>
 </body>
 </html>

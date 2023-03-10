@@ -1,4 +1,3 @@
-console.log("popup script loaded");
 //chrome.action.setBadgeText({
 //    text: "OFF",
   //});
@@ -9,26 +8,35 @@ document.addEventListener('DOMContentLoaded', () =>
     {
         const options = buildOptions();
         saveOptions(options);
-        sendOptions(options);
+        sendOptionsToBackground(options);
     };
-
     
+    chrome.runtime.onMessage.addListener((_RUNTIME_EVENT) =>
+    {
+        switch (_RUNTIME_EVENT.message)
+        {
+            case "fm-popup-current-search-answer":
+                
+                setSavedButtonAs(!isNaN(_RUNTIME_EVENT.id), _RUNTIME_EVENT.data);
+                break;
+        }
+    });
 
     document.getElementById('findButton')?.addEventListener('click', () =>
     {
-        chrome.runtime.sendMessage({ message: "tf-popup-new-search" });
+        chrome.runtime.sendMessage({ message: "fm-popup-new-search" });
         close();
     });
 
     document.getElementById('saveButton')?.addEventListener('click', () =>
     {
-        chrome.runtime.sendMessage({ message: "tf-popup-save-search" });
+        chrome.runtime.sendMessage({ message: "fm-popup-save-search" });
         close();
     });
 
     document.getElementById('loadButton')?.addEventListener('click', () =>
     {
-        chrome.runtime.sendMessage({ message: "tf-popup-load-search" });
+        chrome.runtime.sendMessage({ message: "fm-popup-load-search" });
         close();
     });
 
@@ -109,14 +117,11 @@ document.addEventListener('DOMContentLoaded', () =>
     {
         document.getElementById(_id)?.addEventListener("change", optionChange)
     });
-    
-    loadOptions((_options) => { fillUI(_options); });
-});
 
-function sendOptions(_options)
-{
-    chrome.runtime.sendMessage({ message: "tf-popup-options-change", options: _options });
-}
+    //fillUI();
+    loadOptions();
+    chrome.runtime.sendMessage({ message: "fm-popup-current-search-request" });
+});
 
 function buildOptions()
 {
@@ -133,25 +138,42 @@ function buildOptions()
     return options;
 }
 
-function loadOptions(_onLoad)
+function loadOptions()
 {
-    
-    chrome.storage.sync.get("tfSavedOptions", function (_storage)
+    chrome.storage.sync.get("fmSavedOptions", function (_storage)
     {
-        let options = _storage.tfSavedOptions;
-
-        if (options)
-            _onLoad(options);
+        let options = _storage.fmSavedOptions;
+        fillUIWithOptions(options);
     });
+
+    chrome.runtime.sendMessage("fm-popup-current-search-request");
 }
 
-function fillUI(_options)
+function setSavedButtonAs(_hasActiveWindow, _hasActiveSearches)
 {
-    document.getElementById('cornerButton').selectIndex(_options.corner);
-    document.getElementById('alignmentButton').selectIndex(_options.alignment);
-    document.getElementById('pinButton').selectIndex(_options.startPinned? 1: 0);
-    document.getElementById('opacity').value = _options.opacity;
-    document.getElementById('scale').value = _options.scale;
+    const saveButton = document.getElementById('saveButton');
+    const loadButton = document.getElementById('loadButton');
+    
+    chrome.storage.local.get("fmSavedSearch", (_storage) =>
+    {
+        const hasSavedData = Boolean(_storage.fmSavedSearch);
+        loadButton.disabled = !(hasSavedData && _hasActiveWindow);
+        saveButton.disabled = !(_hasActiveSearches || hasSavedData);
+        const saveButtonClearsInstead = !_hasActiveSearches && hasSavedData;
+        saveButton.innerHTML = saveButtonClearsInstead ? "Clear" : "Save";
+        document.getElementById('saveTooltip').innerHTML = saveButtonClearsInstead ?
+            "Clear saved panels" : "Save current panels";
+    });
+
+}
+
+function fillUIWithOptions(_options)
+{
+    document.getElementById('cornerButton').selectIndex(_options?.corner || 0);
+    document.getElementById('alignmentButton').selectIndex(_options?.alignment ||0);
+    document.getElementById('pinButton').selectIndex(_options?.startPinned? 1: 0);
+    document.getElementById('opacity').value = _options?.opacity || 1;
+    document.getElementById('scale').value = _options?.scale || 1;
 
     //document.getElementById('optionsExpanding').style.expanded = _options.optionsExpanded === true;
     //if (_options.optionsExpanded === true)
@@ -160,5 +182,10 @@ function fillUI(_options)
 
 function saveOptions(_options)
 {
-    chrome.storage.sync.set({ "tfSavedOptions": _options });
+    chrome.storage.sync.set({ "fmSavedOptions": _options });
+}
+
+function sendOptionsToBackground(_options)
+{
+    chrome.runtime.sendMessage({ message: "fm-popup-options-change", options: _options });
 }
