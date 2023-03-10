@@ -1,5 +1,6 @@
 import DOMSearcher from './domSearcher.js';
 import Highlighter from './highlighter.js';
+import Styler from './styler.js';
 import ShadowrootCSS from './cssInjection.js'
 
 //creates and controls search panel element
@@ -18,8 +19,11 @@ class SearchBar
         this.onSearchChange.id = this.id;
 
         this.mainDiv = this.constructPanel(_state);
+
+        
         SearchBar.getShadowRoot().appendChild(this.mainDiv);
         this.addHTMLEvents();
+        //this.Styler = new Styler(_id, this.mainDiv);
 
         if (this.state.searchString == "")
             this.mainDiv.querySelector(`.searchInput`).focus();
@@ -226,16 +230,9 @@ class SearchBar
     {
         const matchesLength = this.highlighter?.getMatchCount() || 0;
 
-        if (matchesLength > 0)
-            this.selectedIndex = (this.selectedIndex || 0) + (_indexChange || 0);
+        this.selectedIndex = this.normalizeSearchIndex(this.selectedIndex, _indexChange, matchesLength);
 
-        if (this.selectedIndex && this.selectedIndex < 0)
-            this.selectedIndex = matchesLength - 1;
-        if (this.selectedIndex && this.selectedIndex >= matchesLength)
-            this.selectedIndex = 0;
-
-        if (this.selectedIndex != null)
-            this.highlighter.accentMatch(this.selectedIndex);
+        this.highlighter?.accentMatch(this.selectedIndex);
 
         if (!this.totalMatchesLabel)
         {
@@ -244,6 +241,19 @@ class SearchBar
         }
         this.selectedMatchLabel.textContent = matchesLength == 0 ? "0" : `${this.selectedIndex + 1}`;
         this.totalMatchesLabel.textContent = matchesLength;
+    }
+    normalizeSearchIndex(_current, _change, _matchCount)
+    {
+        if (_matchCount <= 0)
+            return null;
+
+        _current = (_current || 0) + (_change || 0);
+        if (_current < 0)
+            _current = _matchCount - 1;
+        else if (_current >= _matchCount)
+            _current = 0;
+
+        return _current;
     }
 }
 
