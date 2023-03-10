@@ -1,10 +1,10 @@
-import DOMSearcher from './domSearcher.js';
-import Highlighter from './highlighter.js';
-import Styler from './styler.js';
-import ShadowrootCSS from './cssInjection.js'
+import DOMSearcher from './DOMSearch/domSearcher.js';
+import Highlighter from './DOMSearch/highlighter.js';
+import ShadowrootCSS from './styling/cssInjection.js'
+import Styler from './styling/styler.js';
 
 //creates and controls search panel element
-//starts the search with DOMSearcher and controls the results with Highlighter
+//starts the search with DOMSearcher, marks results with Highlighter and sets css with Styler
 class SearchBar
 {
     constructor(_id, _state)
@@ -23,7 +23,8 @@ class SearchBar
         
         SearchBar.getShadowRoot().appendChild(this.mainDiv);
         this.addHTMLEvents();
-        //this.Styler = new Styler(_id, this.mainDiv);
+        this.styler = new Styler(_id, this.mainDiv);
+        this.styler.set(this.state.getColor(), this.state.getAccentedColor());
 
         if (this.state.searchString == "")
             this.mainDiv.querySelector(`.searchInput`).focus();
@@ -95,8 +96,8 @@ class SearchBar
         {
             this.state.recolor();       
             mainDiv.style.setProperty("--themeHue", this.state.hue);
-            this.highlighter?.setStyle(this.state.getColor(), this.state.getAccentedColor());
-            
+            //this.highlighter?.setStyle(this.state.getColor(), this.state.getAccentedColor());
+            this.styler.set(this.state.getColor(), this.state.getAccentedColor());
         });
 
         mainDiv.querySelector(`.refreshButton`).addEventListener("click", () =>
@@ -183,7 +184,7 @@ class SearchBar
     close()
     {
         this.clearPreviousSearch(this.id);
-        this.highlighter?.clearStyles();
+        this.styler.clearStyles();
         this.mainDiv.remove();
     }
 
@@ -242,6 +243,7 @@ class SearchBar
         this.selectedMatchLabel.textContent = matchesLength == 0 ? "0" : `${this.selectedIndex + 1}`;
         this.totalMatchesLabel.textContent = matchesLength;
     }
+
     normalizeSearchIndex(_current, _change, _matchCount)
     {
         if (_matchCount <= 0)

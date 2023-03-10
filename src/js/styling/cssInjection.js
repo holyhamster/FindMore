@@ -4,7 +4,7 @@ const ShadowrootCSS = `
     --scale-ratio: 1;
     --themeAlpha: .95;
     font-family: Verdana, sans-serif;
-    color: var(--secondary-color);
+    color: var(--dark-color);
     font-size: calc(var(--scale-ratio) * 15px);
     left: 0px;
     top: 0px;
@@ -35,11 +35,11 @@ const ShadowrootCSS = `
     border-style: solid;
     border-width: calc(var(--scale-ratio) * 5px);
     border-color: transparent;
-    background-color: var(--primary-color);
-    color: var(--secondary-color);
+    background-color: var(--light-color);
+    color: var(--dark-color);
     --themeHue: 0;
-    --primary-color: hsl(var(--themeHue), 75%, 75%, var(--themeAlpha));
-    --secondary-color: hsl(var(--themeHue), 60%, 15%, var(--themeAlpha));
+    --light-color: hsl(var(--themeHue), 75%, 75%, var(--themeAlpha));
+    --dark-color: hsl(var(--themeHue), 60%, 15%, var(--themeAlpha));
     pointer-events: auto;
     user-select: none;
 }
@@ -49,18 +49,19 @@ const ShadowrootCSS = `
     justify-content: space-between;
     align-items: center;
 }
-.TFSearchBar > div > *:hover
+.TFSearchBar:hover
 {
-    --themeAlpha: 1;
+    --light-color: hsl(var(--themeHue), 75%, 75%, 1);
+    --dark-color: hsl(var(--themeHue), 60%, 15%, 1);
 }
 .pinned {
-    border-color: var(--secondary-color);
+    border-color: var(--dark-color);
 }
 
 button {
     border-radius: calc(var(--scale-ratio) * 20px);
     font-size: calc(var(--scale-ratio) * 15px);
-    color:var(--secondary-color);
+    color:var(--dark-color);
     background-color: transparent;
     border-style: none;
     margin-left: calc(var(--scale-ratio) * 5px);
@@ -71,8 +72,8 @@ button {
 }
 
 button:hover {
-    color: hsla(var(--themeHue), 75%, 75%, var(--themeAlpha));
-    background-color: hsla(var(--themeHue), 60%, 15%, var(--themeAlpha));
+    color: var(--light-color);
+    background-color: var(--dark-color);
 }
 button:active {
     transform: translateY(calc(var(--scale-ratio)*1px));

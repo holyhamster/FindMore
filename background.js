@@ -77,18 +77,15 @@ chrome.runtime.onMessage.addListener((_RUNTIME_EVENT, _sender) =>
             if (previousTabData)
                 sendSearchData(newTabId, previousTabData, FORCED_UPDATE = false, PINNED_ONLY = true);
 
-            for (let i = quedIdsForNewPanels.length; i >= 0; i--)
+            if (quedIdsForNewPanels.includes(newTabId))
             {
-                if (quedIdsForNewPanels[i] === newTabId)
-                {
-                    chrome.tabs.sendMessage(quedIdsForNewPanels[i],
-                        {
-                            message: "tf-new-search",
-                            tabId: quedIdsForNewPanels[i],
-                            options: options
-                        });
-                    quedIdsForNewPanels.splice(i, 1);
-                }
+                chrome.tabs.sendMessage(newTabId,
+                    {
+                        message: "tf-new-search",
+                        tabId: newTabId,
+                        options: options
+                    });
+                quedIdsForNewPanels.splice(quedIdsForNewPanels.indexOf(newTabId), 1);
             }
             break;
     }
@@ -191,7 +188,7 @@ function requestNewSearchOnActiveWindow()
             (_response) =>
             {
                 const NO_RESPONSE_FROM_CONTENT_SCRIPT = new Boolean(chrome.runtime.lastError);
-                if (NO_RESPONSE_FROM_CONTENT_SCRIPT)
+                if (NO_RESPONSE_FROM_CONTENT_SCRIPT && !quedIdsForNewPanels.includes(_id))
                     quedIdsForNewPanels.push(_id);
             });
 

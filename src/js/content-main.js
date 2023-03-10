@@ -1,5 +1,5 @@
-import SearchBar from './modules/searchBar.js';
-import SearchState from './modules/searchState.js';
+import SearchBar from './searchBar.js';
+import SearchState from './searchState.js';
 
 export function main()
 {

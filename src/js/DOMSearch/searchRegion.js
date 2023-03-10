@@ -1,4 +1,4 @@
-//Keeps all information about the current search scope and its controls
+//maintains and advances current search scope with a treewalker
 
 class SearchRegion
 {
@@ -6,18 +6,18 @@ class SearchRegion
         this.searchString = _searchString;
         this.regexp = _regexp;
 
-        this.string = "";
+        this.stringRegion = "";
         this.nodes = [];
         this.offset = 0;    //offset of the string from the start of the first node
 
-        const newIFramesEvent = new Event(`tf-iframe-style-update`);
+        const newIFramesEvent = new Event(`fm-new-iframe`);
         const onNewIFrame = (_iframe) =>
         {
             newIFramesEvent.iframe = _iframe;
             _eventElem.dispatchEvent(newIFramesEvent);
         };
 
-        this.treeWalk = getTreeWalk(onNewIFrame);
+        this.treeWalk = getTreeWalkPlus(onNewIFrame);
     }
 
     expand() {
@@ -26,29 +26,11 @@ class SearchRegion
         if (!newNode)
             return false;
 
-        this.string += newNode.textContent;
+        this.stringRegion += newNode.textContent;
         this.nodes.push(newNode);
         this.trim();
 
         return true;
-    }
-
-    trim() {
-        let SEARCH_REGION_IS_TOO_LONG;
-        while (SEARCH_REGION_IS_TOO_LONG = (this.nodes.length > 0 &&
-            ((this.string.length - this.nodes[0].textContent.length) > this.searchString.length - 1))) 
-        {
-            this.string = this.string.substring(this.nodes[0].textContent.length);
-            this.nodes.shift();
-            this.offset = 0;
-        }
-    }
-
-    trimToPoint(_nodeIndex, _offset) {
-        this.offset = _offset;
-        this.nodes = this.nodes.slice(_nodeIndex);
-        this.string = "";
-        this.nodes.forEach((_nodes) => { this.string += _nodes.textContent });
     }
 
     getMatches()
@@ -56,7 +38,7 @@ class SearchRegion
         if (this.nodes.length == 0)
             return [];
 
-        const matches = [...this.string.substring(this.offset).matchAll(this.regexp)];
+        const matches = [...this.stringRegion.substring(this.offset).matchAll(this.regexp)];
         let charOffset = 0, nodeOffset = 0;
 
         matches.forEach((_match) =>
@@ -91,6 +73,26 @@ class SearchRegion
         }
         return matches;
     }
+
+    trim()
+    {
+        let SEARCH_REGION_IS_TOO_LONG;
+        while (SEARCH_REGION_IS_TOO_LONG = (this.nodes.length > 0 &&
+            ((this.stringRegion.length - this.nodes[0].textContent.length) > this.searchString.length - 1))) 
+        {
+            this.stringRegion = this.stringRegion.substring(this.nodes[0].textContent.length);
+            this.nodes.shift();
+            this.offset = 0;
+        }
+    }
+
+    trimToPoint(_nodeIndex, _offset)
+    {
+        this.offset = _offset;
+        this.nodes = this.nodes.slice(_nodeIndex);
+        this.stringRegion = "";
+        this.nodes.forEach((_nodes) => { this.stringRegion += _nodes.textContent });
+    }
 }
 
 const treeWalkerCondition = {
@@ -118,7 +120,8 @@ const treeWalkerCondition = {
     }
 };
 
-function getTreeWalk(_onNewIFrame)
+//treewalker than includes iframes and sends event every time it finds a new one
+function getTreeWalkPlus(_onNewIFrame)
 {
     const treeWalker = document.createTreeWalker(
         document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
@@ -134,7 +137,6 @@ function getTreeWalk(_onNewIFrame)
         if (!nextNode)
         {
             this.que.pop();
-            //console.log(`surfacing back to ${this.que.length}-level frame`);
             return this.nextNodePlus();
         }
 
@@ -146,7 +148,6 @@ function getTreeWalk(_onNewIFrame)
                 iframeDoc.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
             _onNewIFrame(nextNode);
             this.que.push(iframeWalker);
-            //console.log(`diving deeper into ${this.que.length}-level frame`);
             return this.nextNodePlus();
         }
 

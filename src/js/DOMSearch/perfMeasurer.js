@@ -1,4 +1,4 @@
-class PerformanceMeasurer
+class PerfMeasurer
 {
     constructor()
     {
@@ -13,4 +13,4 @@ class PerformanceMeasurer
     }
 }
 
-export default PerformanceMeasurer;
+export default PerfMeasurer;

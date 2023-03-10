@@ -1,7 +1,9 @@
 import Container from './container.js';
-import PerformanceMeasurer from './performanceMeasurer.js';
+import PerfMeasurer from './perfMeasurer.js';
 
-//adds css to the document and its iframes
+const recursionTimeLimit = 100;    //MS. set recursion on timeout each time if it takes longer
+const timeoutDelay = 5; //MS, delay between recursion calls
+
 //accepts matches and transforms them into highlight elements
 class Highlighter
 {
@@ -16,112 +18,10 @@ class Highlighter
             newMatchesEvent.length = _newMatchCount;
             _eventElem.dispatchEvent(newMatchesEvent);
         };
-
-        this.setStyle(_primaryColor, _secondaryColor);
     }
-
-    //#region CSS STYLING
-    setStyle(_primaryColor, _accent)
-    {
-        const personalCSS = getPersonalCSSString(this.id, _primaryColor, _accent);
-
-        this.setAdoptedStyle(personalCSS);
-        this.setIFramesStyle(personalCSS);
-    }
-
-    adoptedSheet;
-    setAdoptedStyle(_personalCSS)
-    {
-        if (!Highlighter.defaultSheet)
-        {
-            Highlighter.defaultSheet = new CSSStyleSheet();
-            Highlighter.defaultSheet.replaceSync(defaultCSSString);
-            document.adoptedStyleSheets =
-                [...document.adoptedStyleSheets, Highlighter.defaultSheet];
-        }
-        
-        if (!this.adoptedSheet ||
-            !document.adoptedStyleSheets.includes(this.adoptedSheet))
-        {
-            this.adoptedSheet = new CSSStyleSheet();
-            document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.adoptedSheet];
-        }
-        this.adoptedSheet.replaceSync(_personalCSS);
-    }
-    removeAdoptedStyle()
-    {
-        const adoptedCSSIndex = Array.from(document.adoptedStyleSheets).
-            findIndex((_style) => { return _style === this.adoptedSheet; });
-        if (isNaN(adoptedCSSIndex))
-            return;
-        const currentAdoptedArray = Array.from(document.adoptedStyleSheets);
-        currentAdoptedArray.splice(adoptedCSSIndex, 1);
-        document.adoptedStyleSheets = currentAdoptedArray;
-        this.adoptedSheet = null;
-    }
-
-    iframes = [];
-    setIFramesStyle(_personalCSS)
-    {
-        const styleClass = `fm-iframe${this.id}`;
-        this.iframes.forEach((_iframe) =>
-        {
-            const oldStyle = _iframe.getElementsByClassName(styleClass)[0];
-            oldStyle?.remove();
-            const newStyle = _iframe.createElement(`style`);
-            newStyle.setAttribute("class", styleClass);
-            newStyle.innerHTML = _personalCSS;
-            _iframe.head.appendChild(newStyle);
-        })
-
-        if (this.iFrameListener != null)
-            return;
-
-        this.iFrameListener = (_args) =>
-        {
-            const newIFrame = _args.iframe.contentDocument;
-
-            if (!this.iframes.includes(newIFrame))
-            {
-                this.iframes.push(newIFrame);
-            }
-            let defStyle = newIFrame.getElementsByClassName(`fm-iframeDefStyle`)[0]
-            if (!defStyle)
-            {
-                defStyle = newIFrame.createElement("style");
-                defStyle.setAttribute("class", "fm-iframeDefStyle");
-                defStyle.innerHTML = defaultCSSString;
-                newIFrame.head.appendChild(defStyle);
-            }
-            
-            let personalStyle = newIFrame.getElementsByClassName(styleClass)[0];
-            if (!personalStyle)
-            {
-                personalStyle = newIFrame.createElement(`style`);
-                personalStyle.setAttribute("class", styleClass);
-                personalStyle.innerHTML = _personalCSS;
-                newIFrame.head.appendChild(personalStyle);
-            }
-        };
-
-        this.parentElement.addEventListener(`tf-iframe-style-update`, this.iFrameListener);
-    }
-    removeIframeStyles()
-    {
-        this.iframes.forEach((_iframe) =>
-        {
-            _iframe.getElementsByClassName(`fm-iframe${this.id}`)[0]?.remove();
-        });
-        this.iframes = [];
-    }
-    clearStyles()
-    {
-        this.removeAdoptedStyle();
-        this.removeIframeStyles();
-    }
-    //#endregion
 
     //#region RECURSIVE HIGHLIGHT 
+
     matches = [];       //que of DOMSearcher matches for processing
     containers = [];    //processed matches
     invoked;
@@ -140,13 +40,13 @@ class Highlighter
     consequtiveCalls = 100;
     processHighlights()
     {
-        const perfMeasurer = new PerformanceMeasurer(), msPerCall = 100, msTimeout = 5;
+        const perfMeasurer = new PerfMeasurer();
         let totalTime = 0;
         const range = document.createRange(), dirtyContainers = [];
 
         this.invoked = false;
         
-        while ((totalTime += perfMeasurer.get()) < msPerCall && (this.matches.length > 0) && !this.interrupted)
+        while ((totalTime += perfMeasurer.get()) < recursionTimeLimit && (this.matches.length > 0) && !this.interrupted)
         {
             
             const match = this.matches.shift();
@@ -172,7 +72,7 @@ class Highlighter
         if (!this.invoked && !this.interrupted && this.matches.length > 0)
         {
             this.invoked = true;
-            setTimeout(() => { this.processHighlights() }, msTimeout);
+            setTimeout(() => { this.processHighlights() }, timeoutDelay);
         }
     }
 
@@ -222,13 +122,16 @@ class Highlighter
 
     accentMatch(_index)
     {
+        if (_index === this.accentedIndex)
+            return;
         const lastAccentedContainer = this.containers[this.accentedIndex];
+
         if (lastAccentedContainer)
         {
             lastAccentedContainer.setSelectionAt(this.accentedIndex, false);
             this.accentedIndex = null;
         }
-        if (!_index)
+        if (isNaN(_index))
             return;
 
         let focusTarget;
@@ -278,28 +181,6 @@ class Highlighter
     }
 }
 
-const defaultCSSString = `fm-container { position: absolute; } ` +
-        `fm-container.fm-relative { position: relative; } ` +
-        `fm-highlight { position: absolute; opacity: 0.7; z-index: 2147483646; }`; //` pointer-events: none;`;
-
-function getPersonalCSSString(_id, _primary, _accent)
-{
-    return `fm-highlight.fm-${_id} {background-color: ${_primary}; }` +
-        `fm-highlight.fm-${_id}.fm-accented { background-color: ${_accent}; }`;
-}
-
-function removeDOMClass(_document, _className)
-{
-    if (!_document)
-        return;
-
-    let highlights = _document.querySelectorAll(`.${_className}`);
-
-    for (let i = 0; i < highlights.length; i++)
-    {
-        highlights[i].remove();
-    }
-}
 
 function roundToLeftDigit(_number)
 {

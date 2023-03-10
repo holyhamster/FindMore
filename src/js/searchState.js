@@ -1,4 +1,4 @@
-//serializable class that can be passed from the background script to the content script
+//serializable class that's passed between background and content script 
 
 class SearchState
 {
@@ -6,7 +6,6 @@ class SearchState
     {
         this.searchString = _searchString;
         this.hue = isNaN(_colorHue) ? Math.floor(Math.random() * 360) : _colorHue;
-
         this.pinned = false;
         this.caseSensitive = false;
         this.wholeWord = false;
@@ -19,7 +18,7 @@ class SearchState
 
     static load(_state)
     {
-        let result = new SearchState(_state.searchString, _state.hue);
+        const result = new SearchState(_state.searchString, _state.hue);
         result.pinned = _state.pinned;
         result.caseSensitive = _state.caseSensitive;
         result.wholeWord = _state.wholeWord;
@@ -28,6 +27,15 @@ class SearchState
     recolor(_forward)
     {
         this.hue += _forward ? 25 : -25;
+
+        const to = `"tolIndigo": "#332288",
+            "tolGreen": "#117733",
+                "tolTeal": "#44aa99",
+                    "tolCyan": "#88ccee",
+                        "tolSand": "#ddcc77",
+                            "tolRose": "#cc6677",
+                                "tolPurple": "#aa4499",
+                                    "tolWine": "#882255"`;
     }
 
     getColor()
@@ -53,9 +61,10 @@ class SearchState
         if (this.wholeWord)
             regString = `\\b${regString}\\b`;
 
-        let regOptions = this.caseSensitive ? "g" : "gi";
+        const regOptions = this.caseSensitive ? "g" : "gi";
         return new RegExp(regString, regOptions);
     }
+
 }
 
 

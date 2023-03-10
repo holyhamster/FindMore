@@ -1,18 +1,16 @@
 import SearchRegion from './searchRegion.js';
-import PerformanceMeasurer from './performanceMeasurer.js';
+import PerfMeasurer from './perfMeasurer.js';
 
-//recursively searches DOM, sends matches to highlighter
+//recursively searches DOM with SearchRegion, sends matches to highlighter
+
+const consecutiveCalls = 200;   //caret moves before measuring performance
+const recursionTimeLimit = 100;    //MS. set recursion on timeout each time if it takes longer
+const timeoutDelay = 5; //MS, delay between recursion calls
+
 class DomSearcher
 {
     interrupted;
-    searchString;
-    regexp;
-    walker;
-
-    hitCount = 0; //not all hits will be visible
-    onNewMatches;
     
-    selectedIndex;
 
     constructor(_searchString, _regex, _eventElem, _highlighter)
     {
@@ -30,9 +28,8 @@ class DomSearcher
 
     search(_searchRegion, _highlighter, _executionTime = 0)
     {
-        const sleepInterval = 5, consecutiveCalls = 200, msInterrupt = 100;
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
-        const measurer = new PerformanceMeasurer();
+        const measurer = new PerfMeasurer();
 
         while ((callsLeft -= 1) >= 0 && (WALK_IN_PROGRESS = _searchRegion.expand()))
         {
@@ -46,7 +43,7 @@ class DomSearcher
         if (!WALK_IN_PROGRESS)
             return;
 
-        if ((_executionTime += measurer.get()) < msInterrupt)
+        if ((_executionTime += measurer.get()) < recursionTimeLimit)
         {
             this.search(_searchRegion, _highlighter, _executionTime)
         }
@@ -55,14 +52,10 @@ class DomSearcher
             setTimeout(() =>
             {
                 this.search(_searchRegion, _highlighter)
-            }, sleepInterval);
+            }, timeoutDelay);
         }   
     }
 }
-
-
-
-
 
 export default DomSearcher;
 

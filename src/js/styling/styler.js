@@ -1,13 +1,14 @@
+//adds css to the document and iframes (when recieves an event about locating one)
+
 class Styler
 {
-    
     constructor(_id, _parentElement)
     {
         this.id = _id;
         this.parentElement = _parentElement;
     }
 
-    setStyle(_primaryColor, _accent)
+    set(_primaryColor, _accent)
     {
         const personalCSS = getPersonalCSSString(this.id, _primaryColor, _accent);
 
@@ -18,12 +19,12 @@ class Styler
     adoptedSheet;
     setAdoptedStyle(_personalCSS)
     {
-        if (!Highlighter.defaultSheet)
+        if (!Styler.defaultSheet)
         {
-            Highlighter.defaultSheet = new CSSStyleSheet();
-            Highlighter.defaultSheet.replaceSync(defaultCSSString);
+            Styler.defaultSheet = new CSSStyleSheet();
+            Styler.defaultSheet.replaceSync(defaultCSSString);
             document.adoptedStyleSheets =
-                [...document.adoptedStyleSheets, Highlighter.defaultSheet];
+                [...document.adoptedStyleSheets, Styler.defaultSheet];
         }
 
         if (!this.adoptedSheet ||
@@ -90,7 +91,7 @@ class Styler
             }
         };
 
-        this.parentElement.addEventListener(`tf-iframe-style-update`, this.iFrameListener);
+        this.parentElement.addEventListener(`fm-new-iframe`, this.iFrameListener);
     }
 
     removeIframeStyles()
@@ -101,7 +102,7 @@ class Styler
         });
         this.iframes = [];
         if (this.iFrameListener)
-            this.parentElement.removeEventListener(`tf-iframe-style-update`, this.iFrameListener);
+            this.parentElement.removeEventListener(`fm-new-iframe`, this.iFrameListener);
     }
 
     clearStyles()
@@ -120,3 +121,5 @@ function getPersonalCSSString(_id, _primary, _accent)
     return `fm-highlight.fm-${_id} {background-color: ${_primary}; }` +
         `fm-highlight.fm-${_id}.fm-accented { background-color: ${_accent}; }`;
 }
+
+export default Styler;

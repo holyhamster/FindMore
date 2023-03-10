@@ -50,11 +50,11 @@ class Container
         if (!isVisible)
             return isVisible;
 
-        let parentBoundingRect = this.parentNode.getBoundingClientRect();
-        isVisible = parentBoundingRect.width >= 1 && parentBoundingRect.height >= 1;
+        //const parentBoundingRect = this.parentNode.getBoundingClientRect();
+        //isVisible = parentBoundingRect.width >= 1 && parentBoundingRect.height >= 1;
 
-        if (!isVisible)
-            return isVisible; 
+        //if (!isVisible)
+            //return isVisible; 
 
         this.setAppendance(true);
         this.anchorRect = this.headSpan.getBoundingClientRect();
