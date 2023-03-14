@@ -1,3 +1,5 @@
+import Match from './match.js';
+
 //maintains and advances current search scope with a treewalker
 
 class SearchRegion
@@ -38,38 +40,42 @@ class SearchRegion
         if (this.nodes.length == 0)
             return [];
 
-        const matches = [...this.stringRegion.substring(this.offset).matchAll(this.regexp)];
-        let charOffset = 0, nodeOffset = 0;
+        
+        const regexMatches = [...this.stringRegion.substring(this.offset).matchAll(this.regexp)];
+        
 
-        matches.forEach((_match) =>
+        const matches = [];
+        let charOffset = 0, nodeOffset = 0;
+        regexMatches.forEach((regexMatch) =>
         {
-            _match.index += this.offset;
+            regexMatch.index += this.offset;
             let MATCH_INSIDE_NODE;
 
             while (MATCH_INSIDE_NODE =
-                (charOffset + this.nodes[nodeOffset].textContent.length) <= _match.index)
+                (charOffset + this.nodes[nodeOffset].textContent.length) <= regexMatch.index)
             {
                 charOffset += this.nodes[nodeOffset].textContent.length;
                 nodeOffset += 1;
             }
 
-            _match.startNode = this.nodes[nodeOffset];
-            _match.startOffset = _match.index - charOffset;
+            const startNode = this.nodes[nodeOffset];
+            const startOffset = regexMatch.index - charOffset;
 
             while (MATCH_INSIDE_NODE =
-                ((charOffset + this.nodes[nodeOffset].textContent.length) < (_match.index + this.searchString.length)))
+                ((charOffset + this.nodes[nodeOffset].textContent.length) < (regexMatch.index + this.searchString.length)))
             {
                 charOffset += this.nodes[nodeOffset].textContent.length;
                 nodeOffset += 1;
             }
-            _match.endNode = this.nodes[nodeOffset];
-            _match.endOffset = _match.index + this.searchString.length - charOffset;
+            const endNode = this.nodes[nodeOffset];
+            const endOffset = regexMatch.index + this.searchString.length - charOffset;
+            matches.push(new Match(startOffset, startNode, endOffset, endNode))
         });
 
         if (matches.length > 0)
         {
             const lastMatch = matches[matches.length - 1];
-            this.trimToPoint(lastMatch.endIndex, lastMatch.endOffset);
+            this.trimToPoint(lastMatch.endNode, lastMatch.endOffset);
         }
         return matches;
     }
@@ -86,10 +92,10 @@ class SearchRegion
         }
     }
 
-    trimToPoint(_nodeIndex, _offset)
+    trimToPoint(node, offset)
     {
-        this.offset = _offset;
-        this.nodes = this.nodes.slice(_nodeIndex);
+        this.offset = offset;
+        this.nodes = this.nodes.slice(this.nodes.indexOf(node));
         this.stringRegion = "";
         this.nodes.forEach((_nodes) => { this.stringRegion += _nodes.textContent });
     }

@@ -112,9 +112,9 @@ class Styler
     }
 }
 
-const defaultCSSString = `fm-container { position: absolute; } ` +
-    `fm-container.fm-relative { position: relative; } ` +
-    `fm-highlight { position: absolute; opacity: 0.7; z-index: 2147483646; }`; //` pointer-events: none;`;
+const defaultCSSString = `fm-container { all:initial; position: absolute; } ` +
+    `fm-container.fm-relative { position: relative; display:inline-block; width:0px; height: 0px; } ` +
+    `fm-highlight { all:initial; position: absolute; opacity: 0.7; z-index: 2147483646; }`; //` pointer-events: none;`;
 
 function getPersonalCSSString(_id, _primary, _accent)
 {

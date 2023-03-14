@@ -1,147 +1,136 @@
-//container for a single DOM parent, handles all highlight rectangles for it
+import Match from './match.js'
+
+//container holds an fm-container headElement that holds all fm-relative rectangles for a single DOM parent
 class Container
 {
-    parentNode;
-    headSpan;
-
-    childSpansMap = new Map();
-    uncommittedSpans = [];
-
-    constructor(_parentNode, _id)
+    headElement;
+    constructor(parentNode, id)
     {
-        this.id = _id;
-        this.parentNode = _parentNode;
-        this.headSpan = document.createElement('FM-CONTAINER');
+        this.parentNode = parentNode;
+        this.id = id;
 
-        if (!hasRelativeAncestor(_parentNode))
-            this.headSpan.classList.add(`fm-relative`)
+        this.headElement = document.createElement('FM-CONTAINER');
+        if (relativePositionRequired(parentNode))
+            this.headElement.classList.add(`fm-relative`)
     }
 
-    highlightRects(_index, _rects)
+    setAccent(index, state)
     {
-        if (!this.updatedAfterCommit)
+        if (isNaN(index))
+            return;
+
+        const elements = Array.from(document.getElementsByClassName(`fm-${this.id}-${index}`));
+
+        elements.forEach((span) =>
         {
-            this.updatedAfterCommit = true;
-            this.visible = this.isVisible();
-        }
+            if (state)
+                span.classList.add(`fm-accented`);
+            else
+                span.classList.remove(`fm-accented`);
+        });
 
-        if (!this.visible)
+        return elements;
+    }
+
+    appendSelf()
+    {
+        this.parentNode.append(this.headElement);
+    }
+
+    remove()
+    {
+        this.headElement.remove();
+        this.emptyProcessingCache();
+    }
+
+    quedMatches = [];
+    queMatch(_match)
+    {
+        this.quedMatches.push(_match);
+    }
+
+    indexToMatches = new Map();
+    indexNextMatch(_newIndex)
+    {
+        const match = this.quedMatches.shift();
+        if (!match)
             return false;
 
-        let newSpans = [];
-        _rects.forEach((_rect) => { newSpans.push(this.createAnchoredSpan(_rect)); });
-
-        if (newSpans.length == 0)
-            return false;
-
-        this.childSpansMap.set(_index, newSpans);
-        this.uncommittedSpans = [...this.uncommittedSpans, ...newSpans];
-
+        this.indexToMatches.set(_newIndex, match)
         return true;
     }
 
-    isVisible()
+    calculatedElements = [];
+    precalculateRectangles(anchor, range)
     {
-        this.parentStyle = this.parentStyle || window.getComputedStyle(this.parentNode);
-
-        let isVisible =
-            this.parentStyle.visibility != "hidden" && this.parentStyle.display != "none";
-
-        if (!isVisible)
-            return isVisible;
-
-        //const parentBoundingRect = this.parentNode.getBoundingClientRect();
-        //isVisible = parentBoundingRect.width >= 1 && parentBoundingRect.height >= 1;
-
-        //if (!isVisible)
-            //return isVisible; 
-
-        this.setAppendance(true);
-        this.anchorRect = this.headSpan.getBoundingClientRect();
-
-        return isVisible;
-    }
-
-    setSelectionAt(_index, _state)
-    {
-        if (isNaN(_index))
-            return;
-
-        const spans = this.childSpansMap.get(_index);
-
-        const spanOperation = _state ?
-            (_span) => { _span.classList.add(`fm-accented`) } :
-            (_span) => { _span.classList.remove(`fm-accented`) };
-
-        spans.forEach(spanOperation);
-        return spans;
-    }
-
-    createAnchoredSpan(_rect)
-    {
-        let span = document.createElement('FM-HIGHLIGHT');
-        span.classList.add(`fm-${this.id}`)
-        span.style.height = _rect.height + 'px';
-        span.style.width = _rect.width + 'px';
-        span.style.left = _rect.left - this.anchorRect.left + 'px';
-        span.style.top = _rect.top - this.anchorRect.top + 'px';
-        return span;
-    }
-
-    commit()
-    {
-        const HEAVY_CONTAINER_NEEDS_REMOVAL = this.containerAppended && this.uncommittedSpans.size > 3;
-        if (HEAVY_CONTAINER_NEEDS_REMOVAL)
+        this.indexToMatches.forEach((match, index) =>
         {
-            this.setAppendance(false);
-        }
-        
-        while (this.uncommittedSpans.length > 0)
-            this.headSpan.appendChild(this.uncommittedSpans.shift())
+            range.setStart(match.startNode, match.startOffset);
+            range.setEnd(match.endNode, match.endOffset);
+            const rects = Array.from(range.getClientRects());
 
-        this.setAppendance(true)
-
-        this.updatedAfterCommit = false;
-        this.parentStyle = null;
+            rects.forEach((rect) =>
+            {
+                const rectElement = document.createElement('FM-HIGHLIGHT');
+                rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${index}`);
+                rectElement.style.height = rect.height + 'px';
+                rectElement.style.width = rect.width + 'px';
+                rectElement.style.left = rect.left - anchor.x + 'px';
+                rectElement.style.top = rect.top - anchor.y + 'px';
+                this.calculatedElements.push(rectElement);
+            });
+        });
+        this.indexToMatches = new Map();
     }
-    remove()
+
+    finalize()
     {
-        this.setAppendance(false);
+        //with many append operations its can be profitable to temporarily unappend parent element 
+        const HEAVY_CONTAINER = this.calculatedElements.length > 2;    
+        if (HEAVY_CONTAINER)
+            this.headElement.remove();
+
+
+        this.calculatedElements.forEach((span) => {
+            this.headElement.append(span) });
+        this.calculatedElements = [];
+
+        if (HEAVY_CONTAINER)
+            this.parentNode.appendChild(this.headElement);
     }
-    setAppendance(_appended)
+
+    emptyProcessingCache()
     {
-        if (this.containerAppended == _appended)
-            return;
-
-        if (_appended)
-            this.parentNode.prepend(this.headSpan);
-        else
-            this.headSpan.remove();
-
-        this.containerAppended = _appended;
+        this.quedMatches = [];
+        this.indexToMatches = new Map();
     }
 }
 
-function hasRelativeAncestor(_node) 
+//climbs up the ancestors to find 
+function relativePositionRequired(node) 
 {
-    let node = _node;
-
     while (node)
     {
-        if (node.nodeType == Node.ELEMENT_NODE)
+        if (node.nodeType != Node.ELEMENT_NODE)
         {
-            let STATIC_ANCESTOR_WITH_SCROLLBAR, ANCESTOR_IS_RELATIVE;
-
-            if (STATIC_ANCESTOR_WITH_SCROLLBAR =
-                node.scrollTop > 0 || node.scrollLeft > 0)
-                return false;
-
-            if (ANCESTOR_IS_RELATIVE =
-                window.getComputedStyle(node).getPropertyValue("position") == "relative")
-                return true;
+            node = node.parentNode;
+            continue;
         }
+
+        if (node.scrollTop > 0 || node.scrollLeft > 0)
+            return true;
+
+        const style = window.getComputedStyle(node);
+        if (style.overflow === 'auto' || style.overflow === 'scroll')
+            return true;
+
+        if (style.getPropertyValue("position") == "relative")
+            return false;
+
         node = node.parentNode;
     }
     return false;
 }
+
+
 export default Container;

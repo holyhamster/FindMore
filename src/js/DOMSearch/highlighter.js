@@ -1,183 +1,231 @@
 import Container from './container.js';
 import PerfMeasurer from './perfMeasurer.js';
 
-const recursionTimeLimit = 100;    //MS. set recursion on timeout each time if it takes longer
-const timeoutDelay = 5; //MS, delay between recursion calls
+const processingTimeLimit = 100;    //MS
+const processingTimeDelay = 5;
+const removalTimeLimit = 150;
+const removalTimeDelay = 10;
 
 //accepts matches and transforms them into highlight elements
+//Happens in four stages:
+// 1. queMatches(matches) from DOMSearcher, que the next stage (unless already qued)
+// 2. 
 class Highlighter
 {
-    constructor(_id, _eventElem, _primaryColor, _secondaryColor )
+    constructor(id, eventElement)
     {
-        this.id = _id;
-        this.parentElement = _eventElem;
+        this.id = id;
 
         const newMatchesEvent = new Event(`tf-new-matches-update`);
-        this.onNewMatches = (_newMatchCount) =>
+        this.onNewMatches = () =>
         {
-            newMatchesEvent.length = _newMatchCount;
-            _eventElem.dispatchEvent(newMatchesEvent);
+            newMatchesEvent.length = this.getMatchCount();
+            eventElement.dispatchEvent(newMatchesEvent);
         };
+
     }
 
     //#region RECURSIVE HIGHLIGHT 
-
     matches = [];       //que of DOMSearcher matches for processing
-    containers = [];    //processed matches
     invoked;
-    queMatches(_matches)
+    queMatches(matches)
     {
-        this.matches = [...this.matches, ..._matches];
-        this.interrupted = false;
+        this.matches = [...this.matches, ...matches];
         if (this.invoked)
             return;
 
         this.invoked = true;
-        setTimeout(() => { this.processHighlights() }, 1);
+        setTimeout(() => { this.processMatches() }, 1);
     }
 
-    interrupted;
+
     consequtiveCalls = 100;
-    processHighlights()
+    indexToContainerMap = new Map(); //containers by search index
+    nodeToContainerMap = new Map(); //containers by the parent nodes of their head elements
+
+    processMatches()
     {
         const perfMeasurer = new PerfMeasurer();
         let totalTime = 0;
-        const range = document.createRange(), dirtyContainers = [];
-
         this.invoked = false;
-        
-        while ((totalTime += perfMeasurer.get()) < recursionTimeLimit && (this.matches.length > 0) && !this.interrupted)
+
+        if (this.containerObserver == null)
+            this.containerObserver =
+                this.getContainerObserver(this.nodeToContainerMap, () => this.onNewMatches());
+        if (this.nodeObserver == null)
+            this.nodeObserver =
+                this.getNodeObserver(this.nodeToContainerMap, this.indexToContainerMap,
+                    (element) => { this.containerObserver.observe(element) });
+
+        while ((totalTime += perfMeasurer.get()) < processingTimeLimit &&
+            this.matches.length > 0)
         {
-            
-            const match = this.matches.shift();
-            const container = this.createContainer(match, range);
-            if (container)
-            {
-                this.containers.push(container);
-                if (!dirtyContainers.includes(container))
-                    dirtyContainers.push(container);
-            }
+            const container = this.getContainer(this.matches.shift());
+            this.nodeObserver.observe(container.parentNode);
         }
 
-        if (!this.interrupted)
-        {
-            dirtyContainers.forEach((_container) => { _container.commit(); })
-            if (dirtyContainers.length > 0)
-                this.onNewMatches(this.getMatchCount());
-        }
-
-        this.removeOldContainers();
-        
-
-        if (!this.invoked && !this.interrupted && this.matches.length > 0)
+        if (this.matches.length > 0 &&
+            !(this.invoked))
         {
             this.invoked = true;
-            setTimeout(() => { this.processHighlights() }, timeoutDelay);
+            setTimeout(() => { this.processMatches() }, processingTimeDelay);
         }
     }
 
-    nodeToContainerMap = new Map(); //map of container spans that hold highlighted rectangles to their parent nodes
-    createContainer(_match, _range)
+    getContainer(_match)
     {
-        const rects = this.getHighlightRectangles(_match, _range);
-
-        let hlContainer = this.nodeToContainerMap.get(_match.endNode.parentNode);
-        if (!hlContainer)
+        const parentNode = _match.endNode.parentNode;
+        let container = this.nodeToContainerMap.get(parentNode);
+        if (!container)
         {
-            hlContainer = new Container(_match.endNode.parentNode, this.id);
-            this.nodeToContainerMap.set(_match.endNode.parentNode, hlContainer);
+            container = new Container(parentNode, this.id);
+            this.nodeToContainerMap.set(parentNode, container);
         }
 
-        const highlightID = this.containers.length;
-        const visible = hlContainer.highlightRects(highlightID, rects);
+        container.queMatch(_match);
 
-        if (visible)
-            return hlContainer;
-
-        return;
+        return container;
     }
 
-    getHighlightRectangles(_match, _range)
+    //observes parents of nodes with matches, appends the visible ones and sends them to processing
+    getNodeObserver(nodeMap, indexMap, passToProcessing)
     {
-        
-        _range.setStart(_match.startNode, _match.startOffset);
-        _range.setEnd(_match.endNode, _match.endOffset);
-
-        const rects = Array.from(_range.getClientRects()), nonEmptyRects = [];
-        while (rects.length > 0)
+        const onObserve = (entries) => 
         {
-            const rect = rects.shift();
-            if (rect.width >= 1 && rect.height >= 1)
-                nonEmptyRects.push(rect);
-        }
+            entries.forEach((entry) =>
+            {
+                const container = nodeMap.get(entry.target);
+                observer.unobserve(entry.target);
 
-        return nonEmptyRects;
+                const elementVisible =
+                    entry.boundingClientRect.width > 2 && entry.boundingClientRect.height > 2;
+
+                if (!elementVisible)
+                    return;
+
+                while (container.indexNextMatch(indexMap.size))
+                {
+                    indexMap.set(indexMap.size, container);
+                }
+                container.appendSelf();
+
+                passToProcessing(container.headElement);
+            });
+        };
+
+        var observer = new IntersectionObserver(onObserve);
+
+        return observer;
+    }
+
+    //observes containers of successful matches,
+    getContainerObserver(nodeMap, onNewMatches)
+    {
+        const observer = new IntersectionObserver((_entries) =>
+        {
+            this.removeOldContainers();
+
+            const range = document.createRange();
+            const containers = [];
+
+            _entries.forEach((_entry) =>
+            {
+                const headElement = _entry.target;
+                observer.unobserve(headElement);
+
+                const container = nodeMap.get(headElement.parentNode);
+                containers.push(container);
+                container.precalculateRectangles(headElement.getBoundingClientRect(), range);
+            });
+
+            containers.forEach((_container) =>
+            {
+                _container.finalize();
+            });
+            onNewMatches();
+        });
+        return observer;
     }
     //#endregion
 
-    getMatchCount(_includeUnprocessed = true)
+    getMatchCount(includeUnprocessed = true)
     {
-        return this.containers.length + (_includeUnprocessed ? this.matches.length: 0);
+        return this.indexToContainerMap.size + (includeUnprocessed ? this.matches.length : 0);
     }
 
-    accentMatch(_index)
+    accentClosestMatch(index)
     {
-        if (_index === this.accentedIndex)
-            return;
-        const lastAccentedContainer = this.containers[this.accentedIndex];
+        if (index === this.accentedIndex)
+            return index;
 
+        console.log(`index ${index} this.accentedIndex ${this.accentedIndex}`);
+        console.log(`indexToContainerMap ${this.indexToContainerMap.size} this.matches ${this.matches.length}`);
+        const lastAccentedContainer = this.indexToContainerMap.get(this.accentedIndex);
         if (lastAccentedContainer)
         {
-            lastAccentedContainer.setSelectionAt(this.accentedIndex, false);
+            lastAccentedContainer.setAccent(this.accentedIndex, false);
             this.accentedIndex = null;
         }
-        if (isNaN(_index))
+        
+        if (isNaN(index) || index < 0)
             return;
 
         let focusTarget;
-        if (_index < this.containers.length)
+        if (index < this.indexToContainerMap.size)
         {
-            this.accentedIndex = _index;
-            const accentedRectangles = this.containers[this.accentedIndex].setSelectionAt(_index, true);
-            focusTarget = accentedRectangles.length > 0 ? accentedRectangles[0] : null;
+            this.accentedIndex = index;
+            const accentedRectangles = this.indexToContainerMap.get(index)?.setAccent(index, true);
+            focusTarget = accentedRectangles?.length > 0 ? accentedRectangles[0] : null;
         }
-        else if (_index < this.containers.length + this.matches.length)
+        else
         {
-            const match = this.matches[_index - this.containers.length];
-            focusTarget = match?.startNode.parentNode;
+            index = Math.min(index - this.indexToContainerMap.size, this.matches.length - 1);
+            const match = this.matches[index];
+            focusTarget = match?.startNode?.parentNode;
         }
 
-        if (!focusTarget)
-            return;
-
-        this.intersectionObserver = this.intersectionObserver ||
-            new IntersectionObserver(entries => 
+        if (!this.focusObserver)
+            this.focusObserver = new IntersectionObserver(entries => 
             {
-                if (!entries[0].isIntersecting)
-                    entries[0].target.scrollIntoView({ block: "center" });
-                this.intersectionObserver.unobserve(entries[0].target)
+                entries.forEach((entry) =>
+                {
+                    this.focusObserver.unobserve(entry.target);
+                    if (!entry.isIntersecting)
+                        entry.target.scrollIntoView({ block: "center" });
+                });
             });
-
-        this.intersectionObserver.observe(focusTarget);
+        if (focusTarget)
+            this.focusObserver.observe(focusTarget);
+        console.log(`index ${index} this.accentedIndex ${this.accentedIndex}`);
+        return index;
     }
 
-    oldContainers = [];
+    containersToRemove = [];
     clearSelection()
     {
-        this.interrupted = true;
-        this.oldContainers = [...this.oldContainers, ...Array.from(this.nodeToContainerMap.values())];
+        this.nodeObserver?.disconnect();
+        this.nodeObserver = null;
+        this.containerObserver?.disconnect();
+        this.containerObserver = null;
 
+        this.containersToRemove = [...this.containersToRemove, ...Array.from(this.nodeToContainerMap.values())];
         setTimeout(() => this.removeOldContainers(), 100);
-        
+
         this.matches = [];
-        this.containers = [];
+        this.indexToContainerMap = new Map();
         this.nodeToContainerMap = new Map();
     }
+    //removal of old highlights, recursive for performance reasons
     removeOldContainers()
     {
-        let container;
-        while (container = this.oldContainers.shift())
+        const perf = new PerfMeasurer();
+        let container, timer = 0;
+        while (((timer += perf.get()) < removalTimeLimit) &&
+            (container = this.containersToRemove.shift()))
             container.remove();
+
+        if (this.containersToRemove.length > 0)
+            setTimeout(() => this.removeOldContainers(), removalTimeDelay);
     }
 }
 

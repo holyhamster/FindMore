@@ -215,25 +215,21 @@ class SearchBar
 
     clearPreviousSearch(_id)
     {
-        if (!this.domSearcher)
-            return;
-
-        this.domSearcher.interrupt();
+        this.domSearcher?.interrupt();
         this.domSearcher = null;
 
-        this.highlighter.clearSelection();
-
-        this.selectedIndex = null;
+        this.highlighter?.clearSelection();
+        //this.selectedIndex = null;
     }
 
     selectedIndex;
-    updateLabels(_indexChange)
+    updateLabels(indexChange)
     {
         const matchesLength = this.highlighter?.getMatchCount() || 0;
 
-        this.selectedIndex = this.normalizeSearchIndex(this.selectedIndex, _indexChange, matchesLength);
 
-        this.highlighter?.accentMatch(this.selectedIndex);
+        this.selectedIndex = this.highlighter?.accentClosestMatch(
+            this.normalizeSearchIndex(this.selectedIndex, indexChange, matchesLength));
 
         if (!this.totalMatchesLabel)
         {
