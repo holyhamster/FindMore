@@ -7,9 +7,11 @@ const removalTimeLimit = 150;
 const removalTimeDelay = 10;
 
 //accepts matches and transforms them into highlight elements
-//Happens in four stages:
-// 1. queMatches(matches) from DOMSearcher, que the next stage (unless already qued)
-// 2. 
+//Happens in four batch-stages to minimize reflow calls:
+// 1. queMatches() synchronously from DOMSearcher =>
+// 2. processMatches() asynchronously creates/finds a container for each match =>
+// 3. .nodeObserver asynchronously decides if the node is visible, assignes an index to it, appends the container
+// 4. .containerObserver asynchronously calculates all rectangles, appends them to the container
 class Highlighter
 {
     constructor(id, eventElement)
@@ -45,17 +47,15 @@ class Highlighter
 
     processMatches()
     {
+        this.invoked = false;
         const perfMeasurer = new PerfMeasurer();
         let totalTime = 0;
-        this.invoked = false;
 
         if (this.containerObserver == null)
-            this.containerObserver =
-                this.getContainerObserver(this.nodeToContainerMap, () => this.onNewMatches());
+            this.containerObserver = this.getContainerObserver(this.nodeToContainerMap, () => this.onNewMatches());
         if (this.nodeObserver == null)
-            this.nodeObserver =
-                this.getNodeObserver(this.nodeToContainerMap, this.indexToContainerMap,
-                    (element) => { this.containerObserver.observe(element) });
+            this.nodeObserver = this.getNodeObserver(this.nodeToContainerMap, this.indexToContainerMap,
+                                    (element) => { this.containerObserver.observe(element) });
 
         while ((totalTime += perfMeasurer.get()) < processingTimeLimit &&
             this.matches.length > 0)
@@ -64,17 +64,16 @@ class Highlighter
             this.nodeObserver.observe(container.parentNode);
         }
 
-        if (this.matches.length > 0 &&
-            !(this.invoked))
+        if (this.matches.length > 0 && !this.invoked)
         {
             this.invoked = true;
             setTimeout(() => { this.processMatches() }, processingTimeDelay);
         }
     }
 
-    getContainer(_match)
+    getContainer(match)
     {
-        const parentNode = _match.endNode.parentNode;
+        const parentNode = match.endNode.parentNode;
         let container = this.nodeToContainerMap.get(parentNode);
         if (!container)
         {
@@ -82,8 +81,7 @@ class Highlighter
             this.nodeToContainerMap.set(parentNode, container);
         }
 
-        container.queMatch(_match);
-
+        container.queMatch(match);
         return container;
     }
 
@@ -153,36 +151,26 @@ class Highlighter
         return this.indexToContainerMap.size + (includeUnprocessed ? this.matches.length : 0);
     }
 
-    accentClosestMatch(index)
+    getNewClosestMatch()
+    {
+        //TODO: reference old accent/screenposition
+        return this.getMatchCount() > 0 ? 0 : null;
+    }
+
+    accentMatch(index)
     {
         if (index === this.accentedIndex)
-            return index;
+            return;
 
-        console.log(`index ${index} this.accentedIndex ${this.accentedIndex}`);
-        console.log(`indexToContainerMap ${this.indexToContainerMap.size} this.matches ${this.matches.length}`);
         const lastAccentedContainer = this.indexToContainerMap.get(this.accentedIndex);
         if (lastAccentedContainer)
         {
             lastAccentedContainer.setAccent(this.accentedIndex, false);
             this.accentedIndex = null;
         }
-        
-        if (isNaN(index) || index < 0)
-            return;
 
-        let focusTarget;
-        if (index < this.indexToContainerMap.size)
-        {
-            this.accentedIndex = index;
-            const accentedRectangles = this.indexToContainerMap.get(index)?.setAccent(index, true);
-            focusTarget = accentedRectangles?.length > 0 ? accentedRectangles[0] : null;
-        }
-        else
-        {
-            index = Math.min(index - this.indexToContainerMap.size, this.matches.length - 1);
-            const match = this.matches[index];
-            focusTarget = match?.startNode?.parentNode;
-        }
+        if (isNaN(index) || index < 0 || (this.indexToContainerMap.size + this.matches.length) == 0)
+            return;
 
         if (!this.focusObserver)
             this.focusObserver = new IntersectionObserver(entries => 
@@ -194,10 +182,24 @@ class Highlighter
                         entry.target.scrollIntoView({ block: "center" });
                 });
             });
+
+        const focusTarget = this.getFocusTargetAt(index);
         if (focusTarget)
             this.focusObserver.observe(focusTarget);
-        console.log(`index ${index} this.accentedIndex ${this.accentedIndex}`);
-        return index;
+        return;
+    }
+
+    getFocusTargetAt(index)
+    {
+        if (index < this.indexToContainerMap.size)
+        {
+            this.accentedIndex = index;
+            const accentedRectangles = this.indexToContainerMap.get(index)?.setAccent(index, true);
+            return accentedRectangles?.length > 0 ? accentedRectangles[0] : null;
+        }
+
+        index -= this.indexToContainerMap.size;
+        return this.matches[index]?.startNode?.parentNode;
     }
 
     containersToRemove = [];

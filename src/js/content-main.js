@@ -1,4 +1,4 @@
-import SearchBar from './searchBar.js';
+import SearchPanel from './searchPanel.js';
 import SearchState from './searchState.js';
 
 export function main()
@@ -56,7 +56,7 @@ export function main()
                     newSearch.pinned = _request.options?.startPinned || false;
 
                     searchesMap.set(id, newSearch)
-                    barsMap.set(id, new SearchBar(id, newSearch, barsMap.size));
+                    barsMap.set(id, new SearchPanel(id, newSearch, barsMap.size));
                     cacheData();
                     _sendResponse({});
                     break;
@@ -78,7 +78,7 @@ export function main()
                         searchesMap.set(newId, _state);
 
                         barsMap.set(newId,
-                            new SearchBar(newId, _state));
+                            new SearchPanel(newId, _state));
                     });
                     break;
 
@@ -90,7 +90,7 @@ export function main()
 
     function loadOptions(_options)
     {
-        SearchBar.getShadowRoot().setStyleFromOptions(_options);
+        SearchPanel.getShadowRoot().setStyleFromOptions(_options);
     }
 
     function getNewID()
