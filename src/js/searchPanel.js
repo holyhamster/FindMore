@@ -272,11 +272,11 @@ function setStyleFromOptions(shadowRoot, options)
     const horizontal = options ? options.alignment == 1 : false;
 
     const style = shadowRoot.style;
-
-    style.top = startTop ? "0px" : "";
-    style.bottom = startTop ? "" : "0px";
-    style.left = startLeft ? "0px" : "";
-    style.right = startLeft ? "" : "0px";
+    const screenGap = "5px";
+    style.top = startTop ? screenGap : "";
+    style.bottom = startTop ? "" : screenGap;
+    style.left = startLeft ? screenGap : "";
+    style.right = startLeft ? "" : screenGap;
 
     if (horizontal)
     {
