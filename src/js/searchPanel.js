@@ -1,7 +1,7 @@
 import DOMSearcher from './DOMSearch/domSearcher.js';
 import Highlighter from './DOMSearch/highlighter.js';
-import ShadowrootCSS from './styling/cssInjection.js'
-import Styler from './styling/styler.js';
+import ShadowrootCSS from './cssStyling/cssInjection.js'
+import Styler from './cssStyling/styler.js';
 
 //creates and controls search panel element
 //starts the search with DOMSearcher, marks results with Highlighter and sets css with Styler
