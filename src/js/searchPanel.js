@@ -1,6 +1,6 @@
 import DOMSearcher from './DOMSearch/domSearcher.js';
 import Highlighter from './DOMSearch/highlighter.js';
-import ShadowrootCSS from './cssStyling/cssInjection.js'
+import { ShadowrootCSS } from './cssStyling/cssInjection.js'
 import Styler from './cssStyling/styler.js';
 
 //creates and controls search panel element
@@ -23,7 +23,7 @@ class SearchPanel
         SearchPanel.getShadowRoot().appendChild(this.mainDiv);
         this.addHTMLEvents();
         this.styler = new Styler(id, this.mainDiv);
-        this.styler.set(state.getColor(), state.getAccentedColor());
+        this.styler.set(state.colorIndex, SearchPanel.options?.highlightAlpha);
 
         if (this.state.searchString == "")
             this.mainDiv.querySelector(`.searchInput`).focus();
@@ -38,7 +38,8 @@ class SearchPanel
         mainDiv.setAttribute("class", `TFSearchBar${state.pinned ? " pinned" : ""}`);
         mainDiv.setAttribute("id", `TFSearchBar${id}`);
 
-        mainDiv.style.setProperty("--themeHue", state.hue);
+        mainDiv.style.setProperty("--color1-hsl", `var(--light-color-${state.colorIndex}-hsl)`);
+        mainDiv.style.setProperty("--color2-hsl", `var(--dark-color-${state.colorIndex}-hsl)`);
 
         mainDiv.innerHTML =
             ` <div>
@@ -61,7 +62,6 @@ class SearchPanel
             <button class="colorButton button-28">&#x25D1</button>
             <button class="pinButton"> ${state.pinned ? "\u{25A3}" : "\u{25A2}"}</button>
         </div>`;
-
         mainDiv.querySelector(`.searchInput`).focus();
         return mainDiv;
     }
@@ -93,10 +93,11 @@ class SearchPanel
 
         this.mainDiv.querySelector(`.colorButton`).addEventListener("click", () =>
         {
-            this.state.recolor();       
-            mainDiv.style.setProperty("--themeHue", this.state.hue);
+            this.state.nextColor();       
+            mainDiv.style.setProperty("--color1-hsl", `var(--light-color-${this.state.colorIndex}-hsl)`);
+            mainDiv.style.setProperty("--color2-hsl", `var(--dark-color-${this.state.colorIndex}-hsl)`);
             //this.highlighter?.setStyle(this.state.getColor(), this.state.getAccentedColor());
-            this.styler.set(this.state.getColor(), this.state.getAccentedColor());
+            this.styler.set(this.state.colorIndex, SearchPanel.options?.highlightAlpha);
         });
 
         mainDiv.querySelector(`.refreshButton`).addEventListener("click", () =>
@@ -208,8 +209,7 @@ class SearchPanel
         
         if (this.state.searchString != "")
         {
-            this.highlighter = this.highlighter || new Highlighter(this.id, this.mainDiv,
-                this.state.getColor(), this.state.getAccentedColor());
+            this.highlighter = this.highlighter || new Highlighter(this.id, this.mainDiv);
 
             this.domSearcher = new DOMSearcher(
                 this.state.searchString, this.state.getRegex(true),
@@ -226,17 +226,7 @@ class SearchPanel
         this.highlighter?.clearSelection();
         //this.selectedIndex = null;
     }
-
-    close()
-    {
-        this.clearPreviousSearch();
-        this.mainDiv.remove();
-
-        //removing thousands of highlights can result in a significant reflow time
-        //allowing the page to remove the search panel first makes it less noticable
-        setTimeout(() => { this.styler.clearStyles(); }, 10);   
-    }
-
+    //#endregion
     selectedIndex;
     updateIndex(indexChange)
     {
@@ -253,6 +243,32 @@ class SearchPanel
         this.updateLabels(this.selectedIndex, matchesLength);
     }
 
+    static SetOptions(options, panels)
+    {
+        SearchPanel.options = options;
+        SearchPanel.getShadowRoot().setStyleFromOptions(options);
+
+        panels?.forEach((panel) =>
+        {
+            panel.setOptions(options);
+
+        });
+    }
+
+    setOptions(options)
+    {
+        this.styler?.set(this.state.colorIndex, options.highlightAlpha);
+    }
+
+    close()
+    {
+        this.clearPreviousSearch();
+        this.mainDiv.remove();
+
+        //removing thousands of highlights can result in a significant reflow time
+        //allowing the page to remove the search panel first makes it less noticable
+        setTimeout(() => { this.styler.clearStyles(); }, 10);
+    }
     
 }
 

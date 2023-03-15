@@ -1,28 +1,30 @@
-//adds css to the document and iframes (when recieves an event about locating one)
+import { GetPersonalCSS, DefaultHighlightCSS } from './cssInjection.js'
+
+//adds and redacts css for highlight rectangles to the document's adopted sheets
+//  and iframes (when parent element has an event about locating one)
 
 class Styler
 {
-    constructor(_id, _parentElement)
+    constructor(id, parentElement)
     {
-        this.id = _id;
-        this.parentElement = _parentElement;
+        this.id = id;
+        this.parentElement = parentElement;
     }
 
-    set(_primaryColor, _accent)
+    set(colorIndex, opacity = .8)
     {
-        const personalCSS = getPersonalCSSString(this.id, _primaryColor, _accent);
-
+        const personalCSS = GetPersonalCSS(this.id, colorIndex, opacity);
         this.setAdoptedStyle(personalCSS);
         this.setIFramesStyle(personalCSS);
     }
 
     adoptedSheet;
-    setAdoptedStyle(_personalCSS)
+    setAdoptedStyle(personalCSS)
     {
         if (!Styler.defaultSheet)
         {
             Styler.defaultSheet = new CSSStyleSheet();
-            Styler.defaultSheet.replaceSync(defaultCSSString);
+            Styler.defaultSheet.replaceSync(DefaultHighlightCSS);
             document.adoptedStyleSheets =
                 [...document.adoptedStyleSheets, Styler.defaultSheet];
         }
@@ -33,7 +35,7 @@ class Styler
             this.adoptedSheet = new CSSStyleSheet();
             document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.adoptedSheet];
         }
-        this.adoptedSheet.replaceSync(_personalCSS);
+        this.adoptedSheet.replaceSync(personalCSS);
     }
     removeAdoptedStyle()
     {
@@ -48,7 +50,7 @@ class Styler
     }
 
     iframes = [];
-    setIFramesStyle(_personalCSS)
+    setIFramesStyle(personalCSS)
     {
         const styleClass = `fm-iframe${this.id}`;
         this.iframes.forEach((_iframe) =>
@@ -57,7 +59,7 @@ class Styler
             oldStyle?.remove();
             const newStyle = _iframe.createElement(`style`);
             newStyle.setAttribute("class", styleClass);
-            newStyle.innerHTML = _personalCSS;
+            newStyle.innerHTML = personalCSS;
             _iframe.head.appendChild(newStyle);
         })
 
@@ -86,7 +88,7 @@ class Styler
             {
                 personalStyle = newIFrame.createElement(`style`);
                 personalStyle.setAttribute("class", styleClass);
-                personalStyle.innerHTML = _personalCSS;
+                personalStyle.innerHTML = personalCSS;
                 newIFrame.head.appendChild(personalStyle);
             }
         };
@@ -114,12 +116,12 @@ class Styler
 
 const defaultCSSString = `fm-container { all:initial; position: absolute; } ` +
     `fm-container.fm-relative { position: relative; display:inline-block; width:0px; height: 0px; } ` +
-    `fm-highlight { all:initial; position: absolute; opacity: 0.7; z-index: 2147483646; }`; //` pointer-events: none;`;
+    `fm-highlight { all:initial; position: absolute; opacity: 0.6; z-index: 2147483646; }`; //` pointer-events: none;`;
 
-function getPersonalCSSString(_id, _primary, _accent)
+function getPersonalCSSString(id, primary, accent, opacity)
 {
-    return `fm-highlight.fm-${_id} {background-color: ${_primary}; }` +
-        `fm-highlight.fm-${_id}.fm-accented { background-color: ${_accent}; }`;
+    return `fm-highlight.fm-${id} {background-color: ${primary}; opacity: ${opacity}; }` +
+        `fm-highlight.fm-${id}.fm-accented { background-color: ${accent}; }`;
 }
 
 export default Styler;

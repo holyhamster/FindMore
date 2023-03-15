@@ -46,7 +46,7 @@ export function main()
         {
             tabId = tabId || _request.tabId;
             if (_request.options)
-                loadOptions(_request.options);
+                setOptions(_request.options);
 
             switch (_request.message)
             {
@@ -88,9 +88,9 @@ export function main()
         }
     );
 
-    function loadOptions(_options)
+    function setOptions(options)
     {
-        SearchPanel.getShadowRoot().setStyleFromOptions(_options);
+        SearchPanel.SetOptions(options, Array.from(barsMap.values));
     }
 
     function getNewID()
