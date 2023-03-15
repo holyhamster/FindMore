@@ -1,24 +1,25 @@
 import Container from './container.js';
 import PerfMeasurer from './perfMeasurer.js';
 
+//accepts matches and transforms them into highlight elements
+//Happens in four asynchronous stages to optimize browser's reflow calls:
+// - queMatches() synchronously from DOMSearcher
+// - processMatches() recursively creates/finds a container for each match, makes a delay if execution is too long
+// - nodeObserver asynchronously decides if the parent node of the match is visible, appends the container
+// - containerObserver asynchronously calculates all rectangles, appends them to the container
+
 const processingTimeLimit = 100;    //MS
 const processingTimeDelay = 5;
 const removalTimeLimit = 150;
 const removalTimeDelay = 10;
 
-//accepts matches and transforms them into highlight elements
-//Happens in four batch-stages to minimize reflow calls:
-// 1. queMatches() synchronously from DOMSearcher =>
-// 2. processMatches() asynchronously creates/finds a container for each match =>
-// 3. .nodeObserver asynchronously decides if the node is visible, assignes an index to it, appends the container
-// 4. .containerObserver asynchronously calculates all rectangles, appends them to the container
 class Highlighter
 {
     constructor(id, eventElement)
     {
         this.id = id;
 
-        const newMatchesEvent = new Event(`tf-new-matches-update`);
+        const newMatchesEvent = new Event(`fm-new-matches-update`);
         this.onNewMatches = () =>
         {
             newMatchesEvent.length = this.getMatchCount();

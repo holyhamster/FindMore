@@ -12,10 +12,10 @@ class SearchPanel
         this.id = id;
         this.state = state;
 
-        this.onClose = new Event("tf-bar-closed");
+        this.onClose = new Event("fm-bar-closed");
         this.onClose.id = this.id;
 
-        this.onStateChange = new Event("tf-search-changed");
+        this.onStateChange = new Event("fm-search-changed");
         this.onStateChange.id = this.id;
 
         this.mainDiv = this.constructPanel(id, state);
@@ -70,7 +70,7 @@ class SearchPanel
     {
         const mainDiv = this.mainDiv;
 
-        mainDiv.addEventListener("tf-new-matches-update",
+        mainDiv.addEventListener("fm-new-matches-update",
             (_args) => { this.updateIndex(); });
 
         mainDiv.querySelector(`.searchInput`).addEventListener("input", (_args) =>

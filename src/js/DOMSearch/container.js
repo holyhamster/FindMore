@@ -1,5 +1,3 @@
-import Match from './match.js'
-
 //container holds an fm-container headElement that holds all fm-relative rectangles for a single DOM parent
 class Container
 {

@@ -8,7 +8,7 @@ export function main()
     var barsMap = new Map();    //key -- integer bar ID
 
     //#region document events
-    document.addEventListener("tf-bar-closed", function (_args)
+    document.addEventListener("fm-bar-closed", function (_args)
     {
         if (barsMap.get(_args.id))
         {
@@ -19,7 +19,7 @@ export function main()
         cacheData();
     });
 
-    document.addEventListener("tf-search-changed", function ()
+    document.addEventListener("fm-search-changed", function ()
     {
         cacheData();
     });
@@ -50,7 +50,7 @@ export function main()
 
             switch (_request.message)
             {
-                case "tf-new-search":
+                case "fm-new-search":
                     const id = getNewID();
                     const newSearch = new SearchState("");
                     newSearch.pinned = _request.options?.startPinned || false;
@@ -61,7 +61,7 @@ export function main()
                     _sendResponse({});
                     break;
 
-                case "tf-update-search":
+                case "fm-update-search":
                     if (!_request.data)
                         return;
                     barsMap.forEach(function (_val) { _val.close() });
@@ -116,7 +116,7 @@ export function main()
     }
     function cacheData()
     {
-        const message = { message: "tf-content-update-state", tabId: tabId };
+        const message = { message: "fm-content-update-state", tabId: tabId };
 
         if (searchesMap.size > 0)
             message.data = serializeMap(searchesMap);

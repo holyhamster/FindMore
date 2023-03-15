@@ -64,7 +64,7 @@ chrome.runtime.onMessage.addListener((_RUNTIME_EVENT, _sender) =>
             });
             break;
 
-        case "tf-content-update-state":
+        case "fm-content-update-state":
             if (data)
                 TabsData.set(tabId, data);
             else if (TabsData.has(tabId))
@@ -81,7 +81,7 @@ chrome.runtime.onMessage.addListener((_RUNTIME_EVENT, _sender) =>
             {
                 chrome.tabs.sendMessage(newTabId,
                     {
-                        message: "tf-new-search",
+                        message: "fm-new-search",
                         tabId: newTabId,
                         options: options
                     });
@@ -115,7 +115,7 @@ function obtainActiveID(_onActiveID, _onNoActive)
 function sendSearchData(_tabId, _tabData, _forced, _pinnedOnly)
 {
     const message = {
-        message: "tf-update-search",
+        message: "fm-update-search",
         tabId: _tabId,
         options: options,
         data: _tabData,
@@ -184,7 +184,7 @@ function requestNewSearchOnActiveWindow()
     obtainActiveID((_id) =>
     {
         chrome.tabs.sendMessage(_id,
-            { message: "tf-new-search", tabId: _id, options: options },
+            { message: "fm-new-search", tabId: _id, options: options },
             (_response) =>
             {
                 const NO_RESPONSE_FROM_CONTENT_SCRIPT = new Boolean(chrome.runtime.lastError);
