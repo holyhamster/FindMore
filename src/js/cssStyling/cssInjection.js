@@ -1,4 +1,5 @@
-//for a direct css injection
+//javascript css injection
+
 const ShadowrootCSS = `
 #TFBarsContainer {
     --scale-ratio: 1;
@@ -6,8 +7,8 @@ const ShadowrootCSS = `
     font-family: Verdana, sans-serif;
     color: var(--dark-color);
     font-size: calc(var(--scale-ratio) * 15px);
-    left: 0px;
-    top: 0px;
+    left: 5px;
+    top: 5px;
     position: fixed;
     display: flex;
     flex-direction: column;
