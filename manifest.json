@@ -43,21 +43,21 @@
       },
       "description": "opens search popup"
     },
-    "fm-new-search": {
+    "fm-hotkey-new-search": {
       "suggested_key": {
         "default": "Ctrl+Q",
         "mac": "Command+Q"
       },
       "description": "Opens new search pannel"
     },
-    "fm-save-search": {
+    "fm-hotkey-save-search": {
       "suggested_key": {
         "default": "Ctrl+Y",
         "mac": "Command+Y"
       },
       "description": "Saves search panels on active page"
     },
-    "fm-load-search": {
+    "fm-hotkey-load-search": {
       "suggested_key": {
         "default": "Ctrl+B",
         "mac": "Command+B"

@@ -1,23 +1,6 @@
-var quedIdsForNewPanels = [];
-var TabsData = new Map();
+var tabsData = new Map();
 var options;
-
 loadOptions();
-
-chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
-    switch (HOTKEY_COMMAND) {
-        case 'fm-new-search':
-            requestNewSearchOnActiveWindow();
-            break;
-        case 'fm-save-search':
-            savePanelsToMemory();
-            break;
-        case 'fm-load-search':
-            loadPanelsToActive();
-            break;
-    }
-});
-
 chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
     const tabId = RUNTIME_EVENT.tabId || sender?.tab?.id;
     const data = RUNTIME_EVENT.data;
@@ -30,7 +13,7 @@ chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
 
                 options = RUNTIME_EVENT.options;
 
-                TabsData.forEach((data, id) => {
+                tabsData.forEach((data, id) => {
                     sendSearchData(id);
                 });
             }
@@ -52,7 +35,7 @@ chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
             const message = { message: "fm-popup-current-search-answer", data: false };
             obtainActiveID((id) => {
                 message.id = id;
-                message.data = TabsData.has(id);
+                message.data = tabsData.has(id);
                 chrome.runtime.sendMessage(message);
             }, () => {
                 chrome.runtime.sendMessage(message);
@@ -61,31 +44,45 @@ chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
 
         case "fm-content-update-state":
             if (data)
-                TabsData.set(tabId, data);
+                tabsData.set(tabId, data);
             else
-                TabsData.delete(tabId)
+                tabsData.delete(tabId)
             break;
 
         case "fm-content-script-loaded":
-            const previousTabData = TabsData.get(tabId);
+            const previousTabData = tabsData.get(tabId);
             if (previousTabData)
-                sendSearchData(tabId, previousTabData, FORCED_UPDATE = false, PINNED_ONLY = true);
+                sendSearchData(tabId, { data: previousTabData, pinnedOnly: true });
 
-            if (quedIdsForNewPanels.includes(tabId)) {
+            if (quedNewPanels.includes(tabId)) {
                 chrome.tabs.sendMessage(tabId, {
                     message: "fm-new-search",
                     tabId: tabId,
                     options: options
                 });
-                quedIdsForNewPanels.splice(quedIdsForNewPanels.indexOf(tabId), 1);
+                quedNewPanels.splice(quedNewPanels.indexOf(tabId), 1);
             }
             break;
     }
 });
 
+chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
+    switch (HOTKEY_COMMAND) {
+        case 'fm-hotkey-new-search':
+            requestNewSearchOnActiveWindow();
+            break;
+        case 'fm-hotkey-save-search':
+            savePanelsToMemory();
+            break;
+        case 'fm-hotkey-load-search':
+            loadPanelsToActive();
+            break;
+    }
+});
+
 chrome.windows.onBoundsChanged.addListener(() => {
-    TabsData.forEach((data, id) => {
-        sendSearchData(id, data, FORCED_UPDATE = true, PINNED_ONLY = false);
+    tabsData.forEach((data, id) => {
+        sendSearchData(id, { data: data, forcedUpdate: true });
     });
 });
 
@@ -99,16 +96,14 @@ function obtainActiveID(onActiveID, onNoActive) {
     });
 }
 
-function sendSearchData(tabId, tabData, forced, pinnedOnly) {
+function sendSearchData(tabId, args) {
     const message = {
         message: "fm-update-search",
         tabId: tabId,
-        data: tabData,
-        forcedUpdate: forced,
-        pinnedOnly: pinnedOnly,
         options: options
     };
-
+    Object.assign(message, args);
+    console.log(message);
     chrome.tabs.sendMessage(tabId, message);
 }
 
@@ -123,11 +118,11 @@ function savePanelsToMemory() {
     const clearSaveData = () => chrome.storage.local.remove(["fmSavedSearch"]);
 
     obtainActiveID((id) => {
-        if (!TabsData.has(id)) {
+        if (!tabsData.has(id)) {
             clearSaveData();
             return;
         }
-        chrome.storage.local.set({ "fmSavedSearch": TabsData.get(id) });
+        chrome.storage.local.set({ "fmSavedSearch": tabsData.get(id) });
         showSuccessStatus();
     }, () => {
         clearSaveData();
@@ -143,13 +138,14 @@ function loadPanelsToActive() {
             if (!loadedData)
                 return;
 
-            TabsData.set(id, loadedData);
-            sendSearchData(id, loadedData, FORCED = true, PINNED_ONLY = false);
+            tabsData.set(id, loadedData);
+            sendSearchData(id, { loadedData, forcedUpdate: true});
             showSuccessStatus();
         });
     });
 }
 
+var quedNewPanels = [];
 function requestNewSearchOnActiveWindow() {
     obtainActiveID((id) => {
         chrome.tabs.sendMessage(id, {
@@ -159,8 +155,8 @@ function requestNewSearchOnActiveWindow() {
         },
             (response) => {
                 const NO_RESPONSE_FROM_CONTENT_SCRIPT = new Boolean(chrome.runtime.lastError);
-                if (NO_RESPONSE_FROM_CONTENT_SCRIPT && !quedIdsForNewPanels.includes(id))
-                    quedIdsForNewPanels.push(id);
+                if (NO_RESPONSE_FROM_CONTENT_SCRIPT && !quedNewPanels.includes(id))
+                    quedNewPanels.push(id);
             }
         );
     });

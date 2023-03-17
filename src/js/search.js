@@ -8,7 +8,7 @@ import { Shadowroot } from './shadowroot.js';
 export class Search {
     constructor(id, state, options) {
         this.id = id;
-        this.state = state;
+        this.State = state;
 
         const panel = new Panel(id, state, options);
         this.panel = panel;
@@ -34,7 +34,7 @@ export class Search {
                     this.clearPreviousSearch();
             });
 
-        if (this.state.searchString != "")
+        if (this.State.searchString != "")
             this.startDomSearch();
     }
 
@@ -43,13 +43,11 @@ export class Search {
     startDomSearch() {
         this.clearPreviousSearch();
 
-        if (this.state.searchString != "") {
-            this.highlighter = this.highlighter ||
-                new Highlighter(this.id, this.panel.GetLocalRoot());
+        if (this.State.searchString != "") {
+            this.highlighter = this.highlighter || new Highlighter(this.id, this.panel.GetLocalRoot());
 
             this.domSearcher = new DOMSearcher(
-                this.state.searchString, this.state.getRegex(true),
-                this.panel.GetLocalRoot(), this.highlighter);
+                this.State.searchString, this.State.getRegex(true), this.panel.GetLocalRoot(), this.highlighter);
         }
         this.changeIndex();
     }

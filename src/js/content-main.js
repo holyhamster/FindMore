@@ -4,9 +4,8 @@ import State from './state.js';
 
 export function main() {
     var tabId;
-    var panels = new Map();    //key -- integer bar ID
+    var panels = new Map();
 
-    //#region document events
     Shadowroot.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
         if (panels.has(args.id))
             panels.delete(args.id);
@@ -19,8 +18,8 @@ export function main() {
 
     document.addEventListener('keydown', (_args) => {
         if (_args.key == "Escape") {
-            panels.forEach(function (panel, id) {
-                if (!panel.state.pinned) {
+            panels.forEach((panel) => {
+                if (!panel.State.pinned) {
                     panel.Close();
                 }
             });
@@ -31,14 +30,16 @@ export function main() {
     chrome.runtime.onMessage.addListener(
         (request, sender, sendResponse) => {
             tabId = tabId || request.tabId;
-            if (request.options)
-                setOptions(request.options);
+
+            const options = request.options;
+            if (options)
+                setOptions(options);
 
             switch (request.message) {
                 case "fm-new-search":
                     const id = getNewID();
                     const newSearch = new State("");
-                    newSearch.pinned = request.options?.startPinned || false;
+                    newSearch.pinned = options?.startPinned || false;
 
                     panels.set(id, new Search(id, newSearch, request.options));
                     cacheData(panels);
@@ -53,14 +54,14 @@ export function main() {
                     panels = new Map();
 
                     const loadedMap = deserializeIntoMap(request.data);
-                    loadedMap?.forEach(function (_state) {
-                        if (request.pinnedOnly && !_state.pinned)
+                    loadedMap?.forEach((state) => {
+                        if (request.pinnedOnly && !state.pinned)
                             return;
 
                         const newId = getNewID();
 
                         panels.set(newId,
-                            new Search(newId, _state));
+                            new Search(newId, state));
                     });
                     break;
 

@@ -37,7 +37,7 @@ class DomSearcher
             if (this.interrupted)
                 return;
 
-            _highlighter.queMatches(matches);
+            _highlighter.QueMatches(matches);
         }
 
         if (!WALK_IN_PROGRESS)

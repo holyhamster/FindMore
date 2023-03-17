@@ -14,19 +14,18 @@ export class Panel {
 
         const mainDiv = getPanel(id, state);
         this.mainDiv = mainDiv;
+        this.addHTMLEvents();
 
         Shadowroot.Get().appendChild(mainDiv);
 
-        this.addHTMLEvents(id);
-
-        if (state.searchString == "")
+        if (state.searchString.length == 0)
             mainDiv.querySelector(`.searchInput`).focus();
 
         this.styler = new Styler(id, mainDiv, state.colorIndex, options?.highlightAlpha);
     }
 
-    addHTMLEvents(id) {
-        const mainDiv = this.mainDiv, state = this.state;
+    addHTMLEvents() {
+        const mainDiv = this.mainDiv, state = this.state, id = this.id;
 
         mainDiv.addEventListener(GetClosePanelsEvent().type, (args) => {
             if (isNaN(args.id) || args.id == id) {
@@ -34,19 +33,16 @@ export class Panel {
             }
         });
 
-        const onStateChange = new Event("fm-search-changed");
-        onStateChange.id = id;
-
         mainDiv.querySelector(`.searchInput`).addEventListener("input", (args) => {
             if (!args?.target)
                 return;
             args.target.value = formatIncomingString(args.target.value);
             const inputChanged = args.target.value != state.searchString;
             state.searchString = args.target.value;
-            if (inputChanged)
+            if (inputChanged) {
                 mainDiv.dispatchEvent(GetStateChangeEvent(id));
-
-            mainDiv.dispatchEvent(GetSearchRestartEvent());
+                mainDiv.dispatchEvent(GetSearchRestartEvent());
+            }
         });
 
         mainDiv.querySelector(`.searchInput`).addEventListener("keydown", (args) => {
@@ -58,7 +54,6 @@ export class Panel {
             state.nextColor();
             mainDiv.style.setProperty("--color1-hsl", `var(--light-color-${state.colorIndex}-hsl)`);
             mainDiv.style.setProperty("--color2-hsl", `var(--dark-color-${state.colorIndex}-hsl)`);
-            //this.highlighter?.setStyle(this.state.getColor(), this.state.getAccentedColor());
             mainDiv.dispatchEvent(GetStateChangeEvent(id));
             this.styler.SetColor(state.colorIndex);
         });
@@ -89,7 +84,7 @@ export class Panel {
         });
 
         mainDiv.querySelector(`.wordCheck`).addEventListener("input", (args) => {
-            if (state.wholeWord == args.target.checked)
+            if (state.wholeWord == args?.target?.checked)
                 return;
 
             state.wholeWord = args.target.checked;
@@ -97,16 +92,15 @@ export class Panel {
             mainDiv.dispatchEvent(GetSearchRestartEvent());
         });
 
-        mainDiv.querySelector(`.pinButton`).addEventListener("click", () => {
-            this.pinButton = this.pinButton || mainDiv.querySelector(`.pinButton`);
+        mainDiv.querySelector(`.pinButton`).addEventListener("click", (args) => {
             state.pinned = !state.pinned;
-
             if (state.pinned)
                 mainDiv.classList.add('pinned');
             else
                 mainDiv.classList.remove('pinned');
 
-            this.pinButton.textContent = (state.pinned ? "\u{25A3}" : "\u{25A2}");
+            if (args?.target)
+                args.target.textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
             mainDiv.dispatchEvent(GetStateChangeEvent(id));
         });
     }
@@ -158,12 +152,9 @@ function getPanel(id, state) {
     return mainDiv;
 }
 
-function formatIncomingString(string) {
-    if (!string)
-        return "";
-    if (string.length > 100)
-        string = string.substring(0, 100);
-    return string;
+function formatIncomingString(incomingString) {
+    incomingString = incomingString || "";
+    return incomingString.substring(0, 100);
 }
 
 export default Panel;
