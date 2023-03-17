@@ -1,11 +1,11 @@
 var quedIdsForNewPanels = [];
 var TabsData = new Map();
 var options;
+
 loadOptions();
 
-chrome.commands.onCommand.addListener((_HOTKEY_COMMAND) =>
-{
-    switch (_HOTKEY_COMMAND)
+chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
+    switch (HOTKEY_COMMAND)
     {
         case 'fm-new-search':
             requestNewSearchOnActiveWindow();
@@ -19,8 +19,7 @@ chrome.commands.onCommand.addListener((_HOTKEY_COMMAND) =>
     }
 });
 
-chrome.runtime.onMessage.addListener((_RUNTIME_EVENT, _sender) =>
-{
+chrome.runtime.onMessage.addListener((_RUNTIME_EVENT, _sender) => {
     const tabId = _RUNTIME_EVENT.tabId;
     const data = _RUNTIME_EVENT.data;
 
@@ -53,12 +52,13 @@ chrome.runtime.onMessage.addListener((_RUNTIME_EVENT, _sender) =>
 
         case "fm-popup-current-search-request":
             const message = { message: "fm-popup-current-search-answer", data: false };
-            obtainActiveID((_id) =>
+            obtainActiveID((id) =>
             {
-                message.id = _id;
-                message.data = TabsData.has(_id);
+                message.id = id;
+                message.data = TabsData.has(id);
                 chrome.runtime.sendMessage(message);
-            }, () =>
+            },
+                () =>
             {
                 chrome.runtime.sendMessage(message);
             });
@@ -93,37 +93,36 @@ chrome.runtime.onMessage.addListener((_RUNTIME_EVENT, _sender) =>
 
 chrome.windows.onBoundsChanged.addListener(function ()
 {
-    TabsData.forEach(function (_data, _id)
+    TabsData.forEach((data, id) =>
     {
-        sendSearchData(_id, _data, FORCED_UPDATE = true, PINNED_ONLY = false);
+        sendSearchData(id, data, FORCED_UPDATE = true, PINNED_ONLY = false);
     });
 });
 
-function obtainActiveID(_onActiveID, _onNoActive)
+function obtainActiveID(onActiveID, onNoActive)
 {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) =>
     {
-        if (!tabs || tabs.length == 0 || tabs[0].url.startsWith('chrome://'))
-        {
-            _onNoActive?.call();
-            return;
-        }
-        _onActiveID((Number)(tabs[0].id));
+        const url = tabs ? tabs[0]?.url : null;
+        if (url && !url.startsWith('chrome://'))
+            onActiveID((Number)(tabs[0].id));
+        else
+            onNoActive?.call();
     });
 }
 
-function sendSearchData(_tabId, _tabData, _forced, _pinnedOnly)
+function sendSearchData(tabId, tabData, forced, pinnedOnly)
 {
     const message = {
         message: "fm-update-search",
-        tabId: _tabId,
+        tabId: tabId,
         options: options,
-        data: _tabData,
-        forcedUpdate: _forced,
-        pinnedOnly: _pinnedOnly
+        data: tabData,
+        forcedUpdate: forced,
+        pinnedOnly: pinnedOnly
     };
 
-    chrome.tabs.sendMessage(_tabId, message);
+    chrome.tabs.sendMessage(tabId, message);
 }
 
 function loadOptions()
@@ -145,14 +144,14 @@ function savePanelsToMemory()
         chrome.storage.local.remove(["fmSavedSearch"]);
     };
     obtainActiveID(
-        (_id) =>
+        (id) =>
         {
-            if (!TabsData.has(_id))
+            if (!TabsData.has(id))
             {
                 clearSaveData();
                 return;
             }
-            chrome.storage.local.set({ "fmSavedSearch": TabsData.get(_id) });
+            chrome.storage.local.set({ "fmSavedSearch": TabsData.get(id) });
             showSuccessStatus();
         },
         () =>
@@ -164,16 +163,16 @@ function savePanelsToMemory()
 
 function loadPanelsToActive()
 {
-    obtainActiveID((_id) =>
+    obtainActiveID((id) =>
     {
-        chrome.storage.local.get("fmSavedSearch", (_storage) =>
+        chrome.storage.local.get("fmSavedSearch", (storage) =>
         {
-            const loadedData = _storage.fmSavedSearch;
+            const loadedData = storage.fmSavedSearch;
             if (!loadedData)
                 return;
 
-            TabsData.set(_id, loadedData);
-            sendSearchData(_id, loadedData, FORCED = true, PINNED_ONLY = false);
+            TabsData.set(id, loadedData);
+            sendSearchData(id, loadedData, FORCED = true, PINNED_ONLY = false);
             showSuccessStatus();
         });
     });
@@ -181,15 +180,15 @@ function loadPanelsToActive()
 
 function requestNewSearchOnActiveWindow() 
 {
-    obtainActiveID((_id) =>
+    obtainActiveID((id) =>
     {
-        chrome.tabs.sendMessage(_id,
-            { message: "fm-new-search", tabId: _id, options: options },
-            (_response) =>
+        chrome.tabs.sendMessage(id,
+            { message: "fm-new-search", tabId: id, options: options },
+            (response) =>
             {
                 const NO_RESPONSE_FROM_CONTENT_SCRIPT = new Boolean(chrome.runtime.lastError);
-                if (NO_RESPONSE_FROM_CONTENT_SCRIPT && !quedIdsForNewPanels.includes(_id))
-                    quedIdsForNewPanels.push(_id);
+                if (NO_RESPONSE_FROM_CONTENT_SCRIPT && !quedIdsForNewPanels.includes(id))
+                    quedIdsForNewPanels.push(id);
             });
 
     });

@@ -1,7 +1,11 @@
 //javascript css injection
 //#160925 #4a0423 #6e4c5d #002d47 #003333 #1a3445 #920000 #753b00 #0a5c0a
+
+export const PanelClass = "FMPanel";
+export const PanelContainerId = "FMPanelContainer";
+
 export const ShadowrootCSS = `
-#TFBarsContainer {
+#${PanelContainerId} {
     --dark-color-0-hsl: 268 61% 9%;
     --dark-color-1-hsl: 333 90% 15%;
     --dark-color-2-hsl: 330 18% 20%;
@@ -43,7 +47,7 @@ export const ShadowrootCSS = `
     pointer-events: none;
 }
 
-.TFSearchBar {
+.${PanelClass} {
     --color1-hsl: var(--light-color-0-hsl);
     --color2-hsl: var(--dark-color-0-hsl);
 
@@ -70,12 +74,12 @@ export const ShadowrootCSS = `
     user-select: none;
 }
 
-.TFSearchBar > div {
+.${PanelClass} > div {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-.TFSearchBar:hover
+.${PanelClass}:hover
 {
     --color1: hsl(var(--color2-hsl) / 1);
     --color2: hsl(var(--color1-hsl) / 1);
@@ -173,7 +177,7 @@ export const DefaultHighlightCSS =
         z-index: 2147483646;
     }`; //` pointer-events: none;`;
 
-export function GetPersonalCSS(id, colorIndex, opacity)
+export function GetHighlightsCSS(id, colorIndex, opacity)
 {
     return `fm-highlight.fm-${id} {
         --test: test;

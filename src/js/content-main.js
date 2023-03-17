@@ -1,129 +1,131 @@
-import SearchPanel from './searchPanel.js';
-import SearchState from './searchState.js';
+import { Search, GetClosePanelsEvent, GetStateChangeEvent } from './search.js';
+import { Shadowroot } from './shadowroot.js';
+import State from './state.js';
 
 export function main()
 {
     var tabId;
-    var searchesMap = new Map();    //key -- integer bar ID
-    var barsMap = new Map();    //key -- integer bar ID
+    var panels = new Map();    //key -- integer bar ID
 
     //#region document events
-    document.addEventListener("fm-bar-closed", function (_args)
+    Shadowroot.Get().addEventListener(GetClosePanelsEvent().type, function (args)
     {
-        if (barsMap.get(_args.id))
-        {
-            searchesMap.delete(_args.id);
-            barsMap.delete(_args.id);
-        }
+        if (panels.has(args.id))
+            panels.delete(args.id);
 
-        cacheData();
+        cacheData(panels);
     });
 
-    document.addEventListener("fm-search-changed", function ()
+    Shadowroot.Get().addEventListener(GetStateChangeEvent().type, function ()
     {
-        cacheData();
+        cacheData(panels);
     });
 
     document.addEventListener('keydown', function (_args)
     {
         if (_args.key == "Escape")
         {
-            searchesMap.forEach(function (_val, _key)
+            panels.forEach(function (panel, id)
             {
-                if (!_val.pinned)
+                if (!panel.state.pinned)
                 {
-                    barsMap.get(_key).close();
-                    barsMap.delete(_key);
-                    searchesMap.delete(_key);
+                    panel.Close();
                 }
             });
-            cacheData();
+            cacheData(panels);
         }
     });
 
     chrome.runtime.onMessage.addListener(
-        (_request, _sender, _sendResponse) =>
+        (request, sender, sendResponse) =>
         {
-            tabId = tabId || _request.tabId;
-            if (_request.options)
-                setOptions(_request.options);
+            tabId = tabId || request.tabId;
+            if (request.options)
+                setOptions(request.options);
 
-            switch (_request.message)
+            switch (request.message)
             {
                 case "fm-new-search":
                     const id = getNewID();
-                    const newSearch = new SearchState("");
-                    newSearch.pinned = _request.options?.startPinned || false;
+                    const newSearch = new State("");
+                    newSearch.pinned = request.options?.startPinned || false;
 
-                    searchesMap.set(id, newSearch)
-                    barsMap.set(id, new SearchPanel(id, newSearch, barsMap.size));
-                    cacheData();
-                    _sendResponse({});
+                    panels.set(id, new Search(id, newSearch, request.options));
+                    cacheData(panels);
+                    sendResponse({});
                     break;
 
                 case "fm-update-search":
-                    if (!_request.data)
+                    if (!request.data)
                         return;
-                    barsMap.forEach(function (_val) { _val.close() });
-                    barsMap = new Map();
-                    searchesMap = new Map();
+                    panels.forEach((bar, id) => bar.Close(id))
+                    //barsMap.forEach(function (_val) { _val.close() });
+                    panels = new Map();
 
-                    const loadedMap = deserializeIntoMap(_request.data);
+                    const loadedMap = deserializeIntoMap(request.data);
                     loadedMap?.forEach(function (_state)
                     {
-                        if (_request.pinnedOnly && !_state.pinned)
+                        if (request.pinnedOnly && !_state.pinned)
                             return;
 
                         const newId = getNewID();
-                        searchesMap.set(newId, _state);
+   
 
-                        barsMap.set(newId,
-                            new SearchPanel(newId, _state));
+                        panels.set(newId,
+                            new Search(newId, _state));
                     });
                     break;
 
                 default:
-                    console.log("uncaught message: " + _request.message);
+                    console.log("uncaught message: " + request.message);
             }
         }
     );
 
+    function getStatesMap(panels)
+    {
+        const map = new Map;
+        panels.forEach((panel, id) => map.set(id, panel.state));
+        return map;
+    }
+
     function setOptions(options)
     {
-        SearchPanel.SetOptions(options, Array.from(barsMap.values));
+        Search.SetOptions(options, Array.from(panels.values));
     }
 
     function getNewID()
     {
         let id = 0;
-        while (searchesMap.has(id))
+        while (panels.has(id))
             id += 1;
-
         return id;
     }
+
     function serializeMap(_map)
     {
         return JSON.stringify(Array.from(_map.entries()));
     }
+
     function deserializeIntoMap(_string)
     {
         const map = new Map(JSON.parse(_string));
         map?.forEach(function (_val, _key, _map)
         {
-            _map.set(_key, SearchState.load(_val));
+            _map.set(_key, State.load(_val));
         });
         return map;
     }
-    function cacheData()
+
+    function cacheData(barsMap)
     {
         const message = { message: "fm-content-update-state", tabId: tabId };
-
-        if (searchesMap.size > 0)
-            message.data = serializeMap(searchesMap);
+        const states = getStatesMap(barsMap)
+        if (states.size > 0)
+            message.data = serializeMap(states);
         chrome.runtime.sendMessage(message);
     }
     
-
     chrome.runtime.sendMessage({ message: "fm-content-script-loaded" });
 
 }

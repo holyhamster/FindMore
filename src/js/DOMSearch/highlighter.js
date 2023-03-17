@@ -1,5 +1,6 @@
 import Container from './container.js';
 import PerfMeasurer from './perfMeasurer.js';
+import { GetNewMatchesEvent } from '../search.js';
 
 //accepts matches and transforms them into highlight elements
 //Happens in four asynchronous stages to optimize browser's reflow calls:
@@ -18,14 +19,6 @@ class Highlighter
     constructor(id, eventElement)
     {
         this.id = id;
-
-        const newMatchesEvent = new Event(`fm-new-matches-update`);
-        this.onNewMatches = () =>
-        {
-            newMatchesEvent.length = this.getMatchCount();
-            eventElement.dispatchEvent(newMatchesEvent);
-        };
-
     }
 
     //#region RECURSIVE HIGHLIGHT 
@@ -53,7 +46,8 @@ class Highlighter
         let totalTime = 0;
 
         if (this.containerObserver == null)
-            this.containerObserver = this.getContainerObserver(this.nodeToContainerMap, () => this.onNewMatches());
+            this.containerObserver = this.getContainerObserver(this.nodeToContainerMap,
+                () => GetNewMatchesEvent(this.getMatchCount()));
         if (this.nodeObserver == null)
             this.nodeObserver = this.getNodeObserver(this.nodeToContainerMap, this.indexToContainerMap,
                                     (element) => { this.containerObserver.observe(element) });

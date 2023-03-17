@@ -1,6 +1,6 @@
 //serializable class that's passed between background and content script
 
-class SearchState
+class State
 {
     constructor(searchString)
     {
@@ -13,7 +13,7 @@ class SearchState
 
     static load(state)
     {
-        const result = new SearchState(state.searchString);
+        const result = new State(state.searchString);
         result.colorIndex = state.colorIndex;
         result.pinned = state.pinned;
         result.caseSensitive = state.caseSensitive;
@@ -40,4 +40,4 @@ class SearchState
 
 }
 
-export default SearchState;
+export default State;

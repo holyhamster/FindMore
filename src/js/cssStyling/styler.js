@@ -1,19 +1,45 @@
-import { GetPersonalCSS, DefaultHighlightCSS } from './cssInjection.js'
+import { GetHighlightsCSS, DefaultHighlightCSS } from './cssInjection.js'
+import { GetOptionsChangeEvent, GetClosePanelsEvent } from '../search.js'
 
 //adds and redacts css for highlight rectangles to the document's adopted sheets
 //  and iframes (when parent element has an event about locating one)
 
-class Styler
+export class Styler
 {
-    constructor(id, parentElement)
+    constructor(id, parentElement, colorIndex, opacity = .8)
     {
         this.id = id;
         this.parentElement = parentElement;
+        this.colorIndex = colorIndex;
+        this.opacity = opacity;
+
+        parentElement.addEventListener(
+            GetClosePanelsEvent().type,
+            () => this.clearStyles());
+
+        parentElement.addEventListener(
+            GetOptionsChangeEvent().type,
+            (args) =>
+            {
+                if (args?.options.highlightAlpha)
+                {
+                    this.opacity = args.options.highlightAlpha;
+                    this.updateStyle();
+                }
+            });
+
+        this.updateStyle();
     }
 
-    set(colorIndex, opacity = .8)
+    SetColor(colorIndex)
     {
-        const personalCSS = GetPersonalCSS(this.id, colorIndex, opacity);
+        this.colorIndex = colorIndex;
+        this.updateStyle();
+    }
+
+    updateStyle()
+    {
+        const personalCSS = GetHighlightsCSS(this.id, this.colorIndex, this.opacity);
         this.setAdoptedStyle(personalCSS);
         this.setIFramesStyle(personalCSS);
     }
@@ -79,7 +105,7 @@ class Styler
             {
                 defStyle = newIFrame.createElement("style");
                 defStyle.setAttribute("class", "fm-iframeDefStyle");
-                defStyle.innerHTML = defaultCSSString;
+                defStyle.innerHTML = DefaultHighlightCSS;
                 newIFrame.head.appendChild(defStyle);
             }
 
@@ -114,14 +140,9 @@ class Styler
     }
 }
 
-const defaultCSSString = `fm-container { all:initial; position: absolute; } ` +
-    `fm-container.fm-relative { position: relative; display:inline-block; width:0px; height: 0px; } ` +
-    `fm-highlight { all:initial; position: absolute; opacity: 0.6; z-index: 2147483646; }`; //` pointer-events: none;`;
-
-function getPersonalCSSString(id, primary, accent, opacity)
+export function GetStyleChangeEvent(args)
 {
-    return `fm-highlight.fm-${id} {background-color: ${primary}; opacity: ${opacity}; }` +
-        `fm-highlight.fm-${id}.fm-accented { background-color: ${accent}; }`;
+    const event = new Event("fm-style-change");
+    Object.assign(event, args);
+    return event;
 }
-
-export default Styler;
