@@ -4,22 +4,17 @@
 
 document.addEventListener('DOMContentLoaded', () =>
 {
-    const optionChange = () => 
+    const commitOptions = () => 
     {
         const options = buildOptions();
         saveOptions(options);
         sendOptionsToBackground(options);
     };
     
-    chrome.runtime.onMessage.addListener((_RUNTIME_EVENT) =>
+    chrome.runtime.onMessage.addListener((event) =>
     {
-        switch (_RUNTIME_EVENT.message)
-        {
-            case "fm-popup-current-search-answer":
-                
-                setSavedButtonAs(!isNaN(_RUNTIME_EVENT.id), _RUNTIME_EVENT.data);
-                break;
-        }
+        if (event.message == "fm-popup-current-search-answer")
+            setSavedButtonAs(!isNaN(event.id), event.data);
     });
 
     document.getElementById('findButton')?.addEventListener('click', () =>
@@ -40,53 +35,38 @@ document.addEventListener('DOMContentLoaded', () =>
         close();
     });
 
-    document.getElementById('optionsToggle')?.addEventListener('click', () =>
-    {
-        const optionsStyle = document.getElementById('optionsExpanding').style;
-        if (!optionsStyle)
-            return;
-        optionsStyle.expanded = !optionsStyle.expanded;
-        if (optionsStyle.expanded)
-            optionsStyle.display = "block";
-        else
-            optionsStyle.display = "none";
-        optionChange();
-    });
-
     const cornerButton = document.getElementById('cornerButton');
-    cornerButton.selectIndex = (_index) =>
+    cornerButton.selectIndex = (index) =>
     {
-        cornerButton.selectedIndex = _index || 0;
-        console.log(_index)
-        switch (_index)
+        cornerButton.selectedIndex = index <= 3? index : 0;
+        switch (index)
         {
             case 1:
-                cornerButton.textContent = `\u{25F3}`;
-                break;
+                cornerButton.textContent = `\u{25F2}`;
+                break;         
             case 2:
                 cornerButton.textContent = `\u{25F1}`;
                 break;
             case 3:
-                cornerButton.textContent = `\u{25F2}`;
+                cornerButton.textContent = `\u{25F0}`;
                 break;
             default:
-                cornerButton.textContent = `\u{25F0}`;
-
+                cornerButton.textContent = `\u{25F3}`;
+                break;
         }
     }
-    cornerButton?.addEventListener('click', (_args) =>
+    cornerButton?.addEventListener('click', () =>
     {
-        const index = (cornerButton.selectedIndex || 0) + 1;
-        cornerButton.selectIndex(index <= 3 ? index : 0);
-        optionChange();
+        cornerButton.selectIndex((cornerButton.selectedIndex || 0) + 1);
+        commitOptions();
     });
     
 
     const alignmentButton = document.getElementById('alignmentButton');
-    alignmentButton.selectIndex = (_index) =>
+    alignmentButton.selectIndex = (index) =>
     {
-        alignmentButton.selectedIndex = _index || 0;
-        if (_index === 1)
+        alignmentButton.selectedIndex = index || 0;
+        if (index === 1)
             alignmentButton.textContent = `\u{21C6}`;
         else
             alignmentButton.textContent = `\u{21C5}`;
@@ -94,14 +74,14 @@ document.addEventListener('DOMContentLoaded', () =>
     alignmentButton?.addEventListener('click', (_args) =>
     {
         alignmentButton.selectIndex((alignmentButton.selectedIndex || 0) === 0 ? 1 : 0);
-        optionChange();
+        commitOptions();
     });
 
     const pinButton = document.getElementById('pinButton');
-    pinButton.selectIndex = (_index) =>
+    pinButton.selectIndex = (index) =>
     {
-        pinButton.selectedIndex = _index || 0;
-        if (_index === 1)
+        pinButton.selectedIndex = index || 0;
+        if (index === 1)
             pinButton.textContent = `\u{25A3}`;
         else
             pinButton.textContent = `\u{25A2}`;
@@ -109,13 +89,13 @@ document.addEventListener('DOMContentLoaded', () =>
     pinButton?.addEventListener('click', (_args) =>
     {
         pinButton.selectIndex((pinButton.selectedIndex || 0) === 0 ? 1 : 0);
-        optionChange();
+        commitOptions();
     });
 
     const optionTogglesID = ["opacity", "scale"];
     optionTogglesID.forEach((_id) =>
     {
-        document.getElementById(_id)?.addEventListener("change", optionChange)
+        document.getElementById(_id)?.addEventListener("change", commitOptions)
     });
 
     //fillUI();
@@ -125,31 +105,47 @@ document.addEventListener('DOMContentLoaded', () =>
 
 function buildOptions()
 {
-    let options = new Object();
+    const options = new Object();
 
-    options.corner = document.getElementById('cornerButton')?.selectedIndex || 0;
-    options.alignment = document.getElementById('alignmentButton')?.selectedIndex || 0;
-    options.startPinned = document.getElementById('pinButton')?.selectedIndex === 1;
-    options.opacity = document.getElementById('opacity')?.value;
-    options.scale = document.getElementById('scale')?.value;
+    const cornerValue = document.getElementById('cornerButton')?.selectedIndex || 0;
+    options.StartTop = cornerValue === 3 || cornerValue === 0;
+    options.StartLeft = cornerValue === 3 || cornerValue === 2;
+    options.Horizontal = document.getElementById('alignmentButton')?.selectedIndex === 1;
+    options.StartPinned = document.getElementById('pinButton')?.selectedIndex === 1;
+    options.MenuOpacity = document.getElementById('opacity')?.value || 1;
+    options.MenuScale = document.getElementById('scale')?.value || 1;
+    options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO
 
-    //options.optionsExpanded = document.getElementById('optionsExpanding')?.style.expanded;
-    
     return options;
+}
+
+function fillUIWithOptions(options)
+{
+    const cornerIndex =
+        (options.StartTop & options.StartLeft ? 3 : 0) +
+        (options.StartTop & !options.StartLeft ? 0 : 0) +
+        (!options.StartTop & !options.StartLeft ? 1 : 0) +
+        (!options.StartTop & options.StartLeft ? 2 : 0);
+    document.getElementById('cornerButton').selectIndex(cornerIndex || 0);
+    document.getElementById('alignmentButton').selectIndex(options?.Horizontal? 1 : 0);
+    document.getElementById('pinButton').selectIndex(options?.StartPinned ? 1 : 0);
+    document.getElementById('opacity').value = options?.MenuOpacity || 1;
+    document.getElementById('scale').value = options?.MenuScale || 1;
 }
 
 function loadOptions()
 {
     chrome.storage.sync.get("fmSavedOptions", function (_storage)
     {
-        let options = _storage.fmSavedOptions;
+        
+        const options = _storage.fmSavedOptions;
         fillUIWithOptions(options);
     });
 
     chrome.runtime.sendMessage("fm-popup-current-search-request");
 }
 
-function setSavedButtonAs(_hasActiveWindow, _hasActiveSearches)
+function setSavedButtonAs(hasActiveWindow, hasActiveSearches)
 {
     const saveButton = document.getElementById('saveButton');
     const loadButton = document.getElementById('loadButton');
@@ -157,9 +153,9 @@ function setSavedButtonAs(_hasActiveWindow, _hasActiveSearches)
     chrome.storage.local.get("fmSavedSearch", (_storage) =>
     {
         const hasSavedData = Boolean(_storage.fmSavedSearch);
-        loadButton.disabled = !(hasSavedData && _hasActiveWindow);
-        saveButton.disabled = !(_hasActiveSearches || hasSavedData);
-        const saveButtonClearsInstead = !_hasActiveSearches && hasSavedData;
+        loadButton.disabled = !(hasSavedData && hasActiveWindow);
+        saveButton.disabled = !(hasActiveSearches || hasSavedData);
+        const saveButtonClearsInstead = !hasActiveSearches && hasSavedData;
         saveButton.innerHTML = saveButtonClearsInstead ? "Clear" : "Save";
         document.getElementById('saveTooltip').innerHTML = saveButtonClearsInstead ?
             "Clear saved panels" : "Save current panels";
@@ -167,25 +163,13 @@ function setSavedButtonAs(_hasActiveWindow, _hasActiveSearches)
 
 }
 
-function fillUIWithOptions(_options)
+function saveOptions(options)
 {
-    document.getElementById('cornerButton').selectIndex(_options?.corner || 0);
-    document.getElementById('alignmentButton').selectIndex(_options?.alignment ||0);
-    document.getElementById('pinButton').selectIndex(_options?.startPinned? 1: 0);
-    document.getElementById('opacity').value = _options?.opacity || 1;
-    document.getElementById('scale').value = _options?.scale || 1;
-
-    //document.getElementById('optionsExpanding').style.expanded = _options.optionsExpanded === true;
-    //if (_options.optionsExpanded === true)
-        //document.getElementById('optionsExpanding').style = "block";
+    console.log(options)
+    chrome.storage.sync.set({ "fmSavedOptions": options });
 }
 
-function saveOptions(_options)
+function sendOptionsToBackground(options)
 {
-    chrome.storage.sync.set({ "fmSavedOptions": _options });
-}
-
-function sendOptionsToBackground(_options)
-{
-    chrome.runtime.sendMessage({ message: "fm-popup-options-change", options: _options });
+    chrome.runtime.sendMessage({ message: "fm-popup-options-change", options: options });
 }
