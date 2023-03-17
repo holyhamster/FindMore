@@ -1,5 +1,5 @@
 
-class PerformanceTimer {
+export class PerformanceTimer {
     constructor() {
         this.Reset();
     }
@@ -16,5 +16,3 @@ class PerformanceTimer {
         this.total = 0;
     }
 }
-
-export default PerformanceTimer;

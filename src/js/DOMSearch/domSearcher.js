@@ -1,5 +1,5 @@
 import SearchRegion from './searchRegion.js';
-import PerformanceTimer from './performanceTimer.js';
+import {PerformanceTimer} from './performanceTimer.js';
 
 //recursively searches DOM with SearchRegion, sends matches to highlighter
 

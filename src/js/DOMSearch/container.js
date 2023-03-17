@@ -59,8 +59,9 @@ class Container
     }
 
     calculatedElements = [];
-    precalculateRectangles(anchor, range)
+    precalculateRectangles(range)
     {
+        const anchor = this.headElement.getBoundingClientRect();
         this.indexToMatches.forEach((match, index) =>
         {
             range.setStart(match.startNode, match.startOffset);
