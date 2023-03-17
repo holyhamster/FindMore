@@ -1,5 +1,5 @@
 import Container from './container.js';
-import PerfMeasurer from './perfMeasurer.js';
+import PerformanceTimer from './performanceTimer.js';
 import { GetNewMatchesEvent } from '../search.js';
 
 //accepts matches and transforms them into highlight elements
@@ -9,7 +9,7 @@ import { GetNewMatchesEvent } from '../search.js';
 // - nodeObserver asynchronously decides if the parent node of the match is visible, appends the container
 // - containerObserver asynchronously calculates all rectangles, appends them to the container
 class Highlighter {
-    constructor(id, eventElement) {
+    constructor(id) {
         this.id = id;
     }
 
@@ -30,24 +30,20 @@ class Highlighter {
     processMatches() {
         this.invoked = false;
 
-        if (this.containerObserver == null)
-            this.containerObserver = this.getContainerObserver(this.nodeToContainerMap,
+        this.containerObserver = this.containerObserver || this.getContainerObserver(this.nodeToContainerMap,
                 () => GetNewMatchesEvent(this.getMatchCount()));
-        if (this.nodeObserver == null)
-            this.nodeObserver = this.getNodeObserver(this.nodeToContainerMap, this.indexToContainerMap,
-                (element) => this.containerObserver.observe(element));
+        this.nodeObserver = this.nodeObserver || this.getNodeObserver(this.nodeToContainerMap, this.indexToContainerMap,
+            (container) => this.containerObserver.observe(container.headElement));
 
-        const perfMeasurer = new PerfMeasurer();
-        let totalTime = 0;
-        while ((totalTime += perfMeasurer.get()) < processingTimeLimit &&
-            this.matches.length > 0) {
+        const timer = new PerformanceTimer();
+        while (timer.Get() < processingTimeLimit && this.matches.length > 0) {
             const container = this.getContainer(this.matches.shift());
             this.nodeObserver.observe(container.parentNode);
         }
 
         if (this.matches.length > 0 && !this.invoked) {
             this.invoked = true;
-            setTimeout(() => { this.processMatches() }, processingTimeDelay);
+            setTimeout(() => this.processMatches(), processingTimeDelay);
         }
     }
 
@@ -66,22 +62,20 @@ class Highlighter {
     //observes parents of nodes with matches, appends the visible ones and sends them to processing
     getNodeObserver(nodeMap, indexMap, passToProcessing) {
         const onObserve = (entries) => {
+            
             entries.forEach((entry) => {
                 const container = nodeMap.get(entry.target);
                 observer.unobserve(entry.target);
 
-                const elementVisible =
-                    entry.boundingClientRect.width > 2 && entry.boundingClientRect.height > 2;
-
+                const elementVisible = entry.boundingClientRect.width > 2 && entry.boundingClientRect.height > 2;
                 if (!elementVisible)
                     return;
 
-                while (container.indexNextMatch(indexMap.size)) {
+                while (container.indexNextMatch(indexMap.size))
                     indexMap.set(indexMap.size, container);
-                }
                 container.appendSelf();
 
-                passToProcessing(container.headElement);
+                passToProcessing(container);
             });
         };
 
@@ -89,29 +83,36 @@ class Highlighter {
 
         return observer;
     }
-
+    
     //observes containers of successful matches,
     getContainerObserver(nodeMap, onNewMatches) {
-        const observer = new IntersectionObserver((_entries) => {
-            this.removeOldContainers();
-
+        const observer = new IntersectionObserver((entries) => {
             const range = document.createRange();
             const containers = [];
-
-            _entries.forEach((_entry) => {
-                const headElement = _entry.target;
+            observer.timer.Reset();
+            
+            Highlighter.removeOldContainers()
+            console.log("observing");
+            entries.forEach((entry) => {
+                const headElement = entry.target;
                 observer.unobserve(headElement);
+                if (observer.timer.Get() > observerTimerDelay)
+                {
+                    observer.observe(headElement);
+                    return;
+                }
 
                 const container = nodeMap.get(headElement.parentNode);
                 containers.push(container);
                 container.precalculateRectangles(headElement.getBoundingClientRect(), range);
             });
 
-            containers.forEach((_container) => {
-                _container.finalize();
+            containers.forEach((container) => {
+                container.finalize();
             });
             onNewMatches();
         });
+        observer.timer = new PerformanceTimer();
         return observer;
     }
     //#endregion
@@ -164,36 +165,40 @@ class Highlighter {
         return this.matches[index]?.startNode?.parentNode;
     }
 
-    containersToRemove = [];
     clearSelection() {
         this.nodeObserver?.disconnect();
         this.nodeObserver = null;
         this.containerObserver?.disconnect();
         this.containerObserver = null;
 
-        this.containersToRemove = [...this.containersToRemove, ...Array.from(this.nodeToContainerMap.values())];
-        setTimeout(() => this.removeOldContainers(), 100);
+        Highlighter.queContainersForRemoval(Array.from(this.nodeToContainerMap.values()))
+        setTimeout(() => Highlighter.removeOldContainers(), 100);
 
         this.matches = [];
         this.indexToContainerMap = new Map();
         this.nodeToContainerMap = new Map();
     }
-    //removal of old highlights, recursive for performance reasons
-    removeOldContainers() {
-        const perf = new PerfMeasurer();
-        let container, timer = 0;
-        while (((timer += perf.get()) < removalTimeLimit) &&
-            (container = this.containersToRemove.shift()))
+
+    static queContainersForRemoval(containers) {
+        Highlighter.containersToRemove = Highlighter.containersToRemove || [];
+        Highlighter.containersToRemove = [...Highlighter.containersToRemove, ...containers];
+    }
+
+    static removeOldContainers() {
+        const containersToRemove = Highlighter.containersToRemove || [];
+        const timer = new PerformanceTimer();
+        let container;
+        while ((timer.Get() < removalTimeLimit) && (container = containersToRemove.shift()))
             container.remove();
 
-        if (this.containersToRemove.length > 0)
-            setTimeout(() => this.removeOldContainers(), removalTimeDelay);
-    }
+        if (containersToRemove.length > 0)
+            setTimeout(() => Highlighter.removeOldContainers(), removalTimeDelay);
+    }   
 }
-
-const processingTimeLimit = 100;    //MS
+//Time limits for recursive operations
+const processingTimeLimit = 100;   
 const processingTimeDelay = 5;
 const removalTimeLimit = 150;
 const removalTimeDelay = 10;
-
+const observerTimerDelay = 100;
 export default Highlighter;

@@ -1,5 +1,5 @@
 import SearchRegion from './searchRegion.js';
-import PerfMeasurer from './perfMeasurer.js';
+import PerformanceTimer from './performanceTimer.js';
 
 //recursively searches DOM with SearchRegion, sends matches to highlighter
 
@@ -29,7 +29,7 @@ class DomSearcher
     search(_searchRegion, _highlighter, _executionTime = 0)
     {
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
-        const measurer = new PerfMeasurer();
+        const measurer = new PerformanceTimer();
 
         while ((callsLeft -= 1) >= 0 && (WALK_IN_PROGRESS = _searchRegion.expand()))
         {
@@ -43,7 +43,7 @@ class DomSearcher
         if (!WALK_IN_PROGRESS)
             return;
 
-        if ((_executionTime += measurer.get()) < recursionTimeLimit)
+        if ((_executionTime += measurer.Get()) < recursionTimeLimit)
         {
             this.search(_searchRegion, _highlighter, _executionTime)
         }
