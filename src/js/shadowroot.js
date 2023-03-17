@@ -3,32 +3,27 @@ import { ShadowrootCSS, PanelClass, PanelContainerId } from './cssStyling/cssInj
 
 //singleton that holds all in-page UI, has the following structure:
 //document -> shadowholder with DOMShadow -> css -> root parent
-export class Shadowroot
-{
-    constructor()
-    {
+export class Shadowroot {
+    constructor() {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];
-        if (!shadowHolder)
-        {
+        if (!shadowHolder) {
             shadowHolder = document.createElement("fm-shadowholder");
             document.body.appendChild(shadowHolder);
         }
 
         const shadow = shadowHolder.attachShadow({ mode: "closed" });
-        
+
         const css = document.createElement("div");
         css.style = "all: initial";
         css.innerHTML = `<style>${ShadowrootCSS}</style>`;
         shadow.appendChild(css);
 
         const root = document.createElement("div");
-        root.setAttribute("id", PanelContainerId);        
+        root.setAttribute("id", PanelContainerId);
         root.addEventListener(GetOptionsChangeEvent().type,
-            (args) =>
-            {
+            (args) => {
                 Object.assign(root.style, convertOptionsToStyle(args?.options));
-                Shadowroot.getLocalEventRoots().forEach((panel) =>
-                {
+                Shadowroot.getLocalEventRoots().forEach((panel) => {
                     panel.dispatchEvent(GetOptionsChangeEvent(args?.options));
                 });
             });
@@ -38,22 +33,19 @@ export class Shadowroot
     }
 
     static instance;
-    static Get()
-    {
+    static Get() {
         if (!Shadowroot.instance)
             Shadowroot.instance = new Shadowroot();
 
         return Shadowroot.instance;
     }
 
-    static getLocalEventRoots()
-    {
+    static getLocalEventRoots() {
         return Array.from(Shadowroot.Get().getElementsByClassName(PanelClass));
     }
 }
 
-function convertOptionsToStyle(options)
-{
+function convertOptionsToStyle(options) {
     const style = new Object();
 
     const screenGap = "5px";
@@ -62,19 +54,17 @@ function convertOptionsToStyle(options)
     style.left = options?.StartLeft ? screenGap : "";
     style.right = options?.StartLeft ? "" : screenGap;
 
-    if (options.Horizontal)
-    {
+    if (options.Horizontal) {
         style.flexDirection = options?.StartLeft ? "row" : "row-reverse";
         style.flexWrap = options?.StartTop ? "wrap" : "wrap-reverse";
     }
-    else
-    {
+    else {
         style.flexDirection = options?.StartTop ? "column" : "column-reverse";
         style.flexWrap = options?.StartLeft ? "wrap" : "wrap-reverse";
     }
 
     Object.defineProperty(style, "--themeAlpha", { value: (isNaN(options?.MenuOpacity) ? .95 : options.MenuOpacity) });
-    Object.defineProperty(style, "--scale-ratio", { value: (isNaN(options?.MenuScale) ? 1: options.MenuScale) });
+    Object.defineProperty(style, "--scale-ratio", { value: (isNaN(options?.MenuScale) ? 1 : options.MenuScale) });
 
     return style;
 }

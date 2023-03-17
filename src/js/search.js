@@ -5,10 +5,8 @@ import { Shadowroot } from './shadowroot.js';
 
 //creates and controls search panel element
 //starts the search with DOMSearcher, marks results with Highlighter and sets css with Styler
-export class Search
-{
-    constructor(id, state, options)
-    {
+export class Search {
+    constructor(id, state, options) {
         this.id = id;
         this.state = state;
 
@@ -31,8 +29,7 @@ export class Search
 
         localUpdateElement.addEventListener(
             GetClosePanelsEvent().type,
-            (args) =>
-            {
+            (args) => {
                 if (args.id == this.id)
                     this.clearPreviousSearch();
             });
@@ -40,24 +37,13 @@ export class Search
         if (this.state.searchString != "")
             this.startDomSearch();
     }
-    //#endregion
-
-    //#region SEARCH_CONTROLS
-    restartSearch()
-    {
-        this.selectedIndex = null;
-        this.changeIndex();
-        this.startDomSearch();       
-    }
 
     domSearcher;
     highlighter;
-    startDomSearch()
-    {
-        this.clearPreviousSearch(this.id);
-        
-        if (this.state.searchString != "")
-        {
+    startDomSearch() {
+        this.clearPreviousSearch();
+
+        if (this.state.searchString != "") {
             this.highlighter = this.highlighter ||
                 new Highlighter(this.id, this.panel.GetLocalRoot());
 
@@ -68,18 +54,14 @@ export class Search
         this.changeIndex();
     }
 
-    clearPreviousSearch()
-    {
+    clearPreviousSearch() {
         this.domSearcher?.interrupt();
         this.domSearcher = null;
-
         this.highlighter?.clearSelection();
-        //this.selectedIndex = null;
     }
-    //#endregion
+
     selectedIndex;
-    changeIndex(indexChange)
-    {
+    changeIndex(indexChange) {
         const matchesLength = this.highlighter?.getMatchCount() || 0;
 
         if (this.selectedIndex == null)
@@ -93,23 +75,27 @@ export class Search
         this.panel.updateLabels(this.selectedIndex, matchesLength);
     }
 
-    Close()
-    {
+    restartSearch() {
+        this.selectedIndex = null;
+        this.changeIndex();
+        this.startDomSearch();
+    }
+
+    Close() {
         this.panel.GetLocalRoot().dispatchEvent(GetClosePanelsEvent(this.id));
     }
 
-    static SetOptions(options)
-    {
+    static SetOptions(options) {
         Shadowroot.Get().dispatchEvent(GetOptionsChangeEvent(options));
     }
 }
 
-function normalizeSearchIndex(current, change, matchCount)
-{
+function normalizeSearchIndex(current, change, matchCount) {
     if (matchCount <= 0)
-        return null;
+        return;
 
     current = (current || 0) + (change || 0);
+
     if (current < 0)
         current = matchCount - 1;
     else if (current >= matchCount)
@@ -119,37 +105,31 @@ function normalizeSearchIndex(current, change, matchCount)
 }
 
 //#region EVENTS
-export function GetClosePanelsEvent(id)
-{
+export function GetClosePanelsEvent(id) {
     const event = new Event("fm-search-close", { bubbles: true });
     event.id = id;
     return event;
 }
-export function GetNewMatchesEvent(count)
-{
+export function GetNewMatchesEvent(count) {
     const event = new Event("fm-matches-new");
     event.count = count;
     return event;
 }
-export function GetOptionsChangeEvent(options)
-{
+export function GetOptionsChangeEvent(options) {
     const event = new Event("fm-options-change");
     event.options = options;
     return event;
 }
-export function GetChangeIndexEvent(change)
-{
+export function GetChangeIndexEvent(change) {
     const event = new Event("fm-index-change");
     event.change = change;
     return event;
 }
-export function GetSearchRestartEvent()
-{
+export function GetSearchRestartEvent() {
     const event = new Event("fm-search-restart");
     return event;
 }
-export function GetStateChangeEvent()
-{
+export function GetStateChangeEvent() {
     const event = new Event("fm-state-change", { bubbles: true });
     return event;
 }

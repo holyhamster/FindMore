@@ -145,8 +145,7 @@ label
 .wordLabel
 {
     margin-right: auto;
-}
-`
+}`
 
 export const DefaultHighlightCSS =
     `fm-container { 
@@ -177,8 +176,7 @@ export const DefaultHighlightCSS =
         z-index: 2147483646;
     }`; //` pointer-events: none;`;
 
-export function GetHighlightsCSS(id, colorIndex, opacity)
-{
+export function GetHighlightsCSS(id, colorIndex, opacity) {
     return `fm-highlight.fm-${id} {
         --test: test;
             background-color: hsl(var(--color-${colorIndex}-hsl) / ${opacity}); 
