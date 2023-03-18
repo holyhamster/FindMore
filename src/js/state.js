@@ -39,4 +39,7 @@ export class State
         return new RegExp(regString, regOptions);
     }
 
+    IsEmpty() {
+        return this.searchString == "";
+    }
 }

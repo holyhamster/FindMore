@@ -2,6 +2,8 @@ import { Search, GetClosePanelsEvent, GetStateChangeEvent } from './search.js';
 import { Root } from './root.js';
 import { State } from './state.js';
 
+//passes events between background and the document scripts
+//creates Seaches
 export function main() {
     var tabId;
     var panels = new Map();
@@ -49,8 +51,7 @@ export function main() {
                 case "fm-update-search":
                     if (!request.data)
                         return;
-                    panels.forEach((bar, id) => bar.Close(id))
-                    //barsMap.forEach(function (_val) { _val.close() });
+                    panels.forEach((panel, id) => panel.Close(id))
                     panels = new Map();
 
                     const loadedMap = deserializeIntoMap(request.data);
@@ -88,21 +89,21 @@ export function main() {
         return id;
     }
 
-    function serializeMap(_map) {
-        return JSON.stringify(Array.from(_map.entries()));
+    function serializeMap(map) {
+        return JSON.stringify(Array.from(map.entries()));
     }
 
-    function deserializeIntoMap(_string) {
-        const map = new Map(JSON.parse(_string));
-        map?.forEach((_val, _key, _map) => {
-            _map.set(_key, State.Load(_val));
+    function deserializeIntoMap(string) {
+        const map = new Map(JSON.parse(string));
+        map?.forEach((val, key, map) => {
+            map.set(key, State.Load(val));
         });
         return map;
     }
 
-    function cacheData(barsMap) {
+    function cacheData(panelsMap) {
         const message = { message: "fm-content-update-state", tabId: tabId };
-        const states = getStatesMap(barsMap)
+        const states = getStatesMap(panelsMap)
         if (states.size > 0)
             message.data = serializeMap(states);
         chrome.runtime.sendMessage(message);

@@ -2,9 +2,10 @@ import DOMSearcher from './DOMSearch/domSearcher.js';
 import Highlighter from './DOMSearch/highlighter.js';
 import { Panel } from './panel.js';
 import { Root } from './root.js';
+import { State } from './state.js';
 
 //creates search panel
-//starts the search with DOMSearcher, marks results with Highlighter and sets css with Styler
+//starts the search with DOMSearcher and Highlighter
 export class Search {
     constructor(id, state, options) {
         this.id = id;
@@ -34,7 +35,7 @@ export class Search {
                     this.clearPreviousSearch();
             });
 
-        if (this.State.searchString != "")
+        if (!this.State.IsEmpty())
             this.startDomSearch();
     }
 
@@ -51,7 +52,7 @@ export class Search {
     startDomSearch() {
         this.clearPreviousSearch();
 
-        if (this.State.searchString != "") {
+        if (!this.State.IsEmpty()) {
             this.highlighter = this.highlighter || new Highlighter(this.id, this.panel.GetLocalRoot());
 
             this.domSearcher = new DOMSearcher(

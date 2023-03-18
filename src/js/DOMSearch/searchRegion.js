@@ -127,7 +127,7 @@ const treeWalkerCondition = {
 };
 
 //treewalker than includes iframes and sends event every time it finds a new one
-function getTreeWalkPlus(_onNewIFrame)
+function getTreeWalkPlus(onNewIFrame)
 {
     const treeWalker = document.createTreeWalker(
         document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
@@ -152,7 +152,7 @@ function getTreeWalkPlus(_onNewIFrame)
             const iframeDoc = nextNode.contentDocument;
             const iframeWalker = iframeDoc.createTreeWalker(
                 iframeDoc.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
-            _onNewIFrame(nextNode);
+            onNewIFrame(nextNode);
             this.que.push(iframeWalker);
             return this.nextNodePlus();
         }

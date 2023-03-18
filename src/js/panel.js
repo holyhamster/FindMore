@@ -1,6 +1,7 @@
 import { Root } from './root.js';
 import { Styler } from './cssStyling/styler.js';
 import { PanelClass } from './cssStyling/cssInjection.js';
+import { State } from './state.js';
 import {
 GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent, GetStateChangeEvent
 } from './search.js';
@@ -22,7 +23,7 @@ export class Panel {
 
         Root.Get().appendChild(mainDiv);
 
-        if (stateRef.searchString.length == 0)
+        if (stateRef.IsEmpty())
             mainDiv.querySelector(`.searchInput`).focus();
 
         this.styler = new Styler(id, mainDiv, stateRef.colorIndex, options?.highlightAlpha);
