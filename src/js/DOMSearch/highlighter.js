@@ -1,15 +1,16 @@
-import Container from './container.js';
-import { ContainerObserver } from './containerObserver.js';
-import { NodeObserver } from './nodeObserver.js';
+import Container from './rendering/container.js';
+import { ContainerObserver } from './rendering/containerObserver.js';
+import { NodeObserver } from './rendering/nodeObserver.js';
 import { PerformanceTimer } from './performanceTimer.js';
 import { GetNewMatchesEvent } from '../search.js';
+import { ContainerRemoval } from './rendering/containerRemoval.js';
 
 //accepts matches and transforms them into highlight elements
 //Happens in four asynchronous stages to optimize browser's reflow calls:
 // - queMatches() synchronously from DOMSearcher
 // - processMatches() recursively creates/finds a container for each match, makes a delay if execution is too long
-// - nodeObserver asynchronously decides if the parent node of the match is visible, appends the container
-// - containerObserver asynchronously calculates all rectangles, appends them to the container
+// - NodeObserver asynchronously decides if the parent node of the match is visible, appends the container
+// - ContainerObserver asynchronously calculates all rectangles, appends them to the container
 class Highlighter {
     constructor(id) {
         this.id = id;
@@ -38,14 +39,14 @@ class Highlighter {
             (container) => this.containerObserver.Observe(container));
 
         const timer = new PerformanceTimer();
-        while (timer.Get() < processingTimeLimit && this.matches.length > 0) {
+        while (timer.Get() < processingMSLimit && this.matches.length > 0) {
             const container = this.getContainer(this.matches.shift());
             this.nodeObserver.Observe(container.parentNode);
         }
 
         if (this.matches.length > 0 && !this.invoked) {
             this.invoked = true;
-            setTimeout(() => this.processMatches(), processingTimeDelay);
+            setTimeout(() => this.processMatches(), processingMSDelay);
         }
     }
 
@@ -60,32 +61,6 @@ class Highlighter {
         container.queMatch(match);
         return container;
     }
-
-    //observes parents of nodes with matches, appends the visible ones and sends them to processing
-    getNodeObserver(nodeMap, indexMap, passToProcessing) {
-        const onObserve = (entries) => {
-            
-            entries.forEach((entry) => {
-                const container = nodeMap.get(entry.target);
-                observer.unobserve(entry.target);
-
-                const elementVisible = entry.boundingClientRect.width > 2 && entry.boundingClientRect.height > 2;
-                if (!elementVisible)
-                    return;
-
-                while (container.indexNextMatch(indexMap.size))
-                    indexMap.set(indexMap.size, container);
-                container.appendSelf();
-
-                passToProcessing(container);
-            });
-        };
-
-        var observer = new IntersectionObserver(onObserve);
-
-        return observer;
-    }
-    //#endregion
 
     getMatchCount(includeUnprocessed = true) {
         return this.indexToContainerMap.size + (includeUnprocessed ? this.matches.length : 0);
@@ -138,15 +113,16 @@ class Highlighter {
     clearSelection() {
         this.nodeObserver?.StopObserving();
         this.containerObserver?.StopObserving();
-        ContainerObserver.QueForRemoval(Array.from(this.nodeToContainerMap.values()));
+        ContainerRemoval.Que(Array.from(this.nodeToContainerMap.values()));
 
         this.matches = [];
         this.indexToContainerMap.clear();
         this.nodeToContainerMap.clear();
     }
 }
-//Time limits for recursive operations
-const processingTimeLimit = 100;   
-const processingTimeDelay = 5;
+
+
+const processingMSLimit = 100;   
+const processingMSDelay = 5;
 
 export default Highlighter;
