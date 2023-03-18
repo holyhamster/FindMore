@@ -1,9 +1,9 @@
 import DOMSearcher from './DOMSearch/domSearcher.js';
 import Highlighter from './DOMSearch/highlighter.js';
 import { Panel } from './panel.js';
-import { Shadowroot } from './shadowroot.js';
+import { Root } from './root.js';
 
-//creates and controls search panel element
+//creates search panel
 //starts the search with DOMSearcher, marks results with Highlighter and sets css with Styler
 export class Search {
     constructor(id, state, options) {
@@ -38,6 +38,14 @@ export class Search {
             this.startDomSearch();
     }
 
+    Close() {
+        this.panel.GetLocalRoot().dispatchEvent(GetClosePanelsEvent(this.id));
+    }
+
+    static SetOptions(options) {
+        Root.Get().dispatchEvent(GetOptionsChangeEvent(options));
+    }
+
     domSearcher;
     highlighter;
     startDomSearch() {
@@ -47,7 +55,7 @@ export class Search {
             this.highlighter = this.highlighter || new Highlighter(this.id, this.panel.GetLocalRoot());
 
             this.domSearcher = new DOMSearcher(
-                this.State.searchString, this.State.getRegex(true), this.panel.GetLocalRoot(), this.highlighter);
+                this.State.searchString, this.State.GetRegex(true), this.panel.GetLocalRoot(), this.highlighter);
         }
         this.changeIndex();
     }
@@ -77,14 +85,6 @@ export class Search {
         this.selectedIndex = null;
         this.changeIndex();
         this.startDomSearch();
-    }
-
-    Close() {
-        this.panel.GetLocalRoot().dispatchEvent(GetClosePanelsEvent(this.id));
-    }
-
-    static SetOptions(options) {
-        Shadowroot.Get().dispatchEvent(GetOptionsChangeEvent(options));
     }
 }
 

@@ -1,8 +1,7 @@
 import { GetHighlightsCSS, DefaultHighlightCSS } from './cssInjection.js'
 import { GetOptionsChangeEvent, GetClosePanelsEvent } from '../search.js'
 
-//adds and redacts css for highlight rectangles to the document's adopted sheets
-//  and iframes (when parent element has an event about locating one)
+//Adds and edits css elements for highlight rectangles
 
 export class Styler
 {

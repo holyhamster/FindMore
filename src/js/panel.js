@@ -1,36 +1,38 @@
+import { Root } from './root.js';
 import { Styler } from './cssStyling/styler.js';
 import { PanelClass } from './cssStyling/cssInjection.js';
-import { Shadowroot } from './shadowroot.js';
 import {
 GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent, GetStateChangeEvent
 } from './search.js';
 
+//On-page UI for a single search
+//Sends events when search is changed
+//Creates Styler to add search-related css
+
 export class Panel {
     mainDiv;
 
-    constructor(id, state, options) {
+    constructor(id, stateRef, options) {
         this.id = id;
-        this.state = state;
+        this.state = stateRef;
 
-        const mainDiv = getPanel(id, state);
+        const mainDiv = getPanel(id, stateRef);
         this.mainDiv = mainDiv;
         this.addHTMLEvents();
 
-        Shadowroot.Get().appendChild(mainDiv);
+        Root.Get().appendChild(mainDiv);
 
-        if (state.searchString.length == 0)
+        if (stateRef.searchString.length == 0)
             mainDiv.querySelector(`.searchInput`).focus();
 
-        this.styler = new Styler(id, mainDiv, state.colorIndex, options?.highlightAlpha);
+        this.styler = new Styler(id, mainDiv, stateRef.colorIndex, options?.highlightAlpha);
     }
 
     addHTMLEvents() {
         const mainDiv = this.mainDiv, state = this.state, id = this.id;
 
         mainDiv.addEventListener(GetClosePanelsEvent().type, (args) => {
-            if (isNaN(args.id) || args.id == id) {
-                mainDiv.remove();
-            }
+            mainDiv.remove();
         });
 
         mainDiv.querySelector(`.searchInput`).addEventListener("input", (args) => {
@@ -51,7 +53,7 @@ export class Panel {
         });
 
         mainDiv.querySelector(`.colorButton`).addEventListener("click", () => {
-            state.nextColor();
+            state.NextColor();
             mainDiv.style.setProperty("--color1-hsl", `var(--light-color-${state.colorIndex}-hsl)`);
             mainDiv.style.setProperty("--color2-hsl", `var(--dark-color-${state.colorIndex}-hsl)`);
             mainDiv.dispatchEvent(GetStateChangeEvent(id));

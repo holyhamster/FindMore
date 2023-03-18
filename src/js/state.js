@@ -1,6 +1,7 @@
-//serializable class that's passed between background and content script
+//holds all user-editable data about a single search
+//serialized to pass between content and background script
 
-class State
+export class State
 {
     constructor(searchString)
     {
@@ -11,7 +12,7 @@ class State
         this.wholeWord = false;
     }
 
-    static load(state)
+    static Load(state)
     {
         const result = new State(state.searchString);
         result.colorIndex = state.colorIndex;
@@ -21,14 +22,14 @@ class State
         return result;
     }
 
-    nextColor()
+    NextColor()
     {
         this.colorIndex = this.colorIndex == 8 ? 0 : this.colorIndex + 1;
     }
 
-    getRegex(_escape = true)
+    GetRegex(escape = true)
     {
-        let regString = _escape ? this.searchString.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        let regString = escape ? this.searchString.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
             : this.searchString;
 
         if (this.wholeWord)
@@ -39,5 +40,3 @@ class State
     }
 
 }
-
-export default State;

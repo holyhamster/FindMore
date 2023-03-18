@@ -1,18 +1,18 @@
 import { Search, GetClosePanelsEvent, GetStateChangeEvent } from './search.js';
-import { Shadowroot } from './shadowroot.js';
-import State from './state.js';
+import { Root } from './root.js';
+import { State } from './state.js';
 
 export function main() {
     var tabId;
     var panels = new Map();
 
-    Shadowroot.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
+    Root.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
         if (panels.has(args.id))
             panels.delete(args.id);
         cacheData(panels);
     });
 
-    Shadowroot.Get().addEventListener(GetStateChangeEvent().type, () => {
+    Root.Get().addEventListener(GetStateChangeEvent().type, () => {
         cacheData(panels);
     });
 
@@ -73,7 +73,7 @@ export function main() {
 
     function getStatesMap(panels) {
         const map = new Map;
-        panels.forEach((panel, id) => map.set(id, panel.state));
+        panels.forEach((panel, id) => map.set(id, panel.State));
         return map;
     }
 
@@ -95,7 +95,7 @@ export function main() {
     function deserializeIntoMap(_string) {
         const map = new Map(JSON.parse(_string));
         map?.forEach((_val, _key, _map) => {
-            _map.set(_key, State.load(_val));
+            _map.set(_key, State.Load(_val));
         });
         return map;
     }

@@ -3,7 +3,7 @@ import { ShadowrootCSS, PanelClass, PanelContainerId } from './cssStyling/cssInj
 
 //singleton that holds all in-page UI, has the following structure:
 //document -> shadowholder with DOMShadow -> css -> root parent
-export class Shadowroot {
+export class Root {
     constructor() {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];
         if (!shadowHolder) {
@@ -23,7 +23,7 @@ export class Shadowroot {
         root.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
                 Object.assign(root.style, convertOptionsToStyle(args?.options));
-                Shadowroot.getLocalEventRoots().forEach((panel) => {
+                Root.getLocalEventRoots().forEach((panel) => {
                     panel.dispatchEvent(GetOptionsChangeEvent(args?.options));
                 });
             });
@@ -34,14 +34,14 @@ export class Shadowroot {
 
     static instance;
     static Get() {
-        if (!Shadowroot.instance)
-            Shadowroot.instance = new Shadowroot();
+        if (!Root.instance)
+            Root.instance = new Root();
 
-        return Shadowroot.instance;
+        return Root.instance;
     }
 
     static getLocalEventRoots() {
-        return Array.from(Shadowroot.Get().getElementsByClassName(PanelClass));
+        return Array.from(Root.Get().getElementsByClassName(PanelClass));
     }
 }
 
