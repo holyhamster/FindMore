@@ -6,26 +6,26 @@ import { State } from './state.js';
 //creates Seaches
 export function main() {
     var tabId;
-    var panels = new Map();
+    var panelsMap = new Map();
 
     Root.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
-        if (panels.has(args.id))
-            panels.delete(args.id);
-        cacheData(panels);
+        if (panelsMap.has(args.id))
+            panelsMap.delete(args.id);
+        cacheData(panelsMap);
     });
 
     Root.Get().addEventListener(GetStateChangeEvent().type, () => {
-        cacheData(panels);
+        cacheData(panelsMap);
     });
 
     document.addEventListener('keydown', (_args) => {
         if (_args.key == "Escape") {
-            panels.forEach((panel) => {
+            panelsMap.forEach((panel) => {
                 if (!panel.State.pinned) {
                     panel.Close();
                 }
             });
-            cacheData(panels);
+            cacheData(panelsMap);
         }
     });
 
@@ -39,20 +39,22 @@ export function main() {
 
             switch (request.message) {
                 case "fm-new-search":
-                    const id = getNewID();
-                    const newSearch = new State("");
+                    
+                    const newSearch = new State();
                     newSearch.pinned = options?.startPinned || false;
+                    newSearch.colorIndex = State.GetNextColor(Array.from(getStatesMap(panelsMap).values()));
 
-                    panels.set(id, new Search(id, newSearch, request.options));
-                    cacheData(panels);
+                    const id = getNewID();
+                    panelsMap.set(id, new Search(id, newSearch, request.options));
+                    cacheData(panelsMap);
                     sendResponse({});
                     break;
 
                 case "fm-update-search":
                     if (!request.data)
                         return;
-                    panels.forEach((panel, id) => panel.Close(id))
-                    panels = new Map();
+                    panelsMap.forEach((oldPanel, id) => oldPanel.Close())
+                    panelsMap = new Map();
 
                     const loadedMap = deserializeIntoMap(request.data);
                     loadedMap?.forEach((state) => {
@@ -61,7 +63,7 @@ export function main() {
 
                         const newId = getNewID();
 
-                        panels.set(newId,
+                        panelsMap.set(newId,
                             new Search(newId, state));
                     });
                     break;
@@ -79,12 +81,12 @@ export function main() {
     }
 
     function setOptions(options) {
-        Search.SetOptions(options, Array.from(panels.values));
+        Search.SetOptions(options, Array.from(panelsMap.values));
     }
 
     function getNewID() {
         let id = 0;
-        while (panels.has(id))
+        while (panelsMap.has(id))
             id += 1;
         return id;
     }

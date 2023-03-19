@@ -1,12 +1,13 @@
+import { ColorCount} from './cssStyling/cssInjection.js'
 //holds all user-editable data about a single search
 //serialized to pass between content and background script
 
 export class State
 {
-    constructor(searchString)
+    constructor(colorIndex = 0, searchString = "")
     {
         this.searchString = searchString;
-        this.colorIndex = 0;
+        this.colorIndex = colorIndex;
         this.pinned = false;
         this.caseSensitive = false;
         this.wholeWord = false;
@@ -14,32 +15,43 @@ export class State
 
     static Load(state)
     {
-        const result = new State(state.searchString);
-        result.colorIndex = state.colorIndex;
-        result.pinned = state.pinned;
-        result.caseSensitive = state.caseSensitive;
-        result.wholeWord = state.wholeWord;
+        const result = new State();
+        Object.assign(result, state);
         return result;
     }
 
     NextColor()
     {
-        this.colorIndex = this.colorIndex == 8 ? 0 : this.colorIndex + 1;
+        this.colorIndex = this.colorIndex == ColorCount - 1 ? 0 : this.colorIndex + 1;
     }
 
     GetRegex(escape = true)
     {
-        let regString = escape ? this.searchString.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        let regexString = escape ? this.searchString.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
             : this.searchString;
 
         if (this.wholeWord)
-            regString = `\\b${regString}\\b`;
+            regexString = `\\b${regexString}\\b`;
 
-        const regOptions = this.caseSensitive ? "g" : "gi";
-        return new RegExp(regString, regOptions);
+        const regexOptions = this.caseSensitive ? "g" : "gi";
+        return new RegExp(regexString, regexOptions);
     }
 
     IsEmpty() {
         return this.searchString == "";
+    }
+
+    static GetNextColor(states) {
+        if (!states || states.length == 0)
+            return 0;
+        
+        const takenColors = [];
+        states.forEach((state) => takenColors.push(state?.colorIndex));
+        for (let colorCandidate = 0; colorCandidate < ColorCount; colorCandidate += 1)
+            if (!takenColors.includes(colorCandidate))
+                return colorCandidate;
+
+        const lastUsedColor = states[states.length - 1].colorIndex;
+        return lastUsedColor == ColorCount - 1 ? 0 : lastUsedColor + 1;
     }
 }
