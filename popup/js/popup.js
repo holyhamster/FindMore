@@ -118,9 +118,9 @@ function fillUIWithOptions(options) {
 }
 
 function loadOptions() {
-    chrome.storage.sync.get("fmSavedOptions", function (_storage) {
+    chrome.storage.sync.get("fmSavedOptions", function (storage) {
 
-        const options = _storage.fmSavedOptions;
+        const options = storage.fmSavedOptions;
         fillUIWithOptions(options);
     });
 
