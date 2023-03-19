@@ -1,5 +1,5 @@
 import { GetOptionsChangeEvent } from './search.js'
-import { ShadowrootCSS, PanelClass, PanelContainerId } from './cssStyling/cssInjection.js';
+import { rootCSS, PanelClass, PanelContainerId } from './cssStyling/cssInjection.js';
 
 //singleton that holds all in-page UI, has the following structure:
 //document -> shadowholder with DOMShadow -> css -> root parent
@@ -15,7 +15,7 @@ export class Root {
 
         const css = document.createElement("div");
         css.style = "all: initial";
-        css.innerHTML = `<style>${ShadowrootCSS}</style>`;
+        css.innerHTML = `<style>${rootCSS}</style>`;
         shadow.appendChild(css);
 
         const root = document.createElement("div");

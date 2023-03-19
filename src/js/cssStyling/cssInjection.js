@@ -1,30 +1,73 @@
-//javascript css injection
-//#160925 #4a0423 #6e4c5d #002d47 #003333 #1a3445 #920000 #753b00 #0a5c0a
+//injecting css with javascript is typically a lot faster than .css reference
+//all color is coded in css variables:
+//
+export const ColorCount = 8;
+const colors = {
+    accent: `60 100% 55 %`,
+    0: {
+        highlight: `270 100% 71%`,
+        dark: `268 61% 9%`,
+        light: `270 100% 71%`
+    }, 1: {
+        highlight: `330 100% 58%`,
+        dark: `333 90% 15%`,
+        light: `330 100% 58%`
+    }, 2: {
+        highlight: `330 100% 86%`,
+        dark: `330 18% 20%`,
+        light: `330 100% 86%`
+    }, 3: {
+        highlight: `228 100% 43%`,
+        dark: `202 100% 9%`,
+        light: `225 100% 64%`
+    }, 4: {
+        highlight: `180 100% 29%`,
+        dark: `180 100% 10%`,
+        light: `180 100% 33%`
+    }, 5: {
+        highlight: `204 100% 71%`,
+        dark: `204 45% 19%`,
+        light: `208 100% 77%`
+    }, 6: {
+        highlight: `0 96% 51%`,
+        dark: `0 100% 15%`,
+        light: `0 95% 71%`
+    }, 7: {
+        highlight: `32 72% 50%`,
+        dark: `30 100% 23%`,
+        light: `22 100% 77%`
+    }, 8: {
+        highlight: `120 100% 57%`,
+        dark: `120 80% 20%`,
+        light: `120 100% 57%`
+    }
+}
 
 export const PanelClass = "FMPanel";
 export const PanelContainerId = "FMPanelContainer";
 
-export const ShadowrootCSS = `
+//applied to an element holding all UI panels
+export const rootCSS = `
 #${PanelContainerId} {
-    --dark-color-0-hsl: 268 61% 9%;
-    --dark-color-1-hsl: 333 90% 15%;
-    --dark-color-2-hsl: 330 18% 20%;
-    --dark-color-3-hsl: 202 100% 9%;
-    --dark-color-4-hsl: 180 100% 10%;
-    --dark-color-5-hsl: 204 45% 19%;
-    --dark-color-6-hsl: 0 100% 15%;
-    --dark-color-7-hsl: 30 100% 23%;
-    --dark-color-8-hsl: 120 80% 20%;
+    --dark-color-0-hsl: ${colors[0].dark};
+    --dark-color-1-hsl: ${colors[1].dark};
+    --dark-color-2-hsl: ${colors[2].dark};
+    --dark-color-3-hsl: ${colors[3].dark};
+    --dark-color-4-hsl: ${colors[4].dark};
+    --dark-color-5-hsl: ${colors[5].dark};
+    --dark-color-6-hsl: ${colors[6].dark};
+    --dark-color-7-hsl: ${colors[7].dark};
+    --dark-color-8-hsl: ${colors[8].dark};
 
-    --light-color-0-hsl: 270 100% 71%;
-    --light-color-1-hsl: 330 100% 58%;
-    --light-color-2-hsl: 330 100% 86%;
-    --light-color-3-hsl: 225 100% 64%;
-    --light-color-4-hsl: 180 100% 33%;
-    --light-color-5-hsl: 208 100% 77%;
-    --light-color-6-hsl: 0 95% 71%;
-    --light-color-7-hsl: 22 100% 77%;
-    --light-color-8-hsl: 120 100% 57%;
+    --light-color-0-hsl: ${colors[0].light};
+    --light-color-1-hsl: ${colors[1].light};
+    --light-color-2-hsl: ${colors[2].light};
+    --light-color-3-hsl: ${colors[3].light};
+    --light-color-4-hsl: ${colors[4].light};
+    --light-color-5-hsl: ${colors[5].light};
+    --light-color-6-hsl: ${colors[6].light};
+    --light-color-7-hsl: ${colors[7].light};
+    --light-color-8-hsl: ${colors[8].light};
 
     --scale-ratio: 1;
     --themeAlpha: .95;
@@ -147,19 +190,20 @@ label
     margin-right: auto;
 }`
 
+//highlight css is applied to document adopted sheet and all iframes individually
 export const SharedHighlightCSS =
     `fm-container { 
         all:initial; 
-        --color-0-hsl: 270 100% 71%;
-        --color-1-hsl: 330 100% 58%;
-        --color-2-hsl: 330 100% 86%;
-        --color-3-hsl: 228 100% 43%;
-        --color-4-hsl: 180 100% 29%;
-        --color-5-hsl: 204 100% 71%;
-        --color-6-hsl: 0 96% 51%;
-        --color-7-hsl: 32 72% 50%;
-        --color-8-hsl: 120 100% 57%;
-        --color-accented-hsl: 60 100% 55%;
+        --color-0-hsl: ${colors[0].highlight};
+        --color-1-hsl: ${colors[1].highlight};
+        --color-2-hsl: ${colors[2].highlight};
+        --color-3-hsl: ${colors[3].highlight};
+        --color-4-hsl: ${colors[4].highlight};
+        --color-5-hsl: ${colors[5].highlight};
+        --color-6-hsl: ${colors[6].highlight};
+        --color-7-hsl: ${colors[7].highlight};
+        --color-8-hsl: ${colors[8].highlight};
+        --color-accented-hsl: ${colors.accent};
         position: absolute; 
     }
     fm-container.fm-relative { 
