@@ -1,6 +1,12 @@
-var tabsData = new Map();
+
+
 var options;
-loadOptions();
+chrome.storage.sync.get("fmSavedOptions", (storage) => {
+    if (storage.fmSavedOptions)
+        options = storage.fmSavedOptions;
+});
+
+var tabsData = new Map();
 chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
     const tabId = RUNTIME_EVENT.tabId || sender?.tab?.id;
     const data = RUNTIME_EVENT.data;
@@ -14,7 +20,7 @@ chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
                 options = RUNTIME_EVENT.options;
 
                 tabsData.forEach((data, id) => {
-                    sendSearchData(id);
+                    sendDataToPage(id);
                 });
             }
             break;
@@ -24,16 +30,18 @@ chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
             break;
 
         case "fm-popup-save-search":
-            savePanelsToMemory();
+            getActiveWindowID(
+                (id) => SaveWindowToStorage(id),
+                () => chrome.storage.local.remove(["fmSavedSearch"]));
             break;
 
         case "fm-popup-load-search":
-            loadPanelsToActive();
+            getActiveWindowID((id) => loadStorageToWindow(id));
             break;
 
         case "fm-popup-current-search-request":
             const message = { message: "fm-popup-current-search-answer", data: false };
-            obtainActiveID((id) => {
+            getActiveWindowID((id) => {
                 message.id = id;
                 message.data = tabsData.has(id);
                 chrome.runtime.sendMessage(message);
@@ -52,7 +60,7 @@ chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
         case "fm-content-script-loaded":
             const previousTabData = tabsData.get(tabId);
             if (previousTabData)
-                sendSearchData(tabId, { data: previousTabData, pinnedOnly: true });
+                sendDataToPage(tabId, { data: previousTabData, pinnedOnly: true });
 
             if (quedNewPanels.includes(tabId)) {
                 chrome.tabs.sendMessage(tabId, {
@@ -72,21 +80,21 @@ chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
             requestNewSearchOnActiveWindow();
             break;
         case 'fm-hotkey-save-search':
-            savePanelsToMemory();
+            getActiveWindowID((id) => SaveWindowToStorage(id), () => chrome.storage.local.remove(["fmSavedSearch"]));
             break;
         case 'fm-hotkey-load-search':
-            loadPanelsToActive();
+            getActiveWindowID((id) => loadStorageToWindow(id));
             break;
     }
 });
 
 chrome.windows.onBoundsChanged.addListener(() => {
     tabsData.forEach((data, id) => {
-        sendSearchData(id, { data: data, forcedUpdate: true });
+        sendDataToPage(id, { data: data, forcedUpdate: true });
     });
 });
 
-function obtainActiveID(onActiveID, onNoActive) {
+function getActiveWindowID(onActiveID, onNoActive) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const url = tabs ? tabs[0]?.url : null;
         if (url && !url.startsWith('chrome://'))
@@ -96,7 +104,7 @@ function obtainActiveID(onActiveID, onNoActive) {
     });
 }
 
-function sendSearchData(tabId, args) {
+function sendDataToPage(tabId, args) {
     const message = {
         message: "fm-update-search",
         tabId: tabId,
@@ -107,47 +115,30 @@ function sendSearchData(tabId, args) {
     chrome.tabs.sendMessage(tabId, message);
 }
 
-function loadOptions() {
-    chrome.storage.sync.get("fmSavedOptions", (storage) => {
-        if (storage.fmSavedOptions)
-            options = storage.fmSavedOptions;
-    });
-}
-
-function savePanelsToMemory() {
-    const clearSaveData = () => chrome.storage.local.remove(["fmSavedSearch"]);
-
-    obtainActiveID((id) => {
-        if (!tabsData.has(id)) {
-            clearSaveData();
-            return;
-        }
+function SaveWindowToStorage(id) {
+    if (tabsData.has(id)) {
         chrome.storage.local.set({ "fmSavedSearch": tabsData.get(id) });
-        showSuccessStatus();
-    }, () => {
-        clearSaveData();
-        showSuccessStatus();
     }
-    );
+    else
+        chrome.storage.local.remove(["fmSavedSearch"])
+    showSuccessStatus();
 }
 
-function loadPanelsToActive() {
-    obtainActiveID((id) => {
-        chrome.storage.local.get("fmSavedSearch", (storage) => {
-            const loadedData = storage.fmSavedSearch;
-            if (!loadedData)
-                return;
+function loadStorageToWindow(id) {
+    chrome.storage.local.get("fmSavedSearch", (storage) => {
+        const loadedData = storage.fmSavedSearch;
+        if (!loadedData)
+            return;
 
-            tabsData.set(id, loadedData);
-            sendSearchData(id, { loadedData, forcedUpdate: true});
-            showSuccessStatus();
-        });
+        tabsData.set(id, loadedData);
+        sendDataToPage(id, { data:loadedData, forcedUpdate: true});
+        showSuccessStatus();
     });
 }
 
 var quedNewPanels = [];
 function requestNewSearchOnActiveWindow() {
-    obtainActiveID((id) => {
+    getActiveWindowID((id) => {
         chrome.tabs.sendMessage(id, {
             message: "fm-new-search",
             tabId: id,

@@ -1,7 +1,7 @@
 //injecting css with javascript is typically a lot faster than .css reference
 //all color is coded in css variables:
 //
-export const ColorCount = 8;
+export const ColorCount = 9;
 const colors = {
     accent: `60 100% 55 %`,
     0: {
