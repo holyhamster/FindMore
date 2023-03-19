@@ -147,7 +147,7 @@ label
     margin-right: auto;
 }`
 
-export const DefaultHighlightCSS =
+export const SharedHighlightCSS =
     `fm-container { 
         all:initial; 
         --color-0-hsl: 270 100% 71%;
@@ -176,9 +176,8 @@ export const DefaultHighlightCSS =
         z-index: 2147483646;
     }`; //` pointer-events: none;`;
 
-export function GetHighlightsCSS(id, colorIndex, opacity) {
+export function GetPersonalHighlightCSS(id, colorIndex, opacity) {
     return `fm-highlight.fm-${id} {
-        --test: test;
             background-color: hsl(var(--color-${colorIndex}-hsl) / ${opacity}); 
         }
         fm-highlight.fm-${id}.fm-accented {

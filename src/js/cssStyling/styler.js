@@ -1,12 +1,15 @@
-import { GetHighlightsCSS, DefaultHighlightCSS } from './cssInjection.js'
+import { GetPersonalHighlightCSS, SharedHighlightCSS } from './cssInjection.js'
 import { GetOptionsChangeEvent, GetClosePanelsEvent } from '../search.js'
+import { GetNewIframeEvent } from '../DOMSearch/searchRegion.js'
 
-//Adds and edits css elements for highlight rectangles
+//Adds and edits css elements for highlight rectangles by:
+//-adding an adopted sheet to the main document
+//-watching for iframe discover events and adding <style> to it
+//-if style changes, reapplying it to both adopted sheet and all previously discovered iframes
+//for performance css is split into two: part that's shared between all searches and personal color settings
 
-export class Styler
-{
-    constructor(id, parentElement, colorIndex, opacity = .8)
-    {
+export class Styler {
+    constructor(id, parentElement, colorIndex, opacity = .8) {
         this.id = id;
         this.parentElement = parentElement;
         this.colorIndex = colorIndex;
@@ -18,129 +21,114 @@ export class Styler
 
         parentElement.addEventListener(
             GetOptionsChangeEvent().type,
-            (args) =>
-            {
-                if (args?.options.highlightAlpha)
-                {
+            (args) => {
+                if (args?.options.highlightAlpha) {
                     this.opacity = args.options.highlightAlpha;
                     this.updateStyle();
                 }
             });
 
+        parentElement.addEventListener(
+            GetNewIframeEvent().type,
+            (args) => 
+                this.onIframeDiscover(args?.iframe?.contentDocument));
+
         this.updateStyle();
     }
 
-    SetColor(colorIndex)
-    {
+    SetColor(colorIndex) {
         this.colorIndex = colorIndex;
         this.updateStyle();
     }
 
-    updateStyle()
-    {
-        const personalCSS = GetHighlightsCSS(this.id, this.colorIndex, this.opacity);
-        this.setAdoptedStyle(personalCSS);
-        this.setIFramesStyle(personalCSS);
+    updateStyle() {
+        this.updateAdoptedSheet();
+        this.updateIframeStyle();
     }
 
-    adoptedSheet;
-    setAdoptedStyle(personalCSS)
-    {
-        if (!Styler.defaultSheet)
-        {
-            Styler.defaultSheet = new CSSStyleSheet();
-            Styler.defaultSheet.replaceSync(DefaultHighlightCSS);
-            document.adoptedStyleSheets =
-                [...document.adoptedStyleSheets, Styler.defaultSheet];
+    personalSheet;
+    updateAdoptedSheet() {
+        if (!Styler.sharedSheet) {
+            Styler.sharedSheet = new CSSStyleSheet();
+            Styler.sharedSheet.replaceSync(SharedHighlightCSS);
+            document.adoptedStyleSheets = [...document.adoptedStyleSheets, Styler.sharedSheet];
         }
 
-        if (!this.adoptedSheet ||
-            !document.adoptedStyleSheets.includes(this.adoptedSheet))
-        {
-            this.adoptedSheet = new CSSStyleSheet();
-            document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.adoptedSheet];
-        }
-        this.adoptedSheet.replaceSync(personalCSS);
+        if (!this.personalSheet)
+            this.personalSheet = new CSSStyleSheet();
+        if (!document.adoptedStyleSheets.includes(this.personalSheet))
+            document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.personalSheet];
+
+        this.personalSheet.replaceSync(GetPersonalHighlightCSS(this.id, this.colorIndex, this.opacity));
     }
-    removeAdoptedStyle()
-    {
-        const adoptedCSSIndex = Array.from(document.adoptedStyleSheets).
-            findIndex((_style) => { return _style === this.adoptedSheet; });
-        if (isNaN(adoptedCSSIndex))
+
+    removeAdoptedStyle() {
+        const personalSheetIndex = Array.from(document.adoptedStyleSheets)
+            .findIndex((_style) => _style === this.personalSheet );
+        if (isNaN(personalSheetIndex))
             return;
+
         const currentAdoptedArray = Array.from(document.adoptedStyleSheets);
-        currentAdoptedArray.splice(adoptedCSSIndex, 1);
+        currentAdoptedArray.splice(personalSheetIndex, 1);
         document.adoptedStyleSheets = currentAdoptedArray;
-        this.adoptedSheet = null;
+        this.personalSheet = null;
     }
 
     iframes = [];
-    setIFramesStyle(personalCSS)
-    {
+    updateIframeStyle() {
         const styleClass = `fm-iframe${this.id}`;
-        this.iframes.forEach((_iframe) =>
-        {
-            const oldStyle = _iframe.getElementsByClassName(styleClass)[0];
-            oldStyle?.remove();
-            const newStyle = _iframe.createElement(`style`);
-            newStyle.setAttribute("class", styleClass);
-            newStyle.innerHTML = personalCSS;
-            _iframe.head.appendChild(newStyle);
+        this.iframes.forEach((iframe) => {
+            const existingStyle = iframe.getElementsByClassName(styleClass)[0];
+            const cssString = GetPersonalHighlightCSS(this.id, this.colorIndex, this.opacity);
+            if (existingStyle)
+                existingStyle.innerHTML = cssString;
+            else
+                addStyleToIFrame(iframe, styleClass, cssString)
+
         })
-
-        if (this.iFrameListener != null)
-            return;
-
-        this.iFrameListener = (_args) =>
-        {
-            const newIFrame = _args.iframe.contentDocument;
-
-            if (!this.iframes.includes(newIFrame))
-            {
-                this.iframes.push(newIFrame);
-            }
-            let defStyle = newIFrame.getElementsByClassName(`fm-iframeDefStyle`)[0]
-            if (!defStyle)
-            {
-                defStyle = newIFrame.createElement("style");
-                defStyle.setAttribute("class", "fm-iframeDefStyle");
-                defStyle.innerHTML = DefaultHighlightCSS;
-                newIFrame.head.appendChild(defStyle);
-            }
-
-            let personalStyle = newIFrame.getElementsByClassName(styleClass)[0];
-            if (!personalStyle)
-            {
-                personalStyle = newIFrame.createElement(`style`);
-                personalStyle.setAttribute("class", styleClass);
-                personalStyle.innerHTML = personalCSS;
-                newIFrame.head.appendChild(personalStyle);
-            }
-        };
-
-        this.parentElement.addEventListener(`fm-new-iframe`, this.iFrameListener);
     }
 
-    removeIframeStyles()
-    {
-        this.iframes.forEach((_iframe) =>
-        {
+    removeIframeStyles() {
+        this.iframes.forEach((_iframe) => {
             _iframe.getElementsByClassName(`fm-iframe${this.id}`)[0]?.remove();
         });
         this.iframes = [];
-        if (this.iFrameListener)
-            this.parentElement.removeEventListener(`fm-new-iframe`, this.iFrameListener);
     }
 
-    clearStyles()
-    {
+    onIframeDiscover(newIFrame) {
+        if (!newIFrame)
+            return;
+
+        if (!this.iframes.includes(newIFrame)) {
+            this.iframes.push(newIFrame);
+        }
+
+        const sharedStyleClass = `fm-iframeDefStyle`;
+        let existingSharedStyle = newIFrame.getElementsByClassName(sharedStyleClass)[0]
+        if (!existingSharedStyle) {
+            addStyleToIFrame(newIFrame, sharedStyleClass, SharedHighlightCSS);
+        }
+
+        const personalStyleClass = `fm-iframe${this.id}`;
+        const existingPersonalStyle = newIFrame.getElementsByClassName(personalStyleClass)[0];
+        if (!existingPersonalStyle) {
+            addStyleToIFrame(newIFrame, personalStyleClass,
+                GetPersonalHighlightCSS(this.id, this.colorIndex, this.opacity))
+        }
+    }
+
+    clearStyles() {
         this.removeAdoptedStyle();
         this.removeIframeStyles();
     }
 }
-
-export function GetStyleChangeEvent(args)
-{
+function addStyleToIFrame(iframe, styleclass, styletext) {
+    const style = iframe.createElement(`style`);
+    style.setAttribute("class", styleclass);
+    style.innerHTML = styletext;
+    iframe.head.appendChild(style);
+}
+export function GetStyleChangeEvent(args) {
     const event = new Event("fm-style-change");
     Object.assign(event, args);
     return event;

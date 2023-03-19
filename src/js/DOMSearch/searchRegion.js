@@ -2,24 +2,17 @@ import Match from './match.js';
 
 //maintains and advances current search scope with a treewalker
 
-class SearchRegion
+export class SearchRegion
 {
-    constructor(_searchString, _regexp, _eventElem) {
-        this.searchString = _searchString;
-        this.regexp = _regexp;
+    constructor(searchString, regexp, eventElement) {
+        this.searchString = searchString;
+        this.regexp = regexp;
 
         this.stringRegion = "";
         this.nodes = [];
         this.offset = 0;    //offset of the string from the start of the first node
 
-        const newIFramesEvent = new Event(`fm-new-iframe`);
-        const onNewIFrame = (_iframe) =>
-        {
-            newIFramesEvent.iframe = _iframe;
-            _eventElem.dispatchEvent(newIFramesEvent);
-        };
-
-        this.treeWalk = getTreeWalkPlus(onNewIFrame);
+        this.treeWalk = getTreeWalkPlus((iframe) => eventElement.dispatchEvent(GetNewIframeEvent(iframe)));
     }
 
     expand() {
@@ -162,4 +155,8 @@ function getTreeWalkPlus(onNewIFrame)
     return treeWalker;
 }
 
-export default SearchRegion;
+export function GetNewIframeEvent(iframe) {
+    const event = new Event("fm-new-iframe");
+    event.iframe = iframe;
+    return event;
+}
