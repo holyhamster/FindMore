@@ -12,8 +12,9 @@ import { ContainerRemoval } from './rendering/containerRemoval.js';
 // - NodeObserver asynchronously decides if the parent node of the match is visible, appends the container
 // - ContainerObserver asynchronously calculates all highlight rectangles, appends them to the container
 export class Highlighter {
-    constructor(id) {
+    constructor(id, eventElement) {
         this.id = id;
+        this.eventElement = eventElement;
     }
 
     //#region RECURSIVE HIGHLIGHT 
@@ -34,7 +35,7 @@ export class Highlighter {
         this.invoked = false;
 
         this.containerObserver = this.containerObserver || new ContainerObserver(this.nodeToContainerMap,
-                () => GetNewMatchesEvent(this.getMatchCount()));
+            () => this.eventElement.dispatchEvent(GetNewMatchesEvent(this.getMatchCount())) );
         this.nodeObserver = this.nodeObserver || new NodeObserver(this.nodeToContainerMap, this.indexToContainerMap,
             (container) => this.containerObserver.Observe(container));
 
