@@ -1,6 +1,6 @@
 import Match from './match.js';
 
-//maintains and advances current search scope with a treewalker
+//Maintains and advances current search through DOM tree scope with treewalker
 
 export class SearchRegion
 {

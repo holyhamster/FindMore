@@ -1,61 +1,47 @@
 import { SearchRegion } from './searchRegion.js';
-import {PerformanceTimer} from './performanceTimer.js';
+import { PerformanceTimer } from './performanceTimer.js';
 
-//recursively searches DOM with SearchRegion, sends matches to highlighter
+//Creates and goes recursively through SearchRegion, sends matches to Highlighter
 
-const consecutiveCalls = 200;   //caret moves before measuring performance
-const recursionTimeLimit = 100;    //MS. set recursion on timeout each time if it takes longer
-const timeoutDelay = 5; //MS, delay between recursion calls
+export class DomSearcher {
 
-class DomSearcher
-{
-    interrupted;
-    
-
-    constructor(_searchString, _regex, _eventElem, _highlighter)
-    {
-        setTimeout(() =>
-        {
-            const region = new SearchRegion(_searchString, _regex, _eventElem);
-            this.search(region, _highlighter)
+    constructor(searchString, regex, eventElem, highlighter) {
+        setTimeout(() => {
+            this.search(new SearchRegion(searchString, regex, eventElem), highlighter)
         }, 1);
     }
 
-    interrupt()
-    {
+    interrupted;
+    Interrupt() {
         this.interrupted = true;
     }
 
-    search(_searchRegion, _highlighter, _executionTime = 0)
-    {
+    search(searchRegion, highlighter, executionTime = 0) {
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
         const measurer = new PerformanceTimer();
 
-        while ((callsLeft -= 1) >= 0 && (WALK_IN_PROGRESS = _searchRegion.expand()))
-        {
-            const matches = _searchRegion.getMatches();
-            if (this.interrupted)
-                return;
-
-            _highlighter.QueMatches(matches);
+        while (!this.interrupted &&
+            (callsLeft -= 1) >= 0 &&
+            (WALK_IN_PROGRESS = searchRegion.expand())) {
+            const matches = searchRegion.getMatches();
+            if (matches?.length > 0)
+                highlighter.QueMatches(matches);
         }
 
         if (!WALK_IN_PROGRESS)
             return;
 
-        if ((_executionTime += measurer.Get()) < recursionTimeLimit)
-        {
-            this.search(_searchRegion, _highlighter, _executionTime)
+        if ((executionTime += measurer.Get()) < recursionTimeLimit) {
+            this.search(searchRegion, highlighter, executionTime)
         }
-        else
-        {
-            setTimeout(() =>
-            {
-                this.search(_searchRegion, _highlighter)
-            }, timeoutDelay);
-        }   
+        else {
+            setTimeout(() => this.search(searchRegion, highlighter), DelayTime);
+        }
     }
 }
 
-export default DomSearcher;
+const consecutiveCalls = 200;       //Search region expand calls before checking for performance
+const recursionTimeLimit = 100;     //Time limit to inject a delay
+const DelayTime = 5;    
+
 

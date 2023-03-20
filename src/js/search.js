@@ -1,4 +1,4 @@
-import DOMSearcher from './DOMSearch/domSearcher.js';
+import { DomSearcher } from './DOMSearch/domSearcher.js';
 import Highlighter from './DOMSearch/highlighter.js';
 import { Panel } from './panel.js';
 import { Root } from './root.js';
@@ -55,14 +55,14 @@ export class Search {
         if (!this.State.IsEmpty()) {
             this.highlighter = this.highlighter || new Highlighter(this.id, this.panel.GetLocalRoot());
 
-            this.domSearcher = new DOMSearcher(
+            this.domSearcher = new DomSearcher(
                 this.State.searchString, this.State.GetRegex(true), this.panel.GetLocalRoot(), this.highlighter);
         }
         this.changeIndex();
     }
 
     clearPreviousSearch() {
-        this.domSearcher?.interrupt();
+        this.domSearcher?.Interrupt();
         this.domSearcher = null;
         this.highlighter?.clearSelection();
     }
