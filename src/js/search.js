@@ -29,22 +29,19 @@ export class Search {
     addSearchListeners(element) {
         element.addEventListener(
             GetChangeIndexEvent().type,
-            (args) => { this.changeIndex(args.change); });
+            (args) => this.changeIndex(args.change));
 
         element.addEventListener(
             GetSearchRestartEvent().type,
-            () => { this.restartSearch(); });
+            () => this.restartSearch());
 
         element.addEventListener(
             GetNewMatchesEvent().type,
-            (args) => { this.changeIndex(args?.change); });
+            () => this.changeIndex());
 
         element.addEventListener(
             GetClosePanelsEvent().type,
-            (args) => {
-                if (args.id == this.id)
-                    this.clearPreviousSearch();
-            });
+            () => this.clearPreviousSearch());
     }
 
     domSearcher;
