@@ -2,7 +2,7 @@
 
 export const ColorCount = 9;
 const colors = {
-    accent: `60 100% 55 %`, //selected highlight
+    accent: `60 100% 55%`, //selected highlight
     0: {
         highlight: `270 100% 71%`,  //color of the highlighted match on page
         dark: `268 61% 9%`,         //UI color for matching search panel
