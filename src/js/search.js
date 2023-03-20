@@ -1,11 +1,9 @@
 import { DomSearcher } from './DOMSearch/domSearcher.js';
-import Highlighter from './DOMSearch/highlighter.js';
+import { Highlighter } from './DOMSearch/highlighter.js';
 import { Panel } from './panel.js';
 import { Root } from './root.js';
-import { State } from './state.js';
 
-//creates search panel
-//starts the search with DOMSearcher and Highlighter
+//Nexus class for UI Panel, DOMSearcher and Highlighter
 export class Search {
     constructor(id, state, options) {
         this.id = id;
@@ -14,26 +12,7 @@ export class Search {
         const panel = new Panel(id, state, options);
         this.panel = panel;
 
-        const localUpdateElement = panel.GetLocalRoot();
-
-        localUpdateElement.addEventListener(
-            GetChangeIndexEvent().type,
-            (args) => { this.changeIndex(args.change); });
-
-        localUpdateElement.addEventListener(
-            GetSearchRestartEvent().type,
-            () => { this.restartSearch(); });
-
-        localUpdateElement.addEventListener(
-            GetNewMatchesEvent().type,
-            (args) => { this.changeIndex(args?.change); });
-
-        localUpdateElement.addEventListener(
-            GetClosePanelsEvent().type,
-            (args) => {
-                if (args.id == this.id)
-                    this.clearPreviousSearch();
-            });
+        this.addSearchListeners(panel.GetLocalRoot());
 
         if (!this.State.IsEmpty())
             this.startDomSearch();
@@ -45,6 +24,27 @@ export class Search {
 
     static SetOptions(options) {
         Root.Get().dispatchEvent(GetOptionsChangeEvent(options));
+    }
+
+    addSearchListeners(element) {
+        element.addEventListener(
+            GetChangeIndexEvent().type,
+            (args) => { this.changeIndex(args.change); });
+
+        element.addEventListener(
+            GetSearchRestartEvent().type,
+            () => { this.restartSearch(); });
+
+        element.addEventListener(
+            GetNewMatchesEvent().type,
+            (args) => { this.changeIndex(args?.change); });
+
+        element.addEventListener(
+            GetClosePanelsEvent().type,
+            (args) => {
+                if (args.id == this.id)
+                    this.clearPreviousSearch();
+            });
     }
 
     domSearcher;

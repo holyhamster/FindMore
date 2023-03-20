@@ -1,5 +1,6 @@
+//points at a region in the dom tree with a match
 
-class Match
+export class Match
 {
 	constructor(startOffset, startNode, endOffset, endNode)
 	{
@@ -9,5 +10,3 @@ class Match
 		this.endNode = endNode;
 	}
 }
-
-export default Match;

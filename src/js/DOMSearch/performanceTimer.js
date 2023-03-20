@@ -1,3 +1,4 @@
+//Keeps track of time in MS between Get() calls
 
 export class PerformanceTimer {
     constructor() {

@@ -1,7 +1,6 @@
 //container holds an fm-container headElement that holds all fm-relative rectangles for a single DOM parent
 class Container
 {
-    headElement;
     constructor(parentNode, id)
     {
         this.parentNode = parentNode;
@@ -42,19 +41,19 @@ class Container
     }
 
     quedMatches = [];
-    queMatch(_match)
+    queMatch(match)
     {
-        this.quedMatches.push(_match);
+        this.quedMatches.push(match);
     }
 
     indexToMatches = new Map();
-    indexNextMatch(_newIndex)
+    indexNextMatch(newIndex)
     {
         const match = this.quedMatches.shift();
         if (!match)
             return false;
 
-        this.indexToMatches.set(_newIndex, match)
+        this.indexToMatches.set(newIndex, match)
         return true;
     }
 
@@ -84,14 +83,13 @@ class Container
 
     finalize()
     {
-        //with many append operations its can be profitable to temporarily unappend parent element 
+        //with many append operations it can be profitable to temporarily unappend parent element 
         const HEAVY_CONTAINER = this.calculatedElements.length > 2;    
         if (HEAVY_CONTAINER)
             this.headElement.remove();
 
 
-        this.calculatedElements.forEach((span) => {
-            this.headElement.append(span) });
+        this.calculatedElements.forEach((span) => this.headElement.append(span) );
         this.calculatedElements = [];
 
         if (HEAVY_CONTAINER)
@@ -105,28 +103,26 @@ class Container
     }
 }
 
-//climbs up the ancestors to find 
+//highlight rectangles can be created with relative or absolute positioning
+//absolute is preffered because it's a lot cheaper to draw during flow calls
+//relative is required when there's no relative node between target and a nested scrollbar 
+//  (if absolute elements aren't anchored to relative nodes they will not follow scrollbar's position)
 function relativePositionRequired(node) 
 {
-    while (node)
+    for (let iNode = node; iNode; iNode = iNode.parentNode)
     {
-        if (node.nodeType != Node.ELEMENT_NODE)
-        {
-            node = node.parentNode;
+        if (iNode.nodeType != Node.ELEMENT_NODE)
             continue;
-        }
 
-        if (node.scrollTop > 0 || node.scrollLeft > 0)
+        if (iNode.scrollTop > 0 || iNode.scrollLeft > 0)
             return true;
 
-        const style = window.getComputedStyle(node);
+        const style = window.getComputedStyle(iNode);
         if (style.overflow === 'auto' || style.overflow === 'scroll')
             return true;
 
         if (style.getPropertyValue("position") == "relative")
             return false;
-
-        node = node.parentNode;
     }
     return false;
 }

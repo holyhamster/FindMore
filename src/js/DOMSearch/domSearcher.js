@@ -22,7 +22,7 @@ export class DomSearcher {
 
         while (!this.interrupted &&
             (callsLeft -= 1) >= 0 &&
-            (WALK_IN_PROGRESS = searchRegion.expand())) {
+            (WALK_IN_PROGRESS = searchRegion.tryExpand())) {
             const matches = searchRegion.getMatches();
             if (matches?.length > 0)
                 highlighter.QueMatches(matches);

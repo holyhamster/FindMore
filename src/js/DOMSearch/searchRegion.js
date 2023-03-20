@@ -1,4 +1,4 @@
-import Match from './match.js';
+import { Match } from './match.js';
 import { FrameWalker } from './frameWalker.js'
 
 //Walks through DOM tree with frameWalker, keeps track of current position within it, returns matches from it
@@ -17,8 +17,8 @@ export class SearchRegion
             (iframe) => eventElement.dispatchEvent(GetNewIframeEvent(iframe)));
     }
 
-    expand() {
-        let newNode = this.treeWalk.nextNode();
+    tryExpand() {
+        const newNode = this.treeWalk.nextNode();
 
         if (!newNode)
             return false;
@@ -44,9 +44,8 @@ export class SearchRegion
         regexMatches.forEach((regexMatch) =>
         {
             regexMatch.index += this.offset;
-            let MATCH_INSIDE_NODE;
-
-            while (MATCH_INSIDE_NODE =
+            let MATCH_OUTSIDE_NODE;
+            while (MATCH_OUTSIDE_NODE =
                 (charOffset + this.nodes[nodeOffset].textContent.length) <= regexMatch.index)
             {
                 charOffset += this.nodes[nodeOffset].textContent.length;
@@ -56,7 +55,7 @@ export class SearchRegion
             const startNode = this.nodes[nodeOffset];
             const startOffset = regexMatch.index - charOffset;
 
-            while (MATCH_INSIDE_NODE =
+            while (MATCH_OUTSIDE_NODE =
                 ((charOffset + this.nodes[nodeOffset].textContent.length) < (regexMatch.index + this.searchString.length)))
             {
                 charOffset += this.nodes[nodeOffset].textContent.length;
@@ -77,9 +76,9 @@ export class SearchRegion
 
     trim()
     {
-        let SEARCH_REGION_IS_TOO_LONG;
-        while (SEARCH_REGION_IS_TOO_LONG = (this.nodes.length > 0 &&
-            ((this.stringRegion.length - this.nodes[0].textContent.length) > this.searchString.length - 1))) 
+        let REGION_IS_TOO_LONG;
+        while (this.nodes.length > 0 && (REGION_IS_TOO_LONG = 
+                ((this.stringRegion.length - this.nodes[0].textContent.length) > this.searchString.length - 1))) 
         {
             this.stringRegion = this.stringRegion.substring(this.nodes[0].textContent.length);
             this.nodes.shift();
@@ -92,7 +91,7 @@ export class SearchRegion
         this.offset = offset;
         this.nodes = this.nodes.slice(this.nodes.indexOf(node));
         this.stringRegion = "";
-        this.nodes.forEach((_nodes) => { this.stringRegion += _nodes.textContent });
+        this.nodes.forEach((nodes) => { this.stringRegion += nodes.textContent });
     }
 }
 export function GetNewIframeEvent(iframe) {

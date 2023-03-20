@@ -5,13 +5,13 @@ import { PerformanceTimer } from './performanceTimer.js';
 import { GetNewMatchesEvent } from '../search.js';
 import { ContainerRemoval } from './rendering/containerRemoval.js';
 
-//accepts matches and transforms them into highlight elements
-//Happens in four asynchronous stages to optimize browser's reflow calls:
+//accepts matches and creates highlight elements for them
+//Happens in four stages to optimize browser's reflow calls:
 // - queMatches() synchronously from DOMSearcher
 // - processMatches() recursively creates/finds a container for each match, makes a delay if execution is too long
 // - NodeObserver asynchronously decides if the parent node of the match is visible, appends the container
-// - ContainerObserver asynchronously calculates all rectangles, appends them to the container
-class Highlighter {
+// - ContainerObserver asynchronously calculates all highlight rectangles, appends them to the container
+export class Highlighter {
     constructor(id) {
         this.id = id;
     }
@@ -124,5 +124,3 @@ class Highlighter {
 
 const processingMSLimit = 100;   
 const processingMSDelay = 5;
-
-export default Highlighter;

@@ -111,7 +111,6 @@ function sendDataToPage(tabId, args) {
         options: options
     };
     Object.assign(message, args);
-    console.log(message);
     chrome.tabs.sendMessage(tabId, message);
 }
 
@@ -153,10 +152,10 @@ function requestNewSearchOnActiveWindow() {
     });
 }
 
-function showSuccessStatus(_time = 3000) {
+function showSuccessStatus(duration = 3000) {
     chrome.action.setBadgeText({ text: "\u{2713}" });
 
     setTimeout(() => chrome.action.setBadgeText({ text: "" }),
-        _time
+        duration
     );
 }
