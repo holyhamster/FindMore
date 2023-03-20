@@ -1,8 +1,10 @@
 import { GetOptionsChangeEvent } from './search.js'
 import { rootCSS, PanelClass, PanelContainerId } from './cssStyling/cssInjection.js';
 
-//singleton that holds all in-page UI, has the following structure:
-//document -> shadowholder with DOMShadow -> css -> root parent
+//Singleton that parents all in-page UI. Has the following structure:
+//Document.body -> <fm-shadowholder> with DOMShadow -> <div> with css -> <div> holding all search panels
+//listenes to option change events to adjust css
+
 export class Root {
     constructor() {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];

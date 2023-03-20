@@ -11,14 +11,14 @@ GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent, GetStateChangeE
 //Creates Styler to add search-related css
 
 export class Panel {
-    mainDiv;
+    mainNode;
 
     constructor(id, stateRef, options) {
         this.id = id;
         this.state = stateRef;
 
         const mainDiv = getPanel(id, stateRef);
-        this.mainDiv = mainDiv;
+        this.mainNode = mainDiv;
         this.addHTMLEvents();
 
         Root.Get().appendChild(mainDiv);
@@ -30,9 +30,9 @@ export class Panel {
     }
 
     addHTMLEvents() {
-        const mainNode = this.mainDiv, state = this.state, id = this.id;
+        const mainNode = this.mainNode, state = this.state, id = this.id;
 
-        mainNode.addEventListener(GetClosePanelsEvent().type, (args) => {
+        mainNode.addEventListener(GetClosePanelsEvent().type, () => {
             mainNode.remove();
         });
 
@@ -110,26 +110,24 @@ export class Panel {
 
     updateLabels(index, length) {
         if (!this.totalMatchesLabel) {
-            this.totalMatchesLabel = this.mainDiv.querySelector('.totalMatches');
-            this.selectedMatchLabel = this.mainDiv.querySelector('.selectedMatch');
+            this.totalMatchesLabel = this.mainNode.querySelector('.totalMatches');
+            this.selectedMatchLabel = this.mainNode.querySelector('.selectedMatch');
         }
         this.selectedMatchLabel.textContent = length == 0 ? "0" : `${index + 1}`;
         this.totalMatchesLabel.textContent = length;
     }
 
     GetLocalRoot() {
-        return this.mainDiv;
+        return this.mainNode;
     }
 }
 
 function getPanel(id, state) {
     const mainNode = document.createElement("div");
+    mainNode.setAttribute("id", `${PanelClass}${id}`);
     mainNode.setAttribute("class", `${PanelClass}`);
     if (state.pinned)
         mainNode.classList.add("pinned");
-    mainNode.setAttribute("id", `${PanelClass}${id}`);
-
-
     
     mainNode.innerHTML =
         `<div>

@@ -1,13 +1,12 @@
-//injecting css with javascript is typically a lot faster than .css reference
-//all color is coded in css variables:
-//
+//CSS strings for javascript injections
+
 export const ColorCount = 9;
 const colors = {
-    accent: `60 100% 55 %`,
+    accent: `60 100% 55 %`, //selected highlight
     0: {
-        highlight: `270 100% 71%`,
-        dark: `268 61% 9%`,
-        light: `270 100% 71%`
+        highlight: `270 100% 71%`,  //color of the highlighted match on page
+        dark: `268 61% 9%`,         //UI color for matching search panel
+        light: `270 100% 71%`       //UI color for matching search panel
     }, 1: {
         highlight: `330 100% 58%`,
         dark: `333 90% 15%`,
@@ -46,7 +45,7 @@ const colors = {
 export const PanelClass = "FMPanel";
 export const PanelContainerId = "FMPanelContainer";
 
-//applied to an element holding all UI panels
+//applied to root element holding all UI panels
 export const rootCSS = `
 #${PanelContainerId} {
     --dark-color-0-hsl: ${colors[0].dark};
@@ -190,7 +189,7 @@ label
     margin-right: auto;
 }`
 
-//highlight css is applied to document adopted sheet and all iframes individually
+//applied once to document's adopted sheet and all iframes individually
 export const SharedHighlightCSS =
     `fm-container { 
         all:initial; 
@@ -218,8 +217,9 @@ export const SharedHighlightCSS =
         absolute;
         opacity: 0.6;
         z-index: 2147483646;
-    }`; //` pointer-events: none;`;
+    }`; //` pointer-events: none;`; //uncomment this before prod
 
+//applied for each different search to document's adopted sheet and all iframes individually
 export function GetPersonalHighlightCSS(id, colorIndex, opacity) {
     return `fm-highlight.fm-${id} {
             background-color: hsl(var(--color-${colorIndex}-hsl) / ${opacity}); 
@@ -228,6 +228,8 @@ export function GetPersonalHighlightCSS(id, colorIndex, opacity) {
             background-color: hsl(var(--color-accented-hsl) / ${opacity}); 
         }`;
 }
+
+//applied as inline to individual search panel
 export function GetPanelColorCSS(colorIndex) {
     return `
         --color1-hsl: var(--light-color-${colorIndex}-hsl);

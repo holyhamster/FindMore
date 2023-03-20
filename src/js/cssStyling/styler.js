@@ -6,14 +6,14 @@ import { GetNewIframeEvent } from '../DOMSearch/searchRegion.js'
 //-adding an adopted sheet to the main document
 //-watching for iframe discover events and adding <style> to it
 //-if style changes, reapplying it to both adopted sheet and all previously discovered iframes
-//for performance css is split into two: part that's shared between all searches and personal color settings
+//for performance css is split in two: part that's shared between all searches and personal color settings
 
 export class Styler {
-    constructor(id, parentElement, colorIndex, opacity = .8) {
+    constructor(id, parentElement, colorIndex, highlightAlpha = .8) {
         this.id = id;
         this.parentElement = parentElement;
         this.colorIndex = colorIndex;
-        this.opacity = opacity;
+        this.highlightAlpha = highlightAlpha;
 
         parentElement.addEventListener(
             GetClosePanelsEvent().type,
@@ -23,7 +23,7 @@ export class Styler {
             GetOptionsChangeEvent().type,
             (args) => {
                 if (args?.options.highlightAlpha) {
-                    this.opacity = args.options.highlightAlpha;
+                    this.highlightAlpha = args.options.highlightAlpha;
                     this.updateStyle();
                 }
             });
@@ -59,7 +59,7 @@ export class Styler {
         if (!document.adoptedStyleSheets.includes(this.personalSheet))
             document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.personalSheet];
 
-        this.personalSheet.replaceSync(GetPersonalHighlightCSS(this.id, this.colorIndex, this.opacity));
+        this.personalSheet.replaceSync(GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha));
     }
 
     removeAdoptedStyle() {
@@ -79,7 +79,7 @@ export class Styler {
         const styleClass = `fm-iframe${this.id}`;
         this.iframes.forEach((iframe) => {
             const existingStyle = iframe.getElementsByClassName(styleClass)[0];
-            const cssString = GetPersonalHighlightCSS(this.id, this.colorIndex, this.opacity);
+            const cssString = GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha);
             if (existingStyle)
                 existingStyle.innerHTML = cssString;
             else
@@ -113,7 +113,7 @@ export class Styler {
         const existingPersonalStyle = newIFrame.getElementsByClassName(personalStyleClass)[0];
         if (!existingPersonalStyle) {
             addStyleToIFrame(newIFrame, personalStyleClass,
-                GetPersonalHighlightCSS(this.id, this.colorIndex, this.opacity))
+                GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha))
         }
     }
 
