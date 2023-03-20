@@ -1,6 +1,7 @@
 import Match from './match.js';
+import { FrameWalker } from './frameWalker.js'
 
-//Maintains and advances current search through DOM tree scope with treewalker
+//Walks through DOM tree with frameWalker, keeps track of current position within it, returns matches from it
 
 export class SearchRegion
 {
@@ -11,12 +12,13 @@ export class SearchRegion
         this.stringRegion = "";
         this.nodes = [];
         this.offset = 0;    //offset of the string from the start of the first node
-
-        this.treeWalk = getTreeWalkPlus((iframe) => eventElement.dispatchEvent(GetNewIframeEvent(iframe)));
+        this.treeWalk = FrameWalker.createFrameWalker(
+            document.body,
+            (iframe) => eventElement.dispatchEvent(GetNewIframeEvent(iframe)));
     }
 
     expand() {
-        let newNode = this.treeWalk.nextNodePlus();
+        let newNode = this.treeWalk.nextNode();
 
         if (!newNode)
             return false;
@@ -93,68 +95,6 @@ export class SearchRegion
         this.nodes.forEach((_nodes) => { this.stringRegion += _nodes.textContent });
     }
 }
-
-const treeWalkerCondition = {
-    acceptNode: (node) =>
-    {
-        if (node.nodeName.toUpperCase() == "IFRAME")
-            return NodeFilter.FILTER_ACCEPT;
-
-        if (node.nodeName.toUpperCase() == "STYLE" ||
-            node.nodeName.toUpperCase() == "SCRIPT")
-            return NodeFilter.FILTER_REJECT;
-
-        if (node.nodeType == Node.ELEMENT_NODE)
-        {
-            const classes = node.id.toString().split(/\s+/);
-            const NODE_IS_SEARCHBAR_SHADOWROOT = classes.includes(`TFShadowRoot`);
-            if (NODE_IS_SEARCHBAR_SHADOWROOT)
-                return NodeFilter.FILTER_REJECT;
-        }
-
-        if (node.nodeName.toUpperCase() == "#TEXT" && node.textContent)
-            return NodeFilter.FILTER_ACCEPT;
-
-        return NodeFilter.FILTER_SKIP;
-    }
-};
-
-//treewalker than includes iframes and sends event every time it finds a new one
-function getTreeWalkPlus(onNewIFrame)
-{
-    const treeWalker = document.createTreeWalker(
-        document.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
-    treeWalker.que = [treeWalker];
-
-    treeWalker.nextNodePlus = function ()
-    {
-        if (this.que.length == 0)
-            return null;
-
-        const nextNode = this.que[this.que.length - 1].nextNode();
-
-        if (!nextNode)
-        {
-            this.que.pop();
-            return this.nextNodePlus();
-        }
-
-        if (nextNode.nodeName.toUpperCase() == 'IFRAME' &&
-            nextNode.contentDocument)
-        {
-            const iframeDoc = nextNode.contentDocument;
-            const iframeWalker = iframeDoc.createTreeWalker(
-                iframeDoc.body, NodeFilter.SHOW_ALL, treeWalkerCondition);
-            onNewIFrame(nextNode);
-            this.que.push(iframeWalker);
-            return this.nextNodePlus();
-        }
-
-        return nextNode;
-    };
-    return treeWalker;
-}
-
 export function GetNewIframeEvent(iframe) {
     const event = new Event("fm-new-iframe");
     event.iframe = iframe;
