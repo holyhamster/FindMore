@@ -228,3 +228,8 @@ export function GetPersonalHighlightCSS(id, colorIndex, opacity) {
             background-color: hsl(var(--color-accented-hsl) / ${opacity}); 
         }`;
 }
+export function GetPanelColorCSS(colorIndex) {
+    return `
+        --color1-hsl: var(--light-color-${colorIndex}-hsl);
+        --color2-hsl: var(--dark-color-${colorIndex}-hsl);`;
+}

@@ -1,6 +1,6 @@
 import { Root } from './root.js';
 import { Styler } from './cssStyling/styler.js';
-import { PanelClass } from './cssStyling/cssInjection.js';
+import { PanelClass, GetPanelColorCSS } from './cssStyling/cssInjection.js';
 import { State } from './state.js';
 import {
 GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent, GetStateChangeEvent
@@ -30,81 +30,81 @@ export class Panel {
     }
 
     addHTMLEvents() {
-        const mainDiv = this.mainDiv, state = this.state, id = this.id;
+        const mainNode = this.mainDiv, state = this.state, id = this.id;
 
-        mainDiv.addEventListener(GetClosePanelsEvent().type, (args) => {
-            mainDiv.remove();
+        mainNode.addEventListener(GetClosePanelsEvent().type, (args) => {
+            mainNode.remove();
         });
 
-        mainDiv.querySelector(`.searchInput`).addEventListener("input", (args) => {
+        mainNode.querySelector(`.searchInput`).addEventListener("input", (args) => {
             if (!args?.target)
                 return;
-            args.target.value = formatIncomingString(args.target.value);
-            const inputChanged = args.target.value != state.searchString;
-            state.searchString = args.target.value;
+            const safeValue = formatIncomingString(args.target.value);
+            args.target.value = safeValue;
+            const inputChanged = safeValue != state.searchString;
+            state.searchString = safeValue;
             if (inputChanged) {
-                mainDiv.dispatchEvent(GetStateChangeEvent(id));
-                mainDiv.dispatchEvent(GetSearchRestartEvent());
+                mainNode.dispatchEvent(GetStateChangeEvent(id));
+                mainNode.dispatchEvent(GetSearchRestartEvent());
             }
         });
 
-        mainDiv.querySelector(`.searchInput`).addEventListener("keydown", (args) => {
+        mainNode.querySelector(`.searchInput`).addEventListener("keydown", (args) => {
             if (args.key === "Enter")
-                mainDiv.dispatchEvent(GetChangeIndexEvent(1));
+                mainNode.dispatchEvent(GetChangeIndexEvent(1));
         });
 
-        mainDiv.querySelector(`.colorButton`).addEventListener("click", () => {
+        mainNode.querySelector(`.colorButton`).addEventListener("click", () => {
             state.NextColor();
-            mainDiv.style.setProperty("--color1-hsl", `var(--light-color-${state.colorIndex}-hsl)`);
-            mainDiv.style.setProperty("--color2-hsl", `var(--dark-color-${state.colorIndex}-hsl)`);
-            mainDiv.dispatchEvent(GetStateChangeEvent(id));
+            mainNode.style = GetPanelColorCSS(state.colorIndex);
+            mainNode.dispatchEvent(GetStateChangeEvent(id));
             this.styler.SetColor(state.colorIndex);
         });
 
-        mainDiv.querySelector(`.refreshButton`).addEventListener("click", () => {
-            mainDiv.dispatchEvent(GetSearchRestartEvent());
+        mainNode.querySelector(`.refreshButton`).addEventListener("click", () => {
+            mainNode.dispatchEvent(GetSearchRestartEvent());
         });
 
-        mainDiv.querySelector(`.downButton`).addEventListener("click", () => {
-            mainDiv.dispatchEvent(GetChangeIndexEvent(1));
+        mainNode.querySelector(`.downButton`).addEventListener("click", () => {
+            mainNode.dispatchEvent(GetChangeIndexEvent(1));
         });
 
-        mainDiv.querySelector(`.upButton`).addEventListener("click", () => {
-            mainDiv.dispatchEvent(GetChangeIndexEvent(-1));
+        mainNode.querySelector(`.upButton`).addEventListener("click", () => {
+            mainNode.dispatchEvent(GetChangeIndexEvent(-1));
         });
 
-        mainDiv.querySelector(`.closeButton`).addEventListener("click", () => {
-            mainDiv.dispatchEvent(GetClosePanelsEvent(id));
+        mainNode.querySelector(`.closeButton`).addEventListener("click", () => {
+            mainNode.dispatchEvent(GetClosePanelsEvent(id));
         });
 
-        mainDiv.querySelector(`.caseCheck`).addEventListener("input", (args) => {
+        mainNode.querySelector(`.caseCheck`).addEventListener("input", (args) => {
             if (state.caseSensitive == args.target.checked)
                 return;
 
             state.caseSensitive = args.target.checked;
-            mainDiv.dispatchEvent(GetStateChangeEvent(id));
-            mainDiv.dispatchEvent(GetSearchRestartEvent());
+            mainNode.dispatchEvent(GetStateChangeEvent(id));
+            mainNode.dispatchEvent(GetSearchRestartEvent());
         });
 
-        mainDiv.querySelector(`.wordCheck`).addEventListener("input", (args) => {
+        mainNode.querySelector(`.wordCheck`).addEventListener("input", (args) => {
             if (state.wholeWord == args?.target?.checked)
                 return;
 
             state.wholeWord = args.target.checked;
-            mainDiv.dispatchEvent(GetStateChangeEvent(id));
-            mainDiv.dispatchEvent(GetSearchRestartEvent());
+            mainNode.dispatchEvent(GetStateChangeEvent(id));
+            mainNode.dispatchEvent(GetSearchRestartEvent());
         });
 
-        mainDiv.querySelector(`.pinButton`).addEventListener("click", (args) => {
+        mainNode.querySelector(`.pinButton`).addEventListener("click", (args) => {
             state.pinned = !state.pinned;
             if (state.pinned)
-                mainDiv.classList.add('pinned');
+                mainNode.classList.add('pinned');
             else
-                mainDiv.classList.remove('pinned');
+                mainNode.classList.remove('pinned');
 
             if (args?.target)
                 args.target.textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
-            mainDiv.dispatchEvent(GetStateChangeEvent(id));
+            mainNode.dispatchEvent(GetStateChangeEvent(id));
         });
     }
 
@@ -123,15 +123,16 @@ export class Panel {
 }
 
 function getPanel(id, state) {
-    const mainDiv = document.createElement("div");
-    mainDiv.setAttribute("class", `${PanelClass}${state.pinned ? " pinned" : ""}`);
-    mainDiv.setAttribute("id", `${PanelClass}{id}`);
+    const mainNode = document.createElement("div");
+    mainNode.setAttribute("class", `${PanelClass}`);
+    if (state.pinned)
+        mainNode.classList.add("pinned");
+    mainNode.setAttribute("id", `${PanelClass}${id}`);
 
-    mainDiv.style.setProperty("--color1-hsl", `var(--light-color-${state.colorIndex}-hsl)`);
-    mainDiv.style.setProperty("--color2-hsl", `var(--dark-color-${state.colorIndex}-hsl)`);
 
-    mainDiv.innerHTML =
-        ` <div>
+    
+    mainNode.innerHTML =
+        `<div>
             <input class="searchInput" value="${state.searchString}" placeholder=" Find in page">
             <button class="downButton">&#x25BD</button>
             <button class="upButton">&#x25B3</button>
@@ -151,13 +152,12 @@ function getPanel(id, state) {
             <button class="colorButton button-28">&#x25D1</button>
             <button class="pinButton"> ${state.pinned ? "\u{25A3}" : "\u{25A2}"}</button>
         </div>`;
-    mainDiv.querySelector(`.searchInput`).focus();
-    return mainDiv;
+
+    mainNode.style = GetPanelColorCSS(state.colorIndex);
+    return mainNode;
 }
 
 function formatIncomingString(incomingString) {
     incomingString = incomingString || "";
     return incomingString.substring(0, 100);
 }
-
-export default Panel;
