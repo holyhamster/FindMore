@@ -2,7 +2,7 @@ import { PerformanceTimer } from '../performanceTimer.js'
 import { ContainerRemoval } from './containerRemoval.js'
 
 //Wrapper for IntersectionObserver
-//On call calculates and draws containers in batches
+//On call calculates and draws highlight rectangles in batches
 export class ContainerObserver {
     constructor(nodeMap, onNewMatches) {
         this.nodeMap = nodeMap;

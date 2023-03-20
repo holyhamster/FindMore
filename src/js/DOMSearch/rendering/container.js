@@ -1,4 +1,4 @@
-//container holds an fm-container headElement that holds all fm-relative rectangles for a single DOM parent
+//Wrapper around fm-container headElement that holds all fm-relative rectangles of a single parent element
 class Container
 {
     constructor(parentNode, id)
