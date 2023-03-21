@@ -59,29 +59,37 @@ export class Search {
     }
 
     clearPreviousSearch() {
+        this.secondatySearch = true;
         this.domSearcher?.Interrupt();
         this.domSearcher = null;
         this.highlighter?.clearSelection();
+        this.selectedIndex = null;
     }
 
     selectedIndex;
     changeIndex(indexChange) {
         const matchesLength = this.highlighter?.getMatchCount() || 0;
 
-        if (this.selectedIndex == null)
+        
+        if (!this.selectedIndex && !indexChange)
             this.selectedIndex = this.highlighter?.getNewClosestMatch();
-        else
-            this.selectedIndex = normalizeSearchIndex(this.selectedIndex, indexChange, matchesLength);
 
-        if (!isNaN(this.selectedIndex))
-            this.highlighter?.accentMatch(this.selectedIndex);
+        this.selectedIndex = normalizeSearchIndex(this.selectedIndex, indexChange, matchesLength);
+        //if (this.selectedIndex == null)
+            //this.selectedIndex = this.highlighter?.getNewClosestMatch();
+        //else
+            //this.selectedIndex = normalizeSearchIndex(this.selectedIndex, indexChange, matchesLength);
+
+        if (!isNaN(this.selectedIndex)) {
+            const scrollTowardsMatch = !this.dontAccentNewMatches || Math.abs(indexChange) > 0;
+            this.highlighter?.accentMatch(this.selectedIndex, scrollTowardsMatch);
+        }
 
         this.panel.updateLabels(this.selectedIndex, matchesLength);
     }
 
     restartSearch() {
-        this.selectedIndex = null;
-        this.changeIndex();
+        this.dontAccentNewMatches = this.selectedIndex > 0;
         this.startDomSearch();
     }
 }

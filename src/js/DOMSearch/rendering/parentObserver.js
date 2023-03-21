@@ -11,14 +11,22 @@ export class ParentObserver {
     }
 
     onObserve(entries) {
+        const visibleContainers = [];
         entries.forEach((entry) => {
-            const container = this.nodeMap.get(entry.target);
             this.observer.unobserve(entry.target);
+            const parentStyle = window.getComputedStyle(entry.target);
+            const elementVisible =
+                entry.boundingClientRect.width > 2 &&
+                entry.boundingClientRect.height > 2 &&
+                parentStyle.visibility !== 'hidden' &&
+                parentStyle.display !== 'none';
 
-            const elementVisible = entry.boundingClientRect.width > 2 && entry.boundingClientRect.height > 2;
-            if (!elementVisible)
-                return;
+            const container = this.nodeMap.get(entry.target);
+            if (container && elementVisible)
+                visibleContainers.push(container);
+        });
 
+        visibleContainers.forEach((container) => {
             while (container.IndexNextMatch(this.indexMap.size))
                 this.indexMap.set(this.indexMap.size, container);
             container.AppendSelf();

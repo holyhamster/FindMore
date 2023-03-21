@@ -23,7 +23,7 @@ export class ContainerObserver {
         const containers = [];
         const timer = new PerformanceTimer();
 
-        ContainerRemoval.Remove()
+        ContainerRemoval.RemoveOld();
         entries.forEach((entry) => {
             const headElement = entry.target;
             this.observer.unobserve(headElement);

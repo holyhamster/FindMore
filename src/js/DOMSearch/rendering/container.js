@@ -15,7 +15,7 @@ class Container
     {
         if (isNaN(matchIndex))
             return;
-
+        console.log(this.parentNode);
         const elements = Array.from(this.headElement.getElementsByClassName(`fm-${this.id}-${matchIndex}`));
 
         elements.forEach((span) =>
@@ -34,34 +34,29 @@ class Container
         this.parentNode.append(this.headElement);
     }
 
-    remove()
-    {
-        this.headElement.remove();
-        this.emptyProcessingCache();
-    }
-
     quedMatches = [];
     QueMatch(match)
     {
         this.quedMatches.push(match);
     }
 
-    indexToMatches = new Map();
+    indexedMatches = [];
     IndexNextMatch(newIndex)
     {
         const match = this.quedMatches.shift();
         if (!match)
             return false;
-
-        this.indexToMatches.set(newIndex, match)
+        match.index = newIndex;
+        this.indexedMatches.push(match);
         return true;
     }
 
+    indexToMatches = new Map();
     precalculatedNodes = [];
     PrecalculateRectangles(range)
     {
         const anchor = this.headElement.getBoundingClientRect();
-        this.indexToMatches.forEach((match, matchIndex) =>
+        this.indexedMatches.forEach((match) =>
         {
             range.setStart(match.startNode, match.startOffset);
             range.setEnd(match.endNode, match.endOffset);
@@ -70,15 +65,16 @@ class Container
             rects.forEach((rect) =>
             {
                 const rectElement = document.createElement('FM-HIGHLIGHT');
-                rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${matchIndex}`);
+                rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${match.index}`);
                 rectElement.style.height = rect.height + 'px';
                 rectElement.style.width = rect.width + 'px';
                 rectElement.style.left = rect.left - anchor.x + 'px';
                 rectElement.style.top = rect.top - anchor.y + 'px';
                 this.precalculatedNodes.push(rectElement);
+                this.indexToMatches.set(match.index, match)
             });
         });
-        this.indexToMatches = new Map();
+        this.indexedMatches = [];
     }
 
     AppendPrecalculated()
@@ -96,10 +92,21 @@ class Container
             this.parentNode.appendChild(this.headElement);
     }
 
-    emptyProcessingCache()
+    GetIndexedMatch(index) {
+        return this.indexToMatches.get(index);
+    }
+    GetIndexedMatches() {
+        return Array.from(this.indexToMatches.values());
+    }
+    ClearCache()
     {
         this.quedMatches = [];
-        this.indexToMatches = new Map();
+        this.precalcData = [];
+    }
+    Remove()
+    {
+        this.headElement.remove();
+        this.ClearCache();
     }
 }
 

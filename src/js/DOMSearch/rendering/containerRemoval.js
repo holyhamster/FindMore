@@ -10,17 +10,17 @@ export class ContainerRemoval
         ContainerRemoval.array = ContainerRemoval.array || [];
         ContainerRemoval.array = [...ContainerRemoval.array, ...containers];
 
-        setTimeout(() => ContainerRemoval.Remove(), removalInitialMSDelay);
+        setTimeout(() => ContainerRemoval.RemoveOld(), removalInitialMSDelay);
     }
 
-    static Remove() {
+    static RemoveOld() {
         const timer = new PerformanceTimer();
         let container;
         while ((timer.Get() < removalMSLimit) && (container = ContainerRemoval.array?.shift()))
-            container.remove();
+            container.Remove();
 
         if (ContainerRemoval.array?.length > 0)
-            setTimeout(() => ContainerRemoval.Remove(), removalMSDelay);
+            setTimeout(() => ContainerRemoval.RemoveOld(), removalMSDelay);
     }
 }
 

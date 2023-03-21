@@ -49,9 +49,12 @@ export class Panel {
             }
         });
 
-        mainNode.querySelector(`.searchInput`).addEventListener("keydown", (args) => {
-            if (args.key === "Enter")
+        mainNode.querySelector(`.searchInput`).addEventListener("keydown", (event) => {
+            if (event.key === "Enter")
                 mainNode.dispatchEvent(GetChangeIndexEvent(1));
+            else if (event.key === "Escape")
+                mainNode.dispatchEvent(GetClosePanelsEvent(id));
+            event.stopImmediatePropagation();
         });
 
         mainNode.querySelector(`.colorButton`).addEventListener("click", () => {
@@ -132,8 +135,8 @@ function getPanel(id, state) {
     mainNode.innerHTML =
         `<div>
             <input class="searchInput" value="${state.searchString}" placeholder=" Find in page">
-            <button class="downButton">&#x25BD</button>
             <button class="upButton">&#x25B3</button>
+            <button class="downButton">&#x25BD</button>
             <button class="refreshButton">&#x21BA</button>
             <button class="closeButton">X</button> 
         </div>
