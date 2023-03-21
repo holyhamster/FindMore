@@ -34,11 +34,11 @@ export class ContainerObserver {
 
             const container = this.nodeMap.get(headElement.parentNode);
             containers.push(container);
-            container.precalculateRectangles(range);
+            container.PrecalculateRectangles(range);
         });
 
         containers.forEach((container) => {
-            container.finalize();
+            container.AppendPrecalculated();
         });
         this.onNewMatches();
     }

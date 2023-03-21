@@ -11,16 +11,16 @@ class Container
             this.headElement.classList.add(`fm-relative`)
     }
 
-    setAccent(index, state)
+    SetAccent(matchIndex, accentState)
     {
-        if (isNaN(index))
+        if (isNaN(matchIndex))
             return;
 
-        const elements = Array.from(document.getElementsByClassName(`fm-${this.id}-${index}`));
+        const elements = Array.from(this.headElement.getElementsByClassName(`fm-${this.id}-${matchIndex}`));
 
         elements.forEach((span) =>
         {
-            if (state)
+            if (accentState)
                 span.classList.add(`fm-accented`);
             else
                 span.classList.remove(`fm-accented`);
@@ -29,7 +29,7 @@ class Container
         return elements;
     }
 
-    appendSelf()
+    AppendSelf()
     {
         this.parentNode.append(this.headElement);
     }
@@ -41,13 +41,13 @@ class Container
     }
 
     quedMatches = [];
-    queMatch(match)
+    QueMatch(match)
     {
         this.quedMatches.push(match);
     }
 
     indexToMatches = new Map();
-    indexNextMatch(newIndex)
+    IndexNextMatch(newIndex)
     {
         const match = this.quedMatches.shift();
         if (!match)
@@ -57,11 +57,11 @@ class Container
         return true;
     }
 
-    calculatedElements = [];
-    precalculateRectangles(range)
+    precalculatedNodes = [];
+    PrecalculateRectangles(range)
     {
         const anchor = this.headElement.getBoundingClientRect();
-        this.indexToMatches.forEach((match, index) =>
+        this.indexToMatches.forEach((match, matchIndex) =>
         {
             range.setStart(match.startNode, match.startOffset);
             range.setEnd(match.endNode, match.endOffset);
@@ -70,27 +70,27 @@ class Container
             rects.forEach((rect) =>
             {
                 const rectElement = document.createElement('FM-HIGHLIGHT');
-                rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${index}`);
+                rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${matchIndex}`);
                 rectElement.style.height = rect.height + 'px';
                 rectElement.style.width = rect.width + 'px';
                 rectElement.style.left = rect.left - anchor.x + 'px';
                 rectElement.style.top = rect.top - anchor.y + 'px';
-                this.calculatedElements.push(rectElement);
+                this.precalculatedNodes.push(rectElement);
             });
         });
         this.indexToMatches = new Map();
     }
 
-    finalize()
+    AppendPrecalculated()
     {
         //with many append operations it can be profitable to temporarily unappend parent element 
-        const HEAVY_CONTAINER = this.calculatedElements.length > 2;    
+        const HEAVY_CONTAINER = this.precalculatedNodes.length > 2;    
         if (HEAVY_CONTAINER)
             this.headElement.remove();
 
 
-        this.calculatedElements.forEach((span) => this.headElement.append(span) );
-        this.calculatedElements = [];
+        this.precalculatedNodes.forEach((span) => this.headElement.append(span) );
+        this.precalculatedNodes = [];
 
         if (HEAVY_CONTAINER)
             this.parentNode.appendChild(this.headElement);
