@@ -1,4 +1,4 @@
-//CSS strings for javascript injections
+//CSS strings for injection with content scripts
 
 export const ColorCount = 9;
 const colors = {
@@ -42,7 +42,7 @@ const colors = {
     }
 }
 
-//applied to root element holding all UI panels
+//applied to root element holding UI elements
 export const rootCSS = `
 #FMPanelContainer {
     --dark-color-0-hsl: ${colors[0].dark};

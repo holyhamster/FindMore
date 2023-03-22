@@ -7,7 +7,7 @@ chrome.storage.sync.get("fmSavedOptions", (storage) => {
 
 var tabsData = new Map();
 
-//.runtime events are used for background script to communicate with content script and with the popup
+//.runtime events are used for background script to communicate with content script and with the popup script
 chrome.runtime.onMessage.addListener((runTimeEvent, sender) => {
     const tabId = runTimeEvent.tabId || sender?.tab?.id;
 
@@ -54,7 +54,7 @@ chrome.runtime.onMessage.addListener((runTimeEvent, sender) => {
             break;
 
         case "fm-popup-current-search-request":
-            const message = { message: "fm-popup-current-search-answer", data: false };
+            const message = { message: "fm-popup-current-search-answer" };
             getActiveWindowID((id) => {
                 message.id = id;
                 message.data = tabsData.has(id);

@@ -6,7 +6,7 @@
   "permissions": [ "activeTab", "scripting", "storage" ],
 
   "action": {
-    "default_popup": "popup/popup.html",
+    "default_popup": "src/popup/popup.html",
     "default_icon": "16.png"
   },
 
@@ -31,7 +31,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": [ "src/js/*", "src/css/*" ],
+      "resources": [ "src/js/*" ],
       "matches": [ "<all_urls>" ]
     }
   ],
