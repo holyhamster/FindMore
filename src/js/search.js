@@ -62,30 +62,25 @@ export class Search {
         this.secondatySearch = true;
         this.domSearcher?.Interrupt();
         this.domSearcher = null;
-        this.highlighter?.clearSelection();
+        this.highlighter?.Clear();
         this.selectedIndex = null;
     }
 
     selectedIndex;
     changeIndex(indexChange) {
-        const matchesLength = this.highlighter?.getMatchCount() || 0;
+        //if index isn't being incremented and selectedIndex is either null or 0, get new Index
+        if (!indexChange && !this.selectedIndex)
+            this.selectedIndex = this.highlighter?.GetNewIndex();
 
-        
-        if (!this.selectedIndex && !indexChange)
-            this.selectedIndex = this.highlighter?.getNewClosestMatch();
-
-        this.selectedIndex = normalizeSearchIndex(this.selectedIndex, indexChange, matchesLength);
-        //if (this.selectedIndex == null)
-            //this.selectedIndex = this.highlighter?.getNewClosestMatch();
-        //else
-            //this.selectedIndex = normalizeSearchIndex(this.selectedIndex, indexChange, matchesLength);
+        const matchCount = this.highlighter?.getMatchCount() || 0;
+        this.selectedIndex = normalizeSearchIndex(this.selectedIndex, indexChange, matchCount);
 
         if (!isNaN(this.selectedIndex)) {
             const scrollTowardsMatch = !this.dontAccentNewMatches || Math.abs(indexChange) > 0;
             this.highlighter?.accentMatch(this.selectedIndex, scrollTowardsMatch);
         }
 
-        this.panel.updateLabels(this.selectedIndex, matchesLength);
+        this.panel.updateLabels(this.selectedIndex, matchCount);
     }
 
     restartSearch() {

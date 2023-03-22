@@ -1,4 +1,7 @@
-//Wrapper around fm-container headElement that holds all fm-relative rectangles of a single parent element
+//Holds all highlight rectangles for matches under a single parent element in DOM tree
+//Creating a highlight is split into stages to be done in batches to minimize browser reflow calls:
+//constructor() -> QueMatch() -> IndexNextMatch() -> AppendSelf() -> PrecalculateRectangles() -> AppendPrecalculated()
+
 class Container
 {
     constructor(parentNode, id)
@@ -15,7 +18,7 @@ class Container
     {
         if (isNaN(matchIndex))
             return;
-        console.log(this.parentNode);
+
         const elements = Array.from(this.headElement.getElementsByClassName(`fm-${this.id}-${matchIndex}`));
 
         elements.forEach((span) =>
@@ -51,18 +54,15 @@ class Container
         return true;
     }
 
-    indexToMatches = new Map();
+    indexToMatch = new Map();
     precalculatedNodes = [];
     PrecalculateRectangles(range)
     {
         const anchor = this.headElement.getBoundingClientRect();
         this.indexedMatches.forEach((match) =>
         {
-            range.setStart(match.startNode, match.startOffset);
-            range.setEnd(match.endNode, match.endOffset);
-            const rects = Array.from(range.getClientRects());
-
-            rects.forEach((rect) =>
+            const elements = [];
+            match.GetRectangles(range).forEach((rect) =>
             {
                 const rectElement = document.createElement('FM-HIGHLIGHT');
                 rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${match.index}`);
@@ -70,9 +70,11 @@ class Container
                 rectElement.style.width = rect.width + 'px';
                 rectElement.style.left = rect.left - anchor.x + 'px';
                 rectElement.style.top = rect.top - anchor.y + 'px';
-                this.precalculatedNodes.push(rectElement);
-                this.indexToMatches.set(match.index, match)
+                elements.push(rectElement);
             });
+
+            this.indexToMatch.set(match.index, match)
+            this.precalculatedNodes = [...this.precalculatedNodes, ...elements];
         });
         this.indexedMatches = [];
     }
@@ -84,35 +86,36 @@ class Container
         if (HEAVY_CONTAINER)
             this.headElement.remove();
 
-
-        this.precalculatedNodes.forEach((span) => this.headElement.append(span) );
-        this.precalculatedNodes = [];
+        while (this.precalculatedNodes.length > 0)
+            this.headElement.append(this.precalculatedNodes.shift());
 
         if (HEAVY_CONTAINER)
             this.parentNode.appendChild(this.headElement);
     }
 
-    GetIndexedMatch(index) {
-        return this.indexToMatches.get(index);
+    GetMatch(index) {
+        return this.indexToMatch.get(index);
     }
-    GetIndexedMatches() {
-        return Array.from(this.indexToMatches.values());
+
+    GetAllMatches() {
+        return Array.from(this.indexToMatch.values());
     }
-    ClearCache()
-    {
-        this.quedMatches = [];
-        this.precalcData = [];
-    }
+
     Remove()
     {
         this.headElement.remove();
         this.ClearCache();
     }
+
+    ClearCache() {
+        this.quedMatches = [];
+        this.precalculatedNodes = [];
+    }
 }
 
 //highlight rectangles can be created with relative or absolute positioning
-//absolute is preffered because it's a lot cheaper to draw during flow calls
-//relative is required when there's no relative node between target and a nested scrollbar 
+//absolute is preffered: it's a lot cheaper to draw during flow calls
+//relative required when there's no position:relative node between target and a nested scrollbar 
 //  (if absolute elements aren't anchored to relative nodes they will not follow scrollbar's position)
 function relativePositionRequired(node) 
 {

@@ -10,7 +10,7 @@ import { ContainerRemoval } from './rendering/containerRemoval.js';
 //Happens in four stages to optimize browser's reflow calls:
 // - queMatches() synchronously from DOMSearcher
 // - processMatches() recursively creates/finds a container for each match, makes a delay if execution is too long
-// - NodeObserver asynchronously decides if the parent node of the match is visible, appends the container
+// - NodeObserver asynchronously decides if the parent node of the match is visible, if yes appends the container
 // - ContainerObserver asynchronously calculates all highlight rectangles, appends them to the container
 export class Highlighter {
     constructor(id, eventElement) {
@@ -30,19 +30,19 @@ export class Highlighter {
         setTimeout(() => this.processMatches(), 1);
     }
 
-    indexToContainerMap = new Map(); //containers by search index
-    parentToContainerMap = new Map(); //containers by the parent nodes of their head elements
+    indexToContainer = new Map(); //containers by search index
+    parentToContainer = new Map(); //containers by the parent nodes of their head elements
     processMatches() {
         this.invoked = false;
 
-        this.containerObserver = this.containerObserver || new ContainerObserver(this.parentToContainerMap,
-            () => this.eventElement.dispatchEvent(GetNewMatchesEvent(this.getMatchCount())) );
-        this.parentObserver = this.parentObserver || new ParentObserver(this.parentToContainerMap, this.indexToContainerMap,
+        this.containerObserver = this.containerObserver || new ContainerObserver(this.parentToContainer,
+            () => this.eventElement.dispatchEvent(GetNewMatchesEvent(this.getMatchCount())));
+        this.parentObserver = this.parentObserver || new ParentObserver(this.parentToContainer, this.indexToContainer,
             (container) => this.containerObserver.Observe(container));
 
         const timer = new PerformanceTimer();
         while (timer.Get() < processingMSLimit && this.matches.length > 0) {
-            const container = this.containerize(this.matches.shift());
+            const container = this.getContainer(this.matches.shift());
             this.parentObserver.Observe(container);
         }
 
@@ -52,102 +52,111 @@ export class Highlighter {
         }
     }
 
-    containerize(match) {
+    getContainer(match) {
         const parentNode = match.endNode.parentNode;
-        let container = this.parentToContainerMap.get(parentNode);
+        let container = this.parentToContainer.get(parentNode);
         if (!container) {
             container = new Container(parentNode, this.id);
-            this.parentToContainerMap.set(parentNode, container);
+            this.parentToContainer.set(parentNode, container);
         }
 
         container.QueMatch(match);
         return container;
     }
 
-    getMatchCount(includeUnprocessed = true) {
-        return this.indexToContainerMap.size + (includeUnprocessed ? this.matches.length : 0);
-    }
-
-    getNewClosestMatch() {
-        if (this.getMatchCount() == 0)
-            return;
-        if (!this.lastAccent)
-            return 0;
-        const closest = findClosestMatch(this.lastAccent, this.parentToContainerMap);
-        return findClosestMatch(this.lastAccent, this.parentToContainerMap);
-    }
-
     accentMatch(index, scrollTowards) {
         if (index === this.accentedIndex)
             return;
 
-        const lastAccentedContainer = this.indexToContainerMap.get(this.accentedIndex);
-        if (lastAccentedContainer) {
-            lastAccentedContainer.SetAccent(this.accentedIndex, false);
+        const oldAccentContainer = this.indexToContainer.get(this.accentedIndex);
+        if (oldAccentContainer) {
+            oldAccentContainer.SetAccent(this.accentedIndex, false);
             this.accentedIndex = null;
         }
 
         if (isNaN(index) || index < 0 || this.getMatchCount() == 0)
             return;
 
-        this.focusObserver = this.focusObserver || new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    this.focusObserver.unobserve(entry.target);
-                    if (!entry.isIntersecting)
-                        entry.target.scrollIntoView({ block: "center" });
-                });
-            });
+        const accentTarget = this.getAccentTarget(index);
+        this.accentedIndex = accentTarget.processed ? index : null;
 
-        let focusTarget;
-        if (index < this.indexToContainerMap.size) {
-            this.accentedIndex = index;
-            console.log(index);
-            const accentedRectangles = this.indexToContainerMap.get(index)?.SetAccent(index, true);
-            focusTarget = accentedRectangles?.length > 0 ? accentedRectangles[0] : null;
-        }
-        else
-            focusTarget = this.matches[index - this.indexToContainerMap.size]?.endNode?.parentNode;
-
-        if (scrollTowards && focusTarget)
-            this.focusObserver.observe(focusTarget);
+        this.scrollObserver = this.scrollObserver || getScrollObserver();
+        if (scrollTowards && accentTarget.element)
+            this.scrollObserver.observe(accentTarget.element);
     }
 
-    clearSelection() {
+    getAccentTarget(index) {
+        const TARGET_HAS_BEEN_PROCESSED = index < this.indexToContainer.size;
+        if (TARGET_HAS_BEEN_PROCESSED) {
+            this.accentedIndex = index;
+            const accentedRectangles = this.indexToContainer.get(index)?.SetAccent(index, true);
+            return {
+                processed: true,
+                index: index,
+                element: accentedRectangles?.[0]
+            }
+        }
+        const TARGET_IN_PROCESSING = index - this.indexToContainer.size < this.matches.length;
+        if (TARGET_IN_PROCESSING)
+            return {
+                processed: false,
+                element: this.matches[index - this.indexToContainer.size]?.endNode?.parentNode
+            }
+    }
+
+    getMatchCount(includeUnprocessed = true) {
+        return this.indexToContainer.size + (includeUnprocessed ? this.matches.length : 0);
+    }
+
+    //returns index of the match, closest to accent of the previous search. 
+    //0 if there's no previous accent
+    //null if there's no matches
+    GetNewIndex() {
+        if (this.getMatchCount() == 0)
+            return;
+
+        const containerOfPreviousAccent = this.parentToContainer?.get(this.prevSearchAccent?.parent);
+        if (containerOfPreviousAccent) {
+            const match = Match.FindClosestAmong(containerOfPreviousAccent.GetAllMatches(), this.prevSearchAccent.match);
+            return match?.index;
+        }
+        
+
+        return 0;
+    }
+
+    Clear() {
         if (this.accentedIndex > 0)
-            this.lastAccent = this.getAccentData(this.accentedIndex);
+            this.prevSearchAccent = this.getAccentData(this.accentedIndex);
 
         this.accentedIndex = null;
         this.parentObserver?.StopObserving();
         this.containerObserver?.StopObserving();
-        ContainerRemoval.Que(Array.from(this.parentToContainerMap.values()));
+        ContainerRemoval.Que(Array.from(this.parentToContainer.values()));
 
-        
-        
         this.matches = [];
-        this.indexToContainerMap.clear();
-        this.parentToContainerMap.clear();
+        this.indexToContainer.clear();
+        this.parentToContainer.clear();
     }
+
     getAccentData(index) {
-        
-        const container = this.indexToContainerMap.get(index);
-        const match = container?.GetIndexedMatch(index);
-        if (container && match) 
+        const container = this.indexToContainer.get(index);
+        const match = container?.GetMatch(index);
+        if (container && match)
             return { match: match, parent: container.parentNode }
-            
     }
 }
 
-
-function findClosestMatch(lastAccent, parentToContainerMap) {
-    const container = parentToContainerMap?.get(lastAccent?.parent);
-    if (container)
-    {
-        const match = Match.FindClosestAmong(lastAccent.match, container.GetIndexedMatches());
-        return match?.index;
-    }
-    return 0;
+function getScrollObserver() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            observer.unobserve(entry.target);
+            if (!entry.isIntersecting)
+                entry.target.scrollIntoView({ block: "center" });
+        });
+    });
+    return observer;
 }
 
-const processingMSLimit = 100;   
+const processingMSLimit = 100;
 const processingMSDelay = 5;

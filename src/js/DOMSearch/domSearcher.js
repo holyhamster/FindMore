@@ -20,10 +20,9 @@ export class DomSearcher {
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
         const measurer = new PerformanceTimer();
 
-        while (!this.interrupted &&
-            (callsLeft -= 1) >= 0 &&
-            (WALK_IN_PROGRESS = searchRegion.tryExpand())) {
-            const matches = searchRegion.getMatches();
+        while (!this.interrupted && (callsLeft -= 1) >= 0 &&
+            (WALK_IN_PROGRESS = searchRegion.TryExpand())) {
+            const matches = searchRegion.GetMatches();
             if (matches?.length > 0)
                 highlighter.QueMatches(matches);
         }
@@ -42,6 +41,4 @@ export class DomSearcher {
 
 const consecutiveCalls = 200;       //Search region expand calls before checking for performance
 const recursionTimeLimit = 100;     //Time limit to inject a delay
-const DelayTime = 5;    
-
-
+const DelayTime = 5;

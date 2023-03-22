@@ -17,7 +17,7 @@ export class SearchRegion
             (iframe) => eventElement.dispatchEvent(GetNewIframeEvent(iframe)));
     }
 
-    tryExpand() {
+    TryExpand() {
         const newNode = this.treeWalk.nextNode();
 
         if (!newNode)
@@ -30,14 +30,12 @@ export class SearchRegion
         return true;
     }
 
-    getMatches()
+    GetMatches()
     {
         if (this.nodes.length == 0)
             return [];
-
         
         const regexMatches = [...this.stringRegion.substring(this.offset).matchAll(this.regexp)];
-        
 
         const matches = [];
         let charOffset = 0, nodeOffset = 0;
@@ -51,9 +49,7 @@ export class SearchRegion
                 charOffset += this.nodes[nodeOffset].textContent.length;
                 nodeOffset += 1;
             }
-
-            const startNode = this.nodes[nodeOffset];
-            const startOffset = regexMatch.index - charOffset;
+            const start = { offset: regexMatch.index - charOffset, node: this.nodes[nodeOffset] };
 
             while (MATCH_OUTSIDE_NODE =
                 ((charOffset + this.nodes[nodeOffset].textContent.length) < (regexMatch.index + this.searchString.length)))
@@ -61,9 +57,9 @@ export class SearchRegion
                 charOffset += this.nodes[nodeOffset].textContent.length;
                 nodeOffset += 1;
             }
-            const endNode = this.nodes[nodeOffset];
-            const endOffset = regexMatch.index + this.searchString.length - charOffset;
-            matches.push(new Match(startOffset, startNode, endOffset, endNode))
+            const end = { offset: regexMatch.index + this.searchString.length - charOffset, node: this.nodes[nodeOffset] };
+
+            matches.push(new Match(start, end));
         });
 
         if (matches.length > 0)

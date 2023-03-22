@@ -4,15 +4,16 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     const commitOptions = () => {
-        const options = buildOptions();
-        saveOptions(options);
-        sendOptionsToBackground(options);
+        const options = Options.GetFromUI();
+        Options.Save(options);
+        Options.SendToBackground(options);
     };
 
     chrome.runtime.onMessage.addListener((event) => {
         if (event.message == "fm-popup-current-search-answer")
             setSavedButtonAs(!isNaN(event.id), event.data);
     });
+    chrome.runtime.sendMessage({ message: "fm-popup-current-search-request" });
 
     document.getElementById('findButton')?.addEventListener('click', () => {
         chrome.runtime.sendMessage({ message: "fm-popup-new-search" });
@@ -84,47 +85,55 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById(_id)?.addEventListener("change", commitOptions)
     });
 
-    //fillUI();
-    loadOptions();
-    chrome.runtime.sendMessage({ message: "fm-popup-current-search-request" });
+    Options.FillFromMemory();
+
 });
 
-function buildOptions() {
-    const options = new Object();
+class Options {
+    static GetFromUI() {
+        const options = new Options();
+        const cornerValue = document.getElementById('cornerButton')?.selectedIndex || 0;
+        options.StartTop = cornerValue === 3 || cornerValue === 0;
+        options.StartLeft = cornerValue === 3 || cornerValue === 2;
+        options.Horizontal = document.getElementById('alignmentButton')?.selectedIndex === 1;
+        options.StartPinned = document.getElementById('pinButton')?.selectedIndex === 1;
+        options.MenuOpacity = document.getElementById('opacity')?.value || 1;
+        options.MenuScale = document.getElementById('scale')?.value || 1;
+        options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO
+        return options;
+    }
 
-    const cornerValue = document.getElementById('cornerButton')?.selectedIndex || 0;
-    options.StartTop = cornerValue === 3 || cornerValue === 0;
-    options.StartLeft = cornerValue === 3 || cornerValue === 2;
-    options.Horizontal = document.getElementById('alignmentButton')?.selectedIndex === 1;
-    options.StartPinned = document.getElementById('pinButton')?.selectedIndex === 1;
-    options.MenuOpacity = document.getElementById('opacity')?.value || 1;
-    options.MenuScale = document.getElementById('scale')?.value || 1;
-    options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO
+    static FillFromMemory() {
+        chrome.storage.sync.get("fmSavedOptions", function (storage) {
+            const options = storage.fmSavedOptions;
+            if (options) {
+                console.log(options);
+                Options.FillUI(options);
 
-    return options;
-}
+            }
+        });
+    }
 
-function fillUIWithOptions(options) {
-    const cornerIndex =
-        (options.StartTop & options.StartLeft ? 3 : 0) +
-        (options.StartTop & !options.StartLeft ? 0 : 0) +
-        (!options.StartTop & !options.StartLeft ? 1 : 0) +
-        (!options.StartTop & options.StartLeft ? 2 : 0);
-    document.getElementById('cornerButton').selectIndex(cornerIndex || 0);
-    document.getElementById('alignmentButton').selectIndex(options?.Horizontal ? 1 : 0);
-    document.getElementById('pinButton').selectIndex(options?.StartPinned ? 1 : 0);
-    document.getElementById('opacity').value = options?.MenuOpacity || 1;
-    document.getElementById('scale').value = options?.MenuScale || 1;
-}
+    static Save(options) {
+        chrome.storage.sync.set({ "fmSavedOptions": options });
+    }
 
-function loadOptions() {
-    chrome.storage.sync.get("fmSavedOptions", function (storage) {
+    static FillUI(options) {
+        const cornerIndex =
+            (options.StartTop & options.StartLeft ? 3 : 0) +
+            (options.StartTop & !options.StartLeft ? 0 : 0) +
+            (!options.StartTop & !options.StartLeft ? 1 : 0) +
+            (!options.StartTop & options.StartLeft ? 2 : 0);
+        document.getElementById('cornerButton').selectIndex(cornerIndex || 0);
+        document.getElementById('alignmentButton').selectIndex(options?.Horizontal ? 1 : 0);
+        document.getElementById('pinButton').selectIndex(options?.StartPinned ? 1 : 0);
+        document.getElementById('opacity').value = options.MenuOpacity || 1;
+        document.getElementById('scale').value = options.MenuScale || 1;
+    }
 
-        const options = storage.fmSavedOptions;
-        fillUIWithOptions(options);
-    });
-
-    chrome.runtime.sendMessage("fm-popup-current-search-request");
+    static SendToBackground(options) {
+        chrome.runtime.sendMessage({ message: "fm-popup-options-change", options: options });
+    }
 }
 
 function setSavedButtonAs(hasActiveWindow, hasActiveSearches) {
@@ -140,14 +149,4 @@ function setSavedButtonAs(hasActiveWindow, hasActiveSearches) {
         document.getElementById('saveTooltip').innerHTML = saveButtonClearsInstead ?
             "Clear saved panels" : "Save current panels";
     });
-
-}
-
-function saveOptions(options) {
-    console.log(options)
-    chrome.storage.sync.set({ "fmSavedOptions": options });
-}
-
-function sendOptionsToBackground(options) {
-    chrome.runtime.sendMessage({ message: "fm-popup-options-change", options: options });
 }

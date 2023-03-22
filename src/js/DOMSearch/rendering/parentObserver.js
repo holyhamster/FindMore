@@ -16,8 +16,8 @@ export class ParentObserver {
             this.observer.unobserve(entry.target);
             const parentStyle = window.getComputedStyle(entry.target);
             const elementVisible =
-                entry.boundingClientRect.width > 2 &&
-                entry.boundingClientRect.height > 2 &&
+                entry.boundingClientRect.width > 1 &&
+                entry.boundingClientRect.height > 1 &&
                 parentStyle.visibility !== 'hidden' &&
                 parentStyle.display !== 'none';
 

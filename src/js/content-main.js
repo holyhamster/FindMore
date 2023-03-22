@@ -41,7 +41,7 @@ export function main() {
                 case "fm-new-search":
                     
                     const newSearch = new State();
-                    newSearch.pinned = options?.startPinned || false;
+                    newSearch.pinned = options?.StartPinned || false;
                     newSearch.colorIndex = State.GetNextColor(Array.from(getStatesMap(panelsMap).values()));
 
                     const id = getNewID();

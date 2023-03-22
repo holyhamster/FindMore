@@ -1,27 +1,27 @@
-//points at a region in the dom tree with a match
+//points at a region in the dom tree
 
-export class Match
-{
-	constructor(startOffset, startNode, endOffset, endNode)
-	{
-		this.startOffset = startOffset;
-		this.startNode = startNode;
-		this.endOffset = endOffset;
-		this.endNode = endNode;
-	}
+export class Match {
+    constructor(start, end) {
+        this.startOffset = start.offset;
+        this.startNode = start.node;
+        this.endOffset = end.offset;
+        this.endNode = end.node;
+    }
 
-	static FindClosestAmong(targetMatch, matches) {
-		let candidate;
-		console.log(`past match`);
-		console.log(targetMatch);
-
-		matches.filter((match) => targetMatch.startNode == match.startNode).forEach((match) => {
-			
-			const distance = Math.abs(match.startOffset - targetMatch.startOffset);
-			if (!candidate || candidate.distance > distance)
-				candidate = { distance: distance, match: match };
-		});
-		console.log(candidate?.match);
-		return candidate?.match;
-	}
+    GetRectangles(range) {
+        range.setStart(this.startNode, this.startOffset);
+        range.setEnd(this.endNode, this.endOffset);
+        return Array.from(range.getClientRects());
+    }
+    //finds a closest to targetMatch among matches
+    //TODO: currently only searches among matches with the same startNode
+    static FindClosestAmong(matches, targetMatch) {
+        let candidate;
+        matches?.filter((match) => targetMatch?.startNode == match.startNode).forEach((match) => {
+            const distance = Math.abs(match.startOffset - targetMatch.startOffset);
+            if (!candidate || candidate.distance > distance)
+                candidate = { distance: distance, match: match };
+        });
+        return candidate?.match;
+    }
 }

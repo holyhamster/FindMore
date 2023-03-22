@@ -54,6 +54,7 @@ export class Panel {
                 mainNode.dispatchEvent(GetChangeIndexEvent(1));
             else if (event.key === "Escape")
                 mainNode.dispatchEvent(GetClosePanelsEvent(id));
+            //prevent other javascript in the document from reacting to keypresses
             event.stopImmediatePropagation();
         });
 
