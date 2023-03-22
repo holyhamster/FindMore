@@ -24,7 +24,8 @@
     {
       "matches": [ "<all_urls>", "*://*/*" ],
       "all_frames": false,
-      "js": [ "src/js/content-import.js" ]
+      "js": [ "src/js/content-import.js" ],
+      "run_at": "document_end"
     }
   ],
 

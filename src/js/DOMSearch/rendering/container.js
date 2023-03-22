@@ -59,11 +59,12 @@ class Container
     PrecalculateRectangles(range)
     {
         const anchor = this.headElement.getBoundingClientRect();
-        this.indexedMatches.forEach((match) =>
-        {
+        while (this.indexedMatches.length > 0) {
+            const match = this.indexedMatches.shift();
+
+            this.indexToMatch.set(match.index, match);
             const elements = [];
-            match.GetRectangles(range).forEach((rect) =>
-            {
+            match.GetRectangles(range).forEach((rect) => {
                 const rectElement = document.createElement('FM-HIGHLIGHT');
                 rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${match.index}`);
                 rectElement.style.height = rect.height + 'px';
@@ -73,10 +74,8 @@ class Container
                 elements.push(rectElement);
             });
 
-            this.indexToMatch.set(match.index, match)
             this.precalculatedNodes = [...this.precalculatedNodes, ...elements];
-        });
-        this.indexedMatches = [];
+        }
     }
 
     AppendPrecalculated()

@@ -1,5 +1,5 @@
 import { GetOptionsChangeEvent } from './search.js'
-import { rootCSS, PanelClass, PanelContainerId } from './cssStyling/cssInjection.js';
+import { rootCSS } from './cssStyling/cssInjection.js';
 
 //Singleton that parents all in-page UI. Has the following structure:
 //Document.body -> <fm-shadowholder> with DOMShadow -> <div> with css -> <div> holding all search panels
@@ -10,7 +10,7 @@ export class Root {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];
         if (!shadowHolder) {
             shadowHolder = document.createElement("fm-shadowholder");
-            document.body.appendChild(shadowHolder);
+            this.appendSelf(shadowHolder);
         }
 
         const shadow = shadowHolder.attachShadow({ mode: "closed" });
@@ -21,7 +21,7 @@ export class Root {
         shadow.appendChild(css);
 
         const root = document.createElement("div");
-        root.setAttribute("id", PanelContainerId);
+        root.setAttribute("id", `FMPanelContainer`);
         root.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
                 Object.assign(root.style, convertOptionsToStyle(args?.options));
@@ -33,7 +33,12 @@ export class Root {
         css.appendChild(root);
         return root;
     }
-
+    appendSelf(shadowHolder) {
+        if (document.body)
+            document.body.appendChild(shadowHolder);
+        else
+            setTimeout(() => this.appendSelf(shadowHolder), 1);
+    }
     static instance;
     static Get() {
         if (!Root.instance)
@@ -43,7 +48,7 @@ export class Root {
     }
 
     static getLocalEventRoots() {
-        return Array.from(Root.Get().getElementsByClassName(PanelClass));
+        return Array.from(Root.Get().getElementsByClassName(`FMPanel`));
     }
 }
 

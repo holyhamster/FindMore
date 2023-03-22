@@ -42,12 +42,9 @@ const colors = {
     }
 }
 
-export const PanelClass = "FMPanel";
-export const PanelContainerId = "FMPanelContainer";
-
 //applied to root element holding all UI panels
 export const rootCSS = `
-#${PanelContainerId} {
+#FMPanelContainer {
     --dark-color-0-hsl: ${colors[0].dark};
     --dark-color-1-hsl: ${colors[1].dark};
     --dark-color-2-hsl: ${colors[2].dark};
@@ -89,7 +86,7 @@ export const rootCSS = `
     pointer-events: none;
 }
 
-.${PanelClass} {
+.FMPanel {
     --color1-hsl: var(--light-color-0-hsl);
     --color2-hsl: var(--dark-color-0-hsl);
 
@@ -116,12 +113,12 @@ export const rootCSS = `
     user-select: none;
 }
 
-.${PanelClass} > div {
+.FMPanel > div {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-.${PanelClass}:hover
+.FMPanel:hover
 {
     --color1: hsl(var(--color2-hsl) / 1);
     --color2: hsl(var(--color1-hsl) / 1);

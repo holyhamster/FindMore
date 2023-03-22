@@ -1,6 +1,6 @@
 import { Root } from './root.js';
 import { Styler } from './cssStyling/styler.js';
-import { PanelClass, GetPanelColorCSS } from './cssStyling/cssInjection.js';
+import { GetPanelColorCSS } from './cssStyling/cssInjection.js';
 import { State } from './state.js';
 import {
 GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent, GetStateChangeEvent
@@ -128,8 +128,8 @@ export class Panel {
 
 function getPanel(id, state) {
     const mainNode = document.createElement("div");
-    mainNode.setAttribute("id", `${PanelClass}${id}`);
-    mainNode.setAttribute("class", `${PanelClass}`);
+    mainNode.setAttribute("id", `FMPanel${id}`);
+    mainNode.setAttribute("class", `FMPanel`);
     if (state.pinned)
         mainNode.classList.add("pinned");
     
