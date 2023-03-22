@@ -1,5 +1,4 @@
 
-
 var options;
 chrome.storage.sync.get("fmSavedOptions", (storage) => {
     if (storage.fmSavedOptions)
@@ -7,21 +6,35 @@ chrome.storage.sync.get("fmSavedOptions", (storage) => {
 });
 
 var tabsData = new Map();
-chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
-    const tabId = RUNTIME_EVENT.tabId || sender?.tab?.id;
-    const data = RUNTIME_EVENT.data;
 
-    switch (RUNTIME_EVENT.message) {
+//.runtime events are used for background script to communicate with content script and with the popup
+chrome.runtime.onMessage.addListener((runTimeEvent, sender) => {
+    const tabId = runTimeEvent.tabId || sender?.tab?.id;
+
+    switch (runTimeEvent.message) {
+        case "fm-content-cache-state":
+            if (runTimeEvent.data)
+                tabsData.set(tabId, runTimeEvent.data);
+            else
+                tabsData.delete(tabId)
+            break;
+        //when content script is loaded, send all pinned searches from cache
+        //if there's' a new request that didnt have a response from content script, send it again
+        case "fm-content-script-loaded":
+            const previousTabData = tabsData.get(tabId);
+            if (previousTabData)
+                messageTab(tabId, { context: `fm-content-update-search`, data: previousTabData, pinnedOnly: true });
+
+            if (newSearchRequests.includes(tabId)) {
+                requestNewSearchOnActiveWindow();
+                newSearchRequests.splice(newSearchRequests.indexOf(tabId), 1);
+            }
+            break;
+        //background script <-> popup script
         case "fm-popup-options-change":
             {
-                if (!RUNTIME_EVENT.options)
-                    return;
-
-                options = RUNTIME_EVENT.options;
-
-                tabsData.forEach((data, id) => {
-                    sendDataToPage(id);
-                });
+                options = runTimeEvent.options;
+                tabsData.forEach((data, id) => messageTab(id, { context: `fm-content-update-options` }));
             }
             break;
 
@@ -29,9 +42,10 @@ chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
             requestNewSearchOnActiveWindow();
             break;
 
+        //if there's no active window, remove saved data
         case "fm-popup-save-search":
             getActiveWindowID(
-                (id) => SaveWindowToStorage(id),
+                (id) => saveWindowToStorage(id),
                 () => chrome.storage.local.remove(["fmSavedSearch"]));
             break;
 
@@ -49,28 +63,6 @@ chrome.runtime.onMessage.addListener((RUNTIME_EVENT, sender) => {
                 chrome.runtime.sendMessage(message);
             });
             break;
-
-        case "fm-content-update-state":
-            if (data)
-                tabsData.set(tabId, data);
-            else
-                tabsData.delete(tabId)
-            break;
-
-        case "fm-content-script-loaded":
-            const previousTabData = tabsData.get(tabId);
-            if (previousTabData)
-                sendDataToPage(tabId, { data: previousTabData, pinnedOnly: true });
-
-            if (quedNewPanels.includes(tabId)) {
-                chrome.tabs.sendMessage(tabId, {
-                    message: "fm-new-search",
-                    tabId: tabId,
-                    options: options
-                });
-                quedNewPanels.splice(quedNewPanels.indexOf(tabId), 1);
-            }
-            break;
     }
 });
 
@@ -80,7 +72,7 @@ chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
             requestNewSearchOnActiveWindow();
             break;
         case 'fm-hotkey-save-search':
-            getActiveWindowID((id) => SaveWindowToStorage(id), () => chrome.storage.local.remove(["fmSavedSearch"]));
+            getActiveWindowID((id) => saveWindowToStorage(id), () => chrome.storage.local.remove(["fmSavedSearch"]));
             break;
         case 'fm-hotkey-load-search':
             getActiveWindowID((id) => loadStorageToWindow(id));
@@ -90,13 +82,13 @@ chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
 
 chrome.windows.onBoundsChanged.addListener(() => {
     tabsData.forEach((data, id) => {
-        sendDataToPage(id, { data: data, forcedUpdate: true });
+        messageTab(id, { context: `fm-content-update-search`, data: data, forcedUpdate: true });
     });
 });
 
 function getActiveWindowID(onActiveID, onNoActive) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const url = tabs ? tabs[0]?.url : null;
+        const url = tabs?.[0]?.url;
         if (url && !url.startsWith('chrome://'))
             onActiveID((Number)(tabs[0].id));
         else
@@ -104,17 +96,32 @@ function getActiveWindowID(onActiveID, onNoActive) {
     });
 }
 
-function sendDataToPage(tabId, args) {
+const reponseTime = 5000;
+//sends a message to tab's content scripts
+//If recieves reponse under reponseTime, calls onSuccess. Otherwise, onTimeOut
+async function messageTab(tabId, args, onSuccess, onTimeOut) {
     const message = {
-        message: "fm-update-search",
         tabId: tabId,
         options: options
     };
     Object.assign(message, args);
-    chrome.tabs.sendMessage(tabId, message);
+
+    try {
+        const response = await Promise.race([
+            chrome.tabs.sendMessage(tabId, message),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), reponseTime))
+        ]);
+
+        if (response === 'success')
+            onSuccess?.();
+    }
+    catch (error) {
+        if (error.message === "timeout")
+            onTimeOut?.();
+    }
 }
 
-function SaveWindowToStorage(id) {
+function saveWindowToStorage(id) {
     if (tabsData.has(id)) {
         chrome.storage.local.set({ "fmSavedSearch": tabsData.get(id) });
     }
@@ -130,31 +137,23 @@ function loadStorageToWindow(id) {
             return;
 
         tabsData.set(id, loadedData);
-        sendDataToPage(id, { data:loadedData, forcedUpdate: true});
+        messageTab(id, { context: "fm-content-update-search", data: loadedData, forcedUpdate: true });
         showSuccessStatus();
     });
 }
 
-var quedNewPanels = [];
+var newSearchRequests = [];
 function requestNewSearchOnActiveWindow() {
     getActiveWindowID((id) => {
-        chrome.tabs.sendMessage(id, {
-            message: "fm-new-search",
-            tabId: id,
-            options: options
-        },
-            (response) => {
-                const NO_RESPONSE_FROM_CONTENT_SCRIPT = new Boolean(chrome.runtime.lastError);
-                if (NO_RESPONSE_FROM_CONTENT_SCRIPT && !quedNewPanels.includes(id))
-                    quedNewPanels.push(id);
-            }
-        );
+        if (!newSearchRequests.includes(id))
+            newSearchRequests.push(id);
+        const onResponse = () => newSearchRequests.splice(newSearchRequests.indexOf(id), 1);
+        messageTab(id, { context: "fm-content-add-new" }, onResponse);
     });
 }
 
 function showSuccessStatus(duration = 3000) {
     chrome.action.setBadgeText({ text: "\u{2713}" });
-
     setTimeout(() => chrome.action.setBadgeText({ text: "" }),
         duration
     );

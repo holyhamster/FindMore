@@ -31,29 +31,30 @@ export function main() {
 
     chrome.runtime.onMessage.addListener(
         (request, sender, sendResponse) => {
-            tabId = tabId || request.tabId;
+            sendResponse("success");
 
+            tabId = tabId || request.tabId;
             const options = request.options;
             if (options)
                 setOptions(options);
 
-            switch (request.message) {
-                case "fm-new-search":
-                    
+            switch (request.context) {
+                case "fm-content-add-new":
                     const newSearch = new State();
                     newSearch.pinned = options?.StartPinned || false;
                     newSearch.colorIndex = State.GetNextColor(Array.from(getStatesMap(panelsMap).values()));
 
                     const id = getNewID();
                     panelsMap.set(id, new Search(id, newSearch, request.options));
+
                     cacheData(panelsMap);
-                    sendResponse({});
                     break;
 
-                case "fm-update-search":
+                case "fm-content-update-search":
                     if (!request.data)
                         return;
-                    panelsMap.forEach((oldPanel, id) => oldPanel.Close())
+
+                    panelsMap.forEach((oldPanel) => oldPanel.Close())
                     panelsMap = new Map();
 
                     const loadedMap = deserializeIntoMap(request.data);
@@ -62,12 +63,11 @@ export function main() {
                             return;
 
                         const newId = getNewID();
-
-                        panelsMap.set(newId,
-                            new Search(newId, state));
+                        panelsMap.set(newId, new Search(newId, state));
                     });
                     break;
-
+                case `fm-content-update-options`:
+                    break;
                 default:
                     console.log("uncaught message: " + request.message);
             }
@@ -104,7 +104,7 @@ export function main() {
     }
 
     function cacheData(panelsMap) {
-        const message = { message: "fm-content-update-state", tabId: tabId };
+        const message = { message: "fm-content-cache-state", tabId: tabId };
         const states = getStatesMap(panelsMap)
         if (states.size > 0)
             message.data = serializeMap(states);
