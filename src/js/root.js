@@ -1,16 +1,19 @@
-import { GetOptionsChangeEvent } from './search.js'
 import { rootCSS } from './cssStyling/cssInjection.js';
 
-//Singleton that parents all in-page UI. Has the following structure:
-//Document.body -> <fm-shadowholder> with DOMShadow -> <div> with css -> <div> holding all search panels
-//listenes to option change events to adjust css
+//Singleton that holds all in-page UI. 
+//Has the following structure:
+//  Document.body -> 
+//  fm-shadowholder with a closed shadow node -> 
+//  css div that resets page's style and adds its own -> 
+//  root div holding all search panels
+//Listenes to option change events to adjust style accordingly
 
 export class Root {
-    constructor() {
+    static build() {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];
         if (!shadowHolder) {
             shadowHolder = document.createElement("fm-shadowholder");
-            this.appendSelf(shadowHolder);
+            Root.append(shadowHolder);
         }
 
         const shadow = shadowHolder.attachShadow({ mode: "closed" });
@@ -33,17 +36,19 @@ export class Root {
         css.appendChild(root);
         return root;
     }
-    appendSelf(shadowHolder) {
+
+    //if the document body isn't accessible at the time, wait and try again
+    static append(shadowHolder) {
         if (document.body)
             document.body.appendChild(shadowHolder);
         else
-            setTimeout(() => this.appendSelf(shadowHolder), 1);
+            setTimeout(() => Root.append(shadowHolder), 5);
     }
+
     static instance;
     static Get() {
         if (!Root.instance)
-            Root.instance = new Root();
-
+            Root.instance = Root.build();
         return Root.instance;
     }
 
@@ -52,6 +57,7 @@ export class Root {
     }
 }
 
+//reads Options() from popup script and applies it to style object
 function convertOptionsToStyle(options, styleRef) {
     const screenGap = "5px";
     styleRef.top = options?.StartTop ? screenGap : "";
@@ -71,4 +77,10 @@ function convertOptionsToStyle(options, styleRef) {
     styleRef.setProperty("--theme-alpha", isNaN(options?.MenuOpacity) ? .95 : options.MenuOpacity);
     styleRef.setProperty("--scale-ratio", isNaN(options?.MenuScale) ? 1 : options.MenuScale);
     return styleRef;
+}
+
+export function GetOptionsChangeEvent(options) {
+    const event = new Event("fm-options-change");
+    event.options = options;
+    return event;
 }

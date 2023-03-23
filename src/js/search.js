@@ -1,9 +1,13 @@
 import { DomSearcher } from './DOMSearch/domSearcher.js';
 import { Highlighter } from './DOMSearch/highlighter.js';
 import { Panel } from './panel.js';
-import { Root } from './root.js';
+import { Root, GetOptionsChangeEvent } from './root.js';
 
-//Nexus class for UI Panel, DOMSearcher and Highlighter
+//Nexus class for UI Panel, DOMSearcher and Highlighter:
+//Panel holds and controls UI for the search, top element is used to dispatch events
+//DOMSearcher goes through DOM tree of the document and sends all matches to Highlighter
+//Highlighter takes matches and creates html elements to mark them
+
 export class Search {
     constructor(id, state, options) {
         this.id = id;
@@ -103,33 +107,30 @@ function normalizeSearchIndex(current, change, matchCount) {
     return current;
 }
 
-//#region EVENTS
 export function GetClosePanelsEvent(id) {
     const event = new Event("fm-search-close", { bubbles: true });
     event.id = id;
     return event;
 }
+
 export function GetNewMatchesEvent(count) {
     const event = new Event("fm-matches-new");
     event.count = count;
     return event;
 }
-export function GetOptionsChangeEvent(options) {
-    const event = new Event("fm-options-change");
-    event.options = options;
-    return event;
-}
+
 export function GetChangeIndexEvent(change) {
     const event = new Event("fm-index-change");
     event.change = change;
     return event;
 }
+
 export function GetSearchRestartEvent() {
     const event = new Event("fm-search-restart");
     return event;
 }
+
 export function GetStateChangeEvent() {
     const event = new Event("fm-state-change", { bubbles: true });
     return event;
 }
-//#endregion

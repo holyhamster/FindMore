@@ -3,12 +3,11 @@ import { Styler } from './cssStyling/styler.js';
 import { GetPanelColorCSS } from './cssStyling/cssInjection.js';
 import { State } from './state.js';
 import {
-GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent, GetStateChangeEvent
+    GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent, GetStateChangeEvent
 } from './search.js';
 
-//On-page UI for a single search
-//Sends events when search is changed
-//Creates Styler to add search-related css
+//Controls on-page UI for a single search, and css through Styler instance
+//Head element is used to dispatch events
 
 export class Panel {
     mainNode;
@@ -132,7 +131,7 @@ function getPanel(id, state) {
     mainNode.setAttribute("class", `FMPanel`);
     if (state.pinned)
         mainNode.classList.add("pinned");
-    
+
     mainNode.innerHTML =
         `<div>
             <input class="searchInput" value="${state.searchString}" placeholder=" Find in page">

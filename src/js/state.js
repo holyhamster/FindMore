@@ -1,11 +1,9 @@
-import { ColorCount} from './cssStyling/cssInjection.js'
-//holds all user-editable data about a single search
-//serialized to pass between content and background script
+import { ColorCount } from './cssStyling/cssInjection.js'
+//Holds all user-editable data about a single search
+//Serialized when passed to background script for caching
 
-export class State
-{
-    constructor(colorIndex = 0, searchString = "")
-    {
+export class State {
+    constructor(colorIndex = 0, searchString = "") {
         this.searchString = searchString;
         this.colorIndex = colorIndex;
         this.pinned = false;
@@ -13,20 +11,17 @@ export class State
         this.wholeWord = false;
     }
 
-    static Load(state)
-    {
+    static Load(state) {
         const result = new State();
         Object.assign(result, state);
         return result;
     }
 
-    NextColor()
-    {
+    NextColor() {
         this.colorIndex = this.colorIndex == ColorCount - 1 ? 0 : this.colorIndex + 1;
     }
 
-    GetRegex(escape = true)
-    {
+    GetRegex(escape = true) {
         let regexString = escape ? this.searchString.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
             : this.searchString;
 
@@ -44,7 +39,7 @@ export class State
     static GetNextColor(states) {
         if (!states || states.length == 0)
             return 0;
-        
+
         const takenColors = [];
         states.forEach((state) => takenColors.push(state?.colorIndex));
         for (let colorCandidate = 0; colorCandidate < ColorCount; colorCandidate += 1)

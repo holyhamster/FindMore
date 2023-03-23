@@ -1,19 +1,27 @@
-//chrome.action.setBadgeText({
-//    text: "OFF",
-//});
+//Script running inside extension popup document
+//Builds Options() according to its ui, communicates with background script via runtime events
 
 document.addEventListener('DOMContentLoaded', () => {
-    const commitOptions = () => {
-        const options = Options.GetFromUI();
-        Options.Save(options);
-        Options.SendToBackground(options);
-    };
+    
 
     chrome.runtime.onMessage.addListener((event) => {
         if (event.message == "fm-popup-current-search-answer")
             setSavedButtonAs(!isNaN(event.id), event.data);
     });
     chrome.runtime.sendMessage({ message: "fm-popup-current-search-request" });
+
+    addEventsToUI();
+
+    Options.FillFromMemory();
+
+});
+
+function addEventsToUI() {
+    const commitOptions = () => {
+        const options = Options.GetFromUI();
+        Options.Save(options);
+        Options.SendToBackground(options);
+    };
 
     document.getElementById('findButton')?.addEventListener('click', () => {
         chrome.runtime.sendMessage({ message: "fm-popup-new-search" });
@@ -75,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else
             pinButton.textContent = `\u{25A2}`;
     }
+
     pinButton?.addEventListener('click', (_args) => {
         pinButton.selectIndex((pinButton.selectedIndex || 0) === 0 ? 1 : 0);
         commitOptions();
@@ -84,10 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     optionTogglesID.forEach((_id) => {
         document.getElementById(_id)?.addEventListener("change", commitOptions)
     });
-
-    Options.FillFromMemory();
-
-});
+}
 
 class Options {
     static GetFromUI() {

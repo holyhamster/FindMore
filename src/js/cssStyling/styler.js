@@ -1,6 +1,7 @@
 import { GetPersonalHighlightCSS, SharedHighlightCSS } from './cssInjection.js'
-import { GetOptionsChangeEvent, GetClosePanelsEvent } from '../search.js'
+import { GetClosePanelsEvent } from '../search.js'
 import { GetNewIframeEvent } from '../DOMSearch/searchRegion.js'
+import { GetOptionsChangeEvent } from '../root.js'
 
 //Adds and edits css elements for highlight rectangles by:
 //-adding an adopted sheet to the main document

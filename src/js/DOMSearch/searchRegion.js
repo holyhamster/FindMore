@@ -1,7 +1,7 @@
 import { Match } from './match.js';
 import { FrameWalker } from './frameWalker.js'
 
-//Walks through DOM tree with frameWalker, keeps track of current position within it, returns matches from it
+//Walks through DOM tree with frameWalker, keeps track of current position within, returns matches from it
 
 export class SearchRegion
 {

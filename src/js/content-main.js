@@ -2,7 +2,7 @@ import { Search, GetClosePanelsEvent, GetStateChangeEvent } from './search.js';
 import { Root } from './root.js';
 import { State } from './state.js';
 
-//Main content script, talks to background script and creates new Searches
+//Main content script, talks to background script via runtime events, creates new Searches
 export function main() {
     var tabId;
     var panelsMap = new Map();
@@ -10,10 +10,10 @@ export function main() {
     Root.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
         if (panelsMap.has(args.id))
             panelsMap.delete(args.id);
-        cacheData(panelsMap);
+        sendToCaching(panelsMap);
     });
 
-    Root.Get().addEventListener(GetStateChangeEvent().type, () => cacheData(panelsMap));
+    Root.Get().addEventListener(GetStateChangeEvent().type, () => sendToCaching(panelsMap));
 
     document.addEventListener('keydown', (args) => {
         if (args.key == "Escape") {
@@ -22,7 +22,7 @@ export function main() {
                     panel.Close();
                 }
             });
-            cacheData(panelsMap);
+            sendToCaching(panelsMap);
         }
     });
 
@@ -33,7 +33,7 @@ export function main() {
             tabId = tabId || request.tabId;
             const options = request.options;
             if (options)
-                setOptions(options);
+                setOptions(options, panelsMap);
 
             switch (request.context) {
                 case "fm-content-add-new":
@@ -41,10 +41,10 @@ export function main() {
                     newSearch.pinned = options?.StartPinned || false;
                     newSearch.colorIndex = State.GetNextColor(Array.from(getStatesMap(panelsMap).values()));
 
-                    const id = getNewID();
+                    const id = getNewID(panelsMap);
                     panelsMap.set(id, new Search(id, newSearch, request.options));
 
-                    cacheData(panelsMap);
+                    sendToCaching(panelsMap);
                     break;
 
                 case "fm-content-update-search":
@@ -77,13 +77,13 @@ export function main() {
         return map;
     }
 
-    function setOptions(options) {
-        Search.SetOptions(options, Array.from(panelsMap.values));
+    function setOptions(options, panels) {
+        Search.SetOptions(options, Array.from(panels.values));
     }
 
-    function getNewID() {
+    function getNewID(panels) {
         let id = 0;
-        while (panelsMap.has(id))
+        while (panels.has(id))
             id += 1;
         return id;
     }
@@ -98,7 +98,7 @@ export function main() {
         return map;
     }
 
-    function cacheData(panelsMap) {
+    function sendToCaching(panelsMap) {
         const message = { message: "fm-content-cache-state", tabId: tabId };
         const states = getStatesMap(panelsMap)
         if (states.size > 0)
