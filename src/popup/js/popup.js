@@ -111,12 +111,7 @@ class Options {
 
     static FillFromMemory() {
         chrome.storage.sync.get("fmSavedOptions", function (storage) {
-            const options = storage.fmSavedOptions;
-            if (options) {
-                console.log(options);
-                Options.FillUI(options);
-
-            }
+            Options.FillUI(storage?.fmSavedOptions);
         });
     }
 
