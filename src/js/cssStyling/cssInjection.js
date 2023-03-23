@@ -64,7 +64,7 @@ export const rootCSS = `
     --light-color-6-hsl: ${colors[6].light};
     --light-color-7-hsl: ${colors[7].light};
     --light-color-8-hsl: ${colors[8].light};
-
+    
     --scale-ratio: 1;
     --theme-alpha: .95;
     font-family: Verdana, sans-serif;
@@ -98,8 +98,8 @@ export const rootCSS = `
     justify-content: space-evenly;
     align-content: flex-start;
     flex-wrap: wrap;
-    padding: calc(var(--scale-ratio) * 1px);
-    min-width: calc(var(--scale-ratio) * 180px);
+    padding: calc(var(--scale-ratio) * 2px);
+    min-width: calc(var(--scale-ratio) * 300px);
     min-height: calc(var(--scale-ratio) * 30px);
     border-radius: calc(var(--scale-ratio) * 5px);
     border-style: solid;
@@ -107,8 +107,6 @@ export const rootCSS = `
     border-color: transparent;
     background-color: var(--color1);
     color: var(--color2);
-    
-    
     pointer-events: auto;
     user-select: none;
 }
@@ -126,7 +124,6 @@ export const rootCSS = `
 .pinned {
     border-color: var(--color2);
 }
-
 button {
     border-radius: calc(var(--scale-ratio) * 20px);
     font-size: calc(var(--scale-ratio) * 15px);
@@ -153,27 +150,32 @@ button:active {
     background-color: white;
     border-radius: calc(var(--scale-ratio) * 5px);
     font-size: calc(var(--scale-ratio) * 15px);
+    border: 4px solid transparent;
 }
+.searchInput:focus {
+     border: 4px solid hsl(${colors.accent});
+}
+
 .caseCheck, .wordCheck {
     accent-color: hsl(0, 100%, 100%, var(--theme-alpha));
 }
 .wordCheck {
     margin-left: calc(var(--scale-ratio) * 10px);
 }
-.upButton {
+.downButton {
     margin-left: 0px;
     margin-right: auto;
 }
 
 .selectedMatch {
     right: 0px;
-    min-width: calc(var(--scale-ratio) * 40px);
+    min-width: calc(var(--scale-ratio) * 50px);
     display:flex;
     justify-content:flex-end;
 }
 .totalMatches {
     left: 0px;
-    min-width: calc(var(--scale-ratio) * 40px);
+    min-width: calc(var(--scale-ratio) * 50px);
 }
 
 label 
