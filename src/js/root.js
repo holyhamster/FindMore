@@ -24,7 +24,7 @@ export class Root {
         root.setAttribute("id", `FMPanelContainer`);
         root.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
-                Object.assign(root.style, convertOptionsToStyle(args?.options));
+                convertOptionsToStyle(args?.options, root.style);
                 Root.getLocalEventRoots().forEach((panel) => {
                     panel.dispatchEvent(GetOptionsChangeEvent(args?.options));
                 });
@@ -52,26 +52,23 @@ export class Root {
     }
 }
 
-function convertOptionsToStyle(options) {
-    const style = new Object();
-
+function convertOptionsToStyle(options, styleRef) {
     const screenGap = "5px";
-    style.top = options?.StartTop ? screenGap : "";
-    style.bottom = options?.StartTop ? "" : screenGap;
-    style.left = options?.StartLeft ? screenGap : "";
-    style.right = options?.StartLeft ? "" : screenGap;
+    styleRef.top = options?.StartTop ? screenGap : "";
+    styleRef.bottom = options?.StartTop ? "" : screenGap;
+    styleRef.left = options?.StartLeft ? screenGap : "";
+    styleRef.right = options?.StartLeft ? "" : screenGap;
 
     if (options.Horizontal) {
-        style.flexDirection = options?.StartLeft ? "row" : "row-reverse";
-        style.flexWrap = options?.StartTop ? "wrap" : "wrap-reverse";
+        styleRef.flexDirection = options?.StartLeft ? "row" : "row-reverse";
+        styleRef.flexWrap = options?.StartTop ? "wrap" : "wrap-reverse";
     }
     else {
-        style.flexDirection = options?.StartTop ? "column" : "column-reverse";
-        style.flexWrap = options?.StartLeft ? "wrap" : "wrap-reverse";
+        styleRef.flexDirection = options?.StartTop ? "column" : "column-reverse";
+        styleRef.flexWrap = options?.StartLeft ? "wrap" : "wrap-reverse";
     }
 
-    Object.defineProperty(style, "--themeAlpha", { value: (isNaN(options?.MenuOpacity) ? .95 : options.MenuOpacity) });
-    Object.defineProperty(style, "--scale-ratio", { value: (isNaN(options?.MenuScale) ? 1 : options.MenuScale) });
-
-    return style;
+    styleRef.setProperty("--theme-alpha", isNaN(options?.MenuOpacity) ? .95 : options.MenuOpacity);
+    styleRef.setProperty("--scale-ratio", isNaN(options?.MenuScale) ? 1 : options.MenuScale);
+    return styleRef;
 }
