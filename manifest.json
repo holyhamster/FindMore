@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FindMore",
-  "description": "Persistent search panels to help your research.",
+  "description": "Persistent page search to help your research 🔎",
   "version": "1.0",
   "permissions": [ "activeTab", "scripting", "storage" ],
   "action": {
@@ -36,19 +36,18 @@
   ],
 
   "commands": {
-    "_execute_action": {
-      "suggested_key": {
-        "default": "Ctrl+F",
-        "mac": "MacCtrl+Shift+Q"
-      },
-      "description": "opens search popup"
-    },
     "fm-hotkey-new-search": {
       "suggested_key": {
         "default": "Ctrl+Q",
         "mac": "Command+Q"
       },
       "description": "Opens new search pannel"
+    },
+    "fm-hotkey-focus-search": {
+      "suggested_key": {
+        "default": "Alt+Q"
+      },
+      "description": "Focus on last search panel"
     },
     "fm-hotkey-save-search": {
       "suggested_key": {

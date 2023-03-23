@@ -116,10 +116,10 @@ class Container
     }
 }
 
-//highlight rectangles can be created with relative or absolute positioning
-//absolute is preffered: it's a lot cheaper to draw during flow calls
-//relative required when there's no position:relative node between target and a nested scrollbar 
-//  (if absolute elements aren't anchored to relative nodes they will not follow scrollbar's position)
+//container head element can be created with relative or absolute positioning
+//position:absolute is preffered: it's taken out of the document's flow and will not affect its layout
+//position:relative is required when there's an ancestor with a nested scrollbar and no other position:relative node between them
+//  (in the latter case, position:absolute element will not be affected by the nested scrollbar)
 function relativePositionRequired(node) 
 {
     for (let iNode = node; iNode; iNode = iNode.parentNode)

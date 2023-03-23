@@ -60,8 +60,8 @@ export class SearchRegion
                 nodeOffset += 1;
             }
             const end = { offset: regexMatch.index + this.searchString.length - charOffset, node: this.nodes[nodeOffset] };
-
-            matches.push(new Match(start, end));
+            const parent = start.node.parentNode;
+            matches.push(new Match(start, end, parent));
         });
 
         if (matches.length > 0)
@@ -92,6 +92,21 @@ export class SearchRegion
         this.nodes.forEach((nodes) => this.stringRegion += nodes.textContent );
     }
 }
+function firstNonInlineAncestor(node) {
+    const parent = node.parentNode;
+    if (!parent)
+        return node;
+
+    if (!nodeIsInlineEditing(parent))
+        return parent;
+
+    if (parent.parentNode)
+        return firstNonInlineAncestor(parent)
+}
+function nodeIsInlineEditing(node) {
+    return inlineNodeNames.includes(node?.nodeName?.toUpperCase());
+}
+const inlineNodeNames = ['A', 'B', 'I', 'EM', 'MARK', 'STRONG', 'SMALL']; 
 export function GetNewIframeEvent(iframe) {
     const event = new Event("fm-new-iframe");
     event.iframe = iframe;

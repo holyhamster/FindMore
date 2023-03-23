@@ -53,7 +53,7 @@ export class Highlighter {
     }
 
     getContainer(match) {
-        const parentNode = match.endNode.parentNode;
+        const parentNode = match.parentNode;
         let container = this.parentToContainer.get(parentNode);
         if (!container) {
             container = new Container(parentNode, this.id);
@@ -101,7 +101,7 @@ export class Highlighter {
         if (TARGET_IN_PROCESSING)
             return {
                 processed: false,
-                element: this.matches[index - this.indexToContainer.size]?.endNode?.parentNode
+                element: this.matches[index - this.indexToContainer.size]?.parentNode
             }
     }
 
