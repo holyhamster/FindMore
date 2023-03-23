@@ -201,6 +201,7 @@ export const SharedHighlightCSS =
         --color-8-hsl: ${colors[8].highlight};
         --color-accented-hsl: ${colors.accent};
         position: absolute; 
+        display: flex;
     }
     fm-container.fm-relative { 
         position: relative; 
@@ -209,9 +210,7 @@ export const SharedHighlightCSS =
         height: 0px; 
     }
     fm-highlight {
-        all:initial;
-        position:
-        absolute;
+        position: absolute;
         opacity: 0.6;
         z-index: 2147483646;
     }`; //` pointer-events: none;`; //uncomment this before prod
