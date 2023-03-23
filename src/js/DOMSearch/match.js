@@ -1,11 +1,12 @@
 //Points at a region in the dom tree that contains a search match
 
 export class Match {
-    constructor(start, end) {
+    constructor(start, end, parent) {
         this.startOffset = start.offset;
         this.startNode = start.node;
         this.endOffset = end.offset;
         this.endNode = end.node;
+        this.parentNode = parent;
     }
 
     GetRectangles(range) {
