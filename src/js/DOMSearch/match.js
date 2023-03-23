@@ -1,4 +1,4 @@
-//points at a region in the dom tree
+//Points at a region in the dom tree that contains a search match
 
 export class Match {
     constructor(start, end) {
@@ -13,6 +13,7 @@ export class Match {
         range.setEnd(this.endNode, this.endOffset);
         return Array.from(range.getClientRects());
     }
+
     //finds a closest to targetMatch among matches
     //TODO: currently only searches among matches with the same startNode
     static FindClosestAmong(matches, targetMatch) {

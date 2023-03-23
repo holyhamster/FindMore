@@ -17,6 +17,7 @@ export class SearchRegion
             (iframe) => eventElement.dispatchEvent(GetNewIframeEvent(iframe)));
     }
 
+    //expands region, returns true if tree hasn't ended
     TryExpand() {
         const newNode = this.treeWalk.nextNode();
 
@@ -30,6 +31,7 @@ export class SearchRegion
         return true;
     }
 
+    //get all matches from the current region, trims it to the end of the last match
     GetMatches()
     {
         if (this.nodes.length == 0)

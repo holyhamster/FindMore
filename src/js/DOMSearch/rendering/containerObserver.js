@@ -2,7 +2,8 @@ import { PerformanceTimer } from '../performanceTimer.js'
 import { ContainerRemoval } from './containerRemoval.js'
 
 //Wrapper for IntersectionObserver
-//On call calculates and draws highlight rectangles in batches
+//Watches container head elements, calculates and draws highlight rectangles in batches, callbacks on success
+
 export class ContainerObserver {
     constructor(nodeMap, onNewMatches) {
         this.nodeMap = nodeMap;
@@ -22,8 +23,8 @@ export class ContainerObserver {
         const range = document.createRange();
         const containers = [];
         const timer = new PerformanceTimer();
-
-        ContainerRemoval.RemoveOld();
+        //Trigger removal of any old containers, so it would be done in the same reflow as drawing new ones
+        ContainerRemoval.Trigger();
         entries.forEach((entry) => {
             const headElement = entry.target;
             this.observer.unobserve(headElement);

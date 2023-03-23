@@ -1,6 +1,7 @@
 //Wrapper for IntersectionObserver
 //Watches parent elements of nodes with matches
-//On call indexes all visible matches into the mao and sends its containers into a callback
+//Determines if they're visile, indexes into the map and callbacks with containers on success.
+
 export class ParentObserver {
     constructor(nodeMap, indexMapRef, containerCallback) {
         this.nodeMap = nodeMap;

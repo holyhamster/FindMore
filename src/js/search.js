@@ -76,12 +76,12 @@ export class Search {
         if (!indexChange && !this.selectedIndex)
             this.selectedIndex = this.highlighter?.GetNewIndex();
 
-        const matchCount = this.highlighter?.getMatchCount() || 0;
+        const matchCount = this.highlighter?.GetMatchcount() || 0;
         this.selectedIndex = normalizeSearchIndex(this.selectedIndex, indexChange, matchCount);
 
         if (!isNaN(this.selectedIndex)) {
             const scrollTowardsMatch = !this.dontAccentNewMatches || Math.abs(indexChange) > 0;
-            this.highlighter?.accentMatch(this.selectedIndex, scrollTowardsMatch);
+            this.highlighter?.AccentMatch(this.selectedIndex, scrollTowardsMatch);
         }
 
         this.panel.updateLabels(this.selectedIndex, matchCount);

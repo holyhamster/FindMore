@@ -1,6 +1,10 @@
 //Holds all highlight rectangles for matches under a single parent element in DOM tree
 //Creating a highlight is split into stages to be done in batches to minimize browser reflow calls:
-//constructor() -> QueMatch() -> IndexNextMatch() -> AppendSelf() -> PrecalculateRectangles() -> AppendPrecalculated()
+//QueMatch() -> 
+//IndexNextMatch() -> 
+//AppendSelf() -> 
+//PrecalculateRectangles() -> 
+//AppendPrecalculated()
 
 class Container
 {

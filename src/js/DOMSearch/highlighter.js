@@ -6,10 +6,10 @@ import { PerformanceTimer } from './performanceTimer.js';
 import { GetNewMatchesEvent } from '../search.js';
 import { ContainerRemoval } from './rendering/containerRemoval.js';
 
-//accepts matches and creates highlight elements for them
+//Accepts matches and creates highlight elements for them
 //Happens in four stages to optimize browser's reflow calls:
-// - queMatches() synchronously from DOMSearcher
-// - processMatches() recursively creates/finds a container for each match, makes a delay if execution is too long
+// - QueMatches() synchronously from DOMSearcher
+// - ProcessMatches() recursively creates/finds a container for each match, makes a delay if execution is too long
 // - NodeObserver asynchronously decides if the parent node of the match is visible, if yes appends the container
 // - ContainerObserver asynchronously calculates all highlight rectangles, appends them to the container
 export class Highlighter {
@@ -30,13 +30,13 @@ export class Highlighter {
         setTimeout(() => this.processMatches(), 1);
     }
 
-    indexToContainer = new Map(); //containers by search index
-    parentToContainer = new Map(); //containers by the parent nodes of their head elements
+    indexToContainer = new Map();
+    parentToContainer = new Map();
     processMatches() {
         this.invoked = false;
 
         this.containerObserver = this.containerObserver || new ContainerObserver(this.parentToContainer,
-            () => this.eventElement.dispatchEvent(GetNewMatchesEvent(this.getMatchCount())));
+            () => this.eventElement.dispatchEvent(GetNewMatchesEvent(this.GetMatchcount())));
         this.parentObserver = this.parentObserver || new ParentObserver(this.parentToContainer, this.indexToContainer,
             (container) => this.containerObserver.Observe(container));
 
@@ -64,7 +64,7 @@ export class Highlighter {
         return container;
     }
 
-    accentMatch(index, scrollTowards) {
+    AccentMatch(index, scrollTowards) {
         if (index === this.accentedIndex)
             return;
 
@@ -74,7 +74,7 @@ export class Highlighter {
             this.accentedIndex = null;
         }
 
-        if (isNaN(index) || index < 0 || this.getMatchCount() == 0)
+        if (isNaN(index) || index < 0 || this.GetMatchcount() == 0)
             return;
 
         const accentTarget = this.getAccentTarget(index);
@@ -85,6 +85,7 @@ export class Highlighter {
             this.scrollObserver.observe(accentTarget.element);
     }
 
+    //returns an element that should be highlighted and scrolled towards from the given match index
     getAccentTarget(index) {
         const TARGET_HAS_BEEN_PROCESSED = index < this.indexToContainer.size;
         if (TARGET_HAS_BEEN_PROCESSED) {
@@ -104,15 +105,15 @@ export class Highlighter {
             }
     }
 
-    getMatchCount(includeUnprocessed = true) {
+    GetMatchcount(includeUnprocessed = true) {
         return this.indexToContainer.size + (includeUnprocessed ? this.matches.length : 0);
     }
 
-    //returns index of the match, closest to accent of the previous search. 
+    //returns index of the match closest to accent of the previous search. 
     //0 if there's no previous accent
     //null if there's no matches
     GetNewIndex() {
-        if (this.getMatchCount() == 0)
+        if (this.GetMatchcount() == 0)
             return;
 
         const containerOfPreviousAccent = this.parentToContainer?.get(this.prevSearchAccent?.parent);
@@ -147,6 +148,7 @@ export class Highlighter {
     }
 }
 
+//observer that scrolls towards if the element is outside viewpoint
 function getScrollObserver() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {

@@ -1,13 +1,13 @@
 import { SearchRegion } from './searchRegion.js';
 import { PerformanceTimer } from './performanceTimer.js';
 
-//Creates and goes recursively through SearchRegion, sends matches to Highlighter
+//Goes recursively through SearchRegion, sends matches to Highlighter
 
 export class DomSearcher {
 
-    constructor(searchString, regex, eventElem, highlighter) {
+    constructor(searchString, regex, eventElem, highlighterRef) {
         setTimeout(() => {
-            this.search(new SearchRegion(searchString, regex, eventElem), highlighter)
+            this.search(new SearchRegion(searchString, regex, eventElem), highlighterRef)
         }, 1);
     }
 
