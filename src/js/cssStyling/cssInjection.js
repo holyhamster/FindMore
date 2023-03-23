@@ -66,7 +66,7 @@ export const rootCSS = `
     --light-color-8-hsl: ${colors[8].light};
 
     --scale-ratio: 1;
-    --themeAlpha: .95;
+    --theme-alpha: .95;
     font-family: Verdana, sans-serif;
     color: var(--dark-color);
     font-size: calc(var(--scale-ratio) * 15px);
@@ -90,8 +90,8 @@ export const rootCSS = `
     --color1-hsl: var(--light-color-0-hsl);
     --color2-hsl: var(--dark-color-0-hsl);
 
-    --color1: hsl(var(--color1-hsl) / var(--themeAlpha));
-    --color2: hsl(var(--color2-hsl) / var(--themeAlpha));
+    --color1: hsl(var(--color1-hsl) / var(--theme-alpha));
+    --color2: hsl(var(--color2-hsl) / var(--theme-alpha));
 
     display: flex;
     flex-direction: column;
@@ -155,7 +155,7 @@ button:active {
     font-size: calc(var(--scale-ratio) * 15px);
 }
 .caseCheck, .wordCheck {
-    accent-color: hsl(0, 100%, 100%, var(--themeAlpha));
+    accent-color: hsl(0, 100%, 100%, var(--theme-alpha));
 }
 .wordCheck {
     margin-left: calc(var(--scale-ratio) * 10px);
