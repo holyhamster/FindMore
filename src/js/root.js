@@ -28,7 +28,7 @@ export class Root {
         root.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
                 convertOptionsToStyle(args?.options, root.style);
-                Root.getLocalEventRoots().forEach((panel) => {
+                Root.GetLocalEventRoots().forEach((panel) => {
                     panel.dispatchEvent(GetOptionsChangeEvent(args?.options));
                 });
             });
@@ -52,7 +52,7 @@ export class Root {
         return Root.instance;
     }
 
-    static getLocalEventRoots() {
+    static GetLocalEventRoots() {
         return Array.from(Root.Get().getElementsByClassName(`FMPanel`));
     }
 }

@@ -60,7 +60,8 @@ export class SearchRegion
                 nodeOffset += 1;
             }
             const end = { offset: regexMatch.index + this.searchString.length - charOffset, node: this.nodes[nodeOffset] };
-            const parent = start.node.parentNode;
+            //appending to nodes with inline editing can cause issues and layout shifts, find the closest ancestor without it
+            const parent = firstNonInlineAncestor(start.node);
             matches.push(new Match(start, end, parent));
         });
 
@@ -92,6 +93,8 @@ export class SearchRegion
         this.nodes.forEach((nodes) => this.stringRegion += nodes.textContent );
     }
 }
+
+
 function firstNonInlineAncestor(node) {
     const parent = node.parentNode;
     if (!parent)
@@ -106,7 +109,7 @@ function firstNonInlineAncestor(node) {
 function nodeIsInlineEditing(node) {
     return inlineNodeNames.includes(node?.nodeName?.toUpperCase());
 }
-const inlineNodeNames = ['A', 'B', 'I', 'EM', 'MARK', 'STRONG', 'SMALL']; 
+const inlineNodeNames = ['A', 'B', 'I', 'EM', 'MARK', 'STRONG', 'SMALL', 'LI', 'SUP', 'SUB']; 
 
 export function GetNewIframeEvent(iframe) {
     const event = new Event("fm-new-iframe");

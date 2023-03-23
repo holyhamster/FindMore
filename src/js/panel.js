@@ -16,7 +16,7 @@ export class Panel {
         this.id = id;
         this.state = stateRef;
 
-        const mainDiv = buildPanel(id, stateRef);
+        const mainDiv = getPanel(id, stateRef);
         this.mainNode = mainDiv;
         this.addHTMLEvents();
 
@@ -115,15 +115,19 @@ export class Panel {
         });
 
         mainNode.addEventListener(GetClosePanelsEvent().type, () => {
+            const refocus = this.IsFocused();
             mainNode.remove();
-            console.log(Panel.lastFocusedPanel);
             if (Panel.lastFocusedPanel == mainNode)
                 Panel.lastFocusedPanel = null;
-            console.log(Panel.lastFocusedPanel);
+            if (refocus)
+                Panel.NextFocus();
         });
     }
-    static LastFocused;
-    
+
+    IsFocused() {
+        return this.mainNode.classList.contains("focused");
+    }
+
     //If one of the panels is focused, focuses previously adjustened
     //if none selected, selects the one that focused last
     //if none selected and last focused doesn't exists, selects the first one
@@ -158,7 +162,7 @@ export class Panel {
     }
 }
 
-function buildPanel(id, state) {
+function getPanel(id, state) {
     const mainNode = document.createElement("div");
     mainNode.setAttribute("id", `FMPanel${id}`);
     mainNode.setAttribute("class", `FMPanel`);
