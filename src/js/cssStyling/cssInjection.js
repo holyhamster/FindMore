@@ -116,11 +116,7 @@ export const rootCSS = `
     justify-content: space-between;
     align-items: center;
 }
-.FMPanel:hover
-{
-    --color1: hsl(var(--color2-hsl) / 1);
-    --color2: hsl(var(--color1-hsl) / 1);
-}
+
 .pinned {
     border-color: var(--color2);
 }
@@ -215,7 +211,8 @@ export const SharedHighlightCSS =
         position: absolute;
         opacity: 0.6;
         z-index: 2147483646;
-    }`; //` pointer-events: none;`; //uncomment this before prod
+        pointer-events: none;
+    }`;
 
 //applied for each different search to document's adopted sheet and all iframes individually
 export function GetPersonalHighlightCSS(id, colorIndex, opacity) {

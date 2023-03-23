@@ -4,6 +4,7 @@ import { State } from './state.js';
 
 //Main content script, talks to background script via runtime events, creates new Searches
 export function main() {
+    const maxSearches = 15;
     var tabId;
     var searchMap = new Map();
 
@@ -42,6 +43,8 @@ export function main() {
                         break;
                     }
                 case "fm-content-add-new":
+                    if (searchMap.size >= maxSearches)
+                        break;
                     const newSearch = new State();
                     newSearch.pinned = options?.StartPinned || false;
                     newSearch.colorIndex = State.GetNextColor(Array.from(getStatesMap(searchMap).values()));
