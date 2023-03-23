@@ -92,6 +92,21 @@ export class SearchRegion
         this.nodes.forEach((nodes) => this.stringRegion += nodes.textContent );
     }
 }
+function firstNonInlineAncestor(node) {
+    const parent = node.parentNode;
+    if (!parent)
+        return node;
+
+    if (!nodeIsInlineEditing(parent))
+        return parent;
+
+    if (parent.parentNode)
+        return firstNonInlineAncestor(parent)
+}
+function nodeIsInlineEditing(node) {
+    return inlineNodeNames.includes(node?.nodeName?.toUpperCase());
+}
+const inlineNodeNames = ['A', 'B', 'I', 'EM', 'MARK', 'STRONG', 'SMALL']; 
 
 export function GetNewIframeEvent(iframe) {
     const event = new Event("fm-new-iframe");
