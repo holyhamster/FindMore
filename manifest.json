@@ -43,7 +43,7 @@
       },
       "description": "Opens new search pannel"
     },
-    "fm-hotkey-focus-search": {
+    "fm-hotkey-focu-search": {
       "suggested_key": {
         "default": "Alt+Q"
       },
