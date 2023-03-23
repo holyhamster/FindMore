@@ -70,6 +70,9 @@ chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
         case 'fm-hotkey-new-search':
             requestNewSearchOnActiveWindow();
             break;
+        case 'fm-hotkey-focus-search':
+            callOnActiveId((id) => messageTab(id, {context: "fm-content-focus-search"}));
+            break;
         case 'fm-hotkey-save-search':
             callOnActiveId((id) => saveWindowToStorage(id), () => chrome.storage.local.remove(["fmSavedSearch"]));
             break;

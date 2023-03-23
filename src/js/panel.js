@@ -16,46 +16,21 @@ export class Panel {
         this.id = id;
         this.state = stateRef;
 
-        const mainDiv = getPanel(id, stateRef);
+        const mainDiv = buildPanel(id, stateRef);
         this.mainNode = mainDiv;
         this.addHTMLEvents();
 
         Root.Get().appendChild(mainDiv);
 
         if (stateRef.IsEmpty())
-            mainDiv.querySelector(`.searchInput`).focus();
+            this.mainNode.querySelector(`.searchInput`).focus();
 
         this.styler = new Styler(id, mainDiv, stateRef.colorIndex, options?.highlightAlpha);
     }
 
+    
     addHTMLEvents() {
         const mainNode = this.mainNode, state = this.state, id = this.id;
-
-        mainNode.addEventListener(GetClosePanelsEvent().type, () => {
-            mainNode.remove();
-        });
-
-        mainNode.querySelector(`.searchInput`).addEventListener("input", (args) => {
-            if (!args?.target)
-                return;
-            const safeValue = formatIncomingString(args.target.value);
-            args.target.value = safeValue;
-            const inputChanged = safeValue != state.searchString;
-            state.searchString = safeValue;
-            if (inputChanged) {
-                mainNode.dispatchEvent(GetStateChangeEvent(id));
-                mainNode.dispatchEvent(GetSearchRestartEvent());
-            }
-        });
-
-        mainNode.querySelector(`.searchInput`).addEventListener("keydown", (event) => {
-            if (event.key === "Enter")
-                mainNode.dispatchEvent(GetChangeIndexEvent(1));
-            else if (event.key === "Escape")
-                mainNode.dispatchEvent(GetClosePanelsEvent(id));
-            //prevent other javascript in the document from reacting to keypresses
-            event.stopImmediatePropagation();
-        });
 
         mainNode.querySelector(`.colorButton`).addEventListener("click", () => {
             state.NextColor();
@@ -109,6 +84,64 @@ export class Panel {
                 args.target.textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
             mainNode.dispatchEvent(GetStateChangeEvent(id));
         });
+
+        const searchInput = mainNode.querySelector(`.searchInput`);
+        searchInput.addEventListener("input", (args) => {
+            if (!args?.target)
+                return;
+            const safeValue = formatIncomingString(args.target.value);
+            args.target.value = safeValue;
+            const inputChanged = safeValue != state.searchString;
+            state.searchString = safeValue;
+            if (inputChanged) {
+                mainNode.dispatchEvent(GetStateChangeEvent(id));
+                mainNode.dispatchEvent(GetSearchRestartEvent());
+            }
+        });
+        searchInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter")
+                mainNode.dispatchEvent(GetChangeIndexEvent(1));
+            else if (event.key === "Escape")
+                mainNode.dispatchEvent(GetClosePanelsEvent(id));
+            //prevent other javascript in the document from reacting to keypresses
+            event.stopImmediatePropagation();
+        });
+        searchInput.addEventListener("focus", () => {
+            mainNode.classList.add('focused');
+        });
+        searchInput.addEventListener("focusout", () => {
+            Panel.lastFocusedPanel = mainNode;
+            mainNode.classList.remove('focused');
+        });
+
+        mainNode.addEventListener(GetClosePanelsEvent().type, () => {
+            mainNode.remove();
+            console.log(Panel.lastFocusedPanel);
+            if (Panel.lastFocusedPanel == mainNode)
+                Panel.lastFocusedPanel = null;
+            console.log(Panel.lastFocusedPanel);
+        });
+    }
+    static LastFocused;
+    
+    //If one of the panels is focused, focuses previously adjustened
+    //if none selected, selects the one that focused last
+    //if none selected and last focused doesn't exists, selects the first one
+    static NextFocus() {
+        const panelsNodes = Root.GetLocalEventRoots();
+        const currentFocusedPanel = panelsNodes.filter((node) => node.classList.contains("focused"))?.[0];
+        
+        let newFocusedPanel;
+        if (!currentFocusedPanel) {
+            newFocusedPanel = Panel.lastFocusedPanel || panelsNodes[0];
+        }
+        
+        if (!newFocusedPanel && panelsNodes.length > 1) {
+            const focusedIndex = panelsNodes.indexOf(currentFocusedPanel);
+            const newFocusIndex = focusedIndex - 1 >= 0 ? focusedIndex - 1 : panelsNodes.length - 1;
+            newFocusedPanel = panelsNodes[newFocusIndex];
+        }
+        newFocusedPanel?.querySelector(`.searchInput`)?.focus();
     }
 
     updateLabels(index, length) {
@@ -125,7 +158,7 @@ export class Panel {
     }
 }
 
-function getPanel(id, state) {
+function buildPanel(id, state) {
     const mainNode = document.createElement("div");
     mainNode.setAttribute("id", `FMPanel${id}`);
     mainNode.setAttribute("class", `FMPanel`);

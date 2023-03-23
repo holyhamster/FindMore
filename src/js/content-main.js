@@ -5,24 +5,24 @@ import { State } from './state.js';
 //Main content script, talks to background script via runtime events, creates new Searches
 export function main() {
     var tabId;
-    var panelsMap = new Map();
+    var searchMap = new Map();
 
     Root.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
-        if (panelsMap.has(args.id))
-            panelsMap.delete(args.id);
-        sendToCaching(panelsMap);
+        if (searchMap.has(args.id))
+            searchMap.delete(args.id);
+        sendToCaching(searchMap);
     });
 
-    Root.Get().addEventListener(GetStateChangeEvent().type, () => sendToCaching(panelsMap));
+    Root.Get().addEventListener(GetStateChangeEvent().type, () => sendToCaching(searchMap));
 
     document.addEventListener('keydown', (args) => {
         if (args.key == "Escape") {
-            panelsMap.forEach((panel) => {
-                if (!panel.State.pinned) {
-                    panel.Close();
+            searchMap.forEach((search) => {
+                if (!search.State.pinned) {
+                    search.Close();
                 }
             });
-            sendToCaching(panelsMap);
+            sendToCaching(searchMap);
         }
     });
 
@@ -33,34 +33,39 @@ export function main() {
             tabId = tabId || request.tabId;
             const options = request.options;
             if (options)
-                setOptions(options, panelsMap);
+                setOptions(options, searchMap);
 
             switch (request.context) {
+                case `fm-content-focus-search`:
+                    if (searchMap.size > 0) {
+                        Search.NextFocus();
+                        break;
+                    }
                 case "fm-content-add-new":
                     const newSearch = new State();
                     newSearch.pinned = options?.StartPinned || false;
-                    newSearch.colorIndex = State.GetNextColor(Array.from(getStatesMap(panelsMap).values()));
+                    newSearch.colorIndex = State.GetNextColor(Array.from(getStatesMap(searchMap).values()));
 
-                    const id = getNewID(panelsMap);
-                    panelsMap.set(id, new Search(id, newSearch, request.options));
+                    const id = getNewID(searchMap);
+                    searchMap.set(id, new Search(id, newSearch, request.options));
 
-                    sendToCaching(panelsMap);
+                    sendToCaching(searchMap);
                     break;
 
                 case "fm-content-update-search":
                     if (!request.data)
                         return;
 
-                    panelsMap.forEach((oldPanel) => oldPanel.Close())
-                    panelsMap = new Map();
+                    searchMap.forEach((oldSearch) => oldSearch.Close())
+                    searchMap = new Map();
 
                     const loadedMap = deserializeIntoMap(request.data);
                     loadedMap?.forEach((state) => {
                         if (request.pinnedOnly && !state.pinned)
                             return;
 
-                        const newId = getNewID();
-                        panelsMap.set(newId, new Search(newId, state));
+                        const newId = getNewID(searchMap);
+                        searchMap.set(newId, new Search(newId, state));
                     });
                     break;
                 case `fm-content-update-options`:
@@ -71,19 +76,19 @@ export function main() {
         }
     );
 
-    function getStatesMap(panels) {
+    function getStatesMap(searches) {
         const map = new Map;
-        panels.forEach((panel, id) => map.set(id, panel.State));
+        searches.forEach((search, id) => map.set(id, search.State));
         return map;
     }
 
-    function setOptions(options, panels) {
-        Search.SetOptions(options, Array.from(panels.values));
+    function setOptions(options, searches) {
+        Search.SetOptions(options, Array.from(searches.values));
     }
 
-    function getNewID(panels) {
+    function getNewID(searches) {
         let id = 0;
-        while (panels.has(id))
+        while (searches.has(id))
             id += 1;
         return id;
     }
@@ -98,9 +103,9 @@ export function main() {
         return map;
     }
 
-    function sendToCaching(panelsMap) {
+    function sendToCaching(searchMap) {
         const message = { message: "fm-content-cache-state", tabId: tabId };
-        const states = getStatesMap(panelsMap)
+        const states = getStatesMap(searchMap)
         if (states.size > 0)
             message.data = serializeMap(states);
         chrome.runtime.sendMessage(message);

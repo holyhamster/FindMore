@@ -29,6 +29,9 @@ export class Search {
     static SetOptions(options) {
         Root.Get().dispatchEvent(GetOptionsChangeEvent(options));
     }
+    static NextFocus() {
+        Panel.NextFocus();
+    }
 
     addSearchListeners(element) {
         element.addEventListener(
