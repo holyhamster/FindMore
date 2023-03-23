@@ -87,7 +87,7 @@ export class SearchRegion
         this.offset = offset;
         this.nodes = this.nodes.slice(this.nodes.indexOf(node));
         this.stringRegion = "";
-        this.nodes.forEach((nodes) => { this.stringRegion += nodes.textContent });
+        this.nodes.forEach((nodes) => this.stringRegion += nodes.textContent );
     }
 }
 export function GetNewIframeEvent(iframe) {

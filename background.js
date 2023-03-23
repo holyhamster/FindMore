@@ -59,9 +59,7 @@ chrome.runtime.onMessage.addListener((runTimeEvent, sender) => {
                 message.id = id;
                 message.data = tabsData.has(id);
                 chrome.runtime.sendMessage(message);
-            }, () => {
-                chrome.runtime.sendMessage(message);
-            });
+            }, () => chrome.runtime.sendMessage(message));
             break;
     }
 });
@@ -80,11 +78,10 @@ chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
     }
 });
 
-chrome.windows.onBoundsChanged.addListener(() => {
-    tabsData.forEach((data, id) => {
-        messageTab(id, { context: `fm-content-update-search`, data: data, forcedUpdate: true });
-    });
-});
+chrome.windows.onBoundsChanged.addListener(() => 
+    tabsData.forEach((data, id) =>
+        messageTab(id, { context: `fm-content-update-search`, data: data, forcedUpdate: true }))
+);
 
 function getActiveWindowID(onActiveID, onNoActive) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

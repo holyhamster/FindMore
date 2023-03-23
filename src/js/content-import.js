@@ -1,4 +1,4 @@
-//allows import keyword for content-main
+//shell script to allow imports
 (async () => {
     const src = chrome.runtime.getURL('src/js/content-main.js');
 

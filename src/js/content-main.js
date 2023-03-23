@@ -2,8 +2,7 @@ import { Search, GetClosePanelsEvent, GetStateChangeEvent } from './search.js';
 import { Root } from './root.js';
 import { State } from './state.js';
 
-//passes events between background and the document scripts
-//creates Seaches
+//Main content script, talks to background script and creates new Searches
 export function main() {
     var tabId;
     var panelsMap = new Map();
@@ -14,12 +13,10 @@ export function main() {
         cacheData(panelsMap);
     });
 
-    Root.Get().addEventListener(GetStateChangeEvent().type, () => {
-        cacheData(panelsMap);
-    });
+    Root.Get().addEventListener(GetStateChangeEvent().type, () => cacheData(panelsMap));
 
-    document.addEventListener('keydown', (_args) => {
-        if (_args.key == "Escape") {
+    document.addEventListener('keydown', (args) => {
+        if (args.key == "Escape") {
             panelsMap.forEach((panel) => {
                 if (!panel.State.pinned) {
                     panel.Close();
@@ -97,9 +94,7 @@ export function main() {
 
     function deserializeIntoMap(string) {
         const map = new Map(JSON.parse(string));
-        map?.forEach((val, key, map) => {
-            map.set(key, State.Load(val));
-        });
+        map?.forEach((val, key, map) => map.set(key, State.Load(val)));
         return map;
     }
 

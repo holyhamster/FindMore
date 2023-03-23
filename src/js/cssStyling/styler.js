@@ -64,7 +64,7 @@ export class Styler {
 
     removeAdoptedStyle() {
         const personalSheetIndex = Array.from(document.adoptedStyleSheets)
-            .findIndex((_style) => _style === this.personalSheet );
+            .findIndex((style) => style === this.personalSheet );
         if (isNaN(personalSheetIndex))
             return;
 
