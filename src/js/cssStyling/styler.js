@@ -1,5 +1,6 @@
 import { GetPersonalHighlightCSS, SharedHighlightCSS } from './cssInjection.js'
 import { GetClosePanelsEvent } from '../search.js'
+import { GetColorchangeEvent } from '../panel.js'
 import { GetNewIframeEvent } from '../domCrawling/searchRegion.js'
 import { GetOptionsChangeEvent } from '../root.js'
 
@@ -16,29 +17,28 @@ export class Styler {
         this.colorIndex = colorIndex;
         this.highlightAlpha = highlightAlpha;
 
-        parentElement.addEventListener(
-            GetClosePanelsEvent().type,
+        parentElement.addEventListener(GetClosePanelsEvent().type,
             () => this.clearStyles());
 
-        parentElement.addEventListener(
-            GetOptionsChangeEvent().type,
+        parentElement.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
                 if (args?.options.highlightAlpha) {
                     this.highlightAlpha = args.options.highlightAlpha;
                     this.updateStyle();
                 }
             });
+        
+        parentElement.addEventListener(GetNewIframeEvent().type,
+            (args) => this.onIframeDiscover(args?.iframe?.contentDocument));
 
-        parentElement.addEventListener(
-            GetNewIframeEvent().type,
-            (args) => 
-                this.onIframeDiscover(args?.iframe?.contentDocument));
+        parentElement.addEventListener(GetColorchangeEvent().type,
+            (args) => {
+                if (args?.colorIndex) {
+                    this.colorIndex = colorIndex;
+                    this.updateStyle();
+                }
+            });
 
-        this.updateStyle();
-    }
-
-    SetColor(colorIndex) {
-        this.colorIndex = colorIndex;
         this.updateStyle();
     }
 

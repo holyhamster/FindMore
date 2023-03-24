@@ -16,16 +16,16 @@ export class Panel {
         this.id = id;
         this.state = stateRef;
 
-        const mainDiv = getPanel(id, stateRef);
-        this.mainNode = mainDiv;
+        const mainNode = getPanel(id, stateRef);
+        this.mainNode = mainNode;
         this.addHTMLEvents();
 
-        Root.Get().appendChild(mainDiv);
+        Root.Get().appendChild(mainNode);
 
         if (stateRef.IsEmpty())
             this.mainNode.querySelector(`.searchInput`).focus();
 
-        this.styler = new Styler(id, mainDiv, stateRef.colorIndex, options?.highlightAlpha);
+        new Styler(id, mainNode, stateRef.colorIndex, options?.highlightAlpha);
     }
 
     
@@ -36,7 +36,7 @@ export class Panel {
             state.NextColor();
             mainNode.style = GetPanelColorCSS(state.colorIndex);
             mainNode.dispatchEvent(GetStateChangeEvent(id));
-            this.styler.SetColor(state.colorIndex);
+            mainNode.dispatchEvent(GetColorchangeEvent(state.colorIndex));
         });
 
         mainNode.querySelector(`.refreshButton`).addEventListener("click", () => {
@@ -198,4 +198,10 @@ function getPanel(id, state) {
 function formatIncomingString(incomingString) {
     incomingString = incomingString || "";
     return incomingString.substring(0, 100);
+}
+
+export function GetColorchangeEvent(colorIndex) {
+    const event = new Event("fm-color-change");
+    event.colorIndex = colorIndex;
+    return event;
 }
