@@ -1,6 +1,6 @@
 import { GetPersonalHighlightCSS, SharedHighlightCSS } from './cssInjection.js'
 import { GetClosePanelsEvent } from '../search.js'
-import { GetNewIframeEvent } from '../DOMSearch/searchRegion.js'
+import { GetNewIframeEvent } from '../domCrawling/searchRegion.js'
 import { GetOptionsChangeEvent } from '../root.js'
 
 //Adds and edits css elements for highlight rectangles by:
@@ -129,6 +129,7 @@ function addStyleToIFrame(iframe, styleclass, styletext) {
     style.innerHTML = styletext;
     iframe.head.appendChild(style);
 }
+
 export function GetStyleChangeEvent(args) {
     const event = new Event("fm-style-change");
     Object.assign(event, args);

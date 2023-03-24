@@ -1,14 +1,14 @@
-import Container from './rendering/container.js';
-import { Match } from './match.js';
-import { ContainerObserver } from './rendering/containerObserver.js';
-import { ParentObserver } from './rendering/parentObserver.js';
-import { PerformanceTimer } from './performanceTimer.js';
+import { Container } from './container.js';
+import { ContainerObserver } from './containerObserver.js';
+import { ParentObserver } from './parentObserver.js';
+import { ContainerRemoval } from './containerRemoval.js';
+import { PerformanceTimer } from '../performanceTimer.js';
 import { GetNewMatchesEvent } from '../search.js';
-import { ContainerRemoval } from './rendering/containerRemoval.js';
+import { Match } from '../match.js';
 
 //Accepts matches and creates highlight elements for them
 //Happens in four stages to optimize browser's reflow calls:
-// - QueMatches() synchronously from DOMSearcher
+// - QueMatches() synchronously from DOMCrawler
 // - ProcessMatches() recursively creates/finds a container for each match, makes a delay if execution is too long
 // - NodeObserver asynchronously decides if the parent node of the match is visible, if yes appends the container
 // - ContainerObserver asynchronously calculates all highlight rectangles, appends them to the container
@@ -19,7 +19,7 @@ export class Highlighter {
     }
 
     //#region RECURSIVE HIGHLIGHT 
-    matches = [];       //que of DOMSearcher matches for processing
+    matches = [];       //que of DOMCrawler matches for processing
     invoked;
     QueMatches(matches) {
         this.matches = [...this.matches, ...matches];

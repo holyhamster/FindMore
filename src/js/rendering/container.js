@@ -6,7 +6,7 @@
 //PrecalculateRectangles() -> 
 //AppendPrecalculated()
 
-class Container
+export class Container
 {
     constructor(parentNode, id)
     {
@@ -139,6 +139,3 @@ function relativePositionRequired(node)
     }
     return false;
 }
-
-
-export default Container;

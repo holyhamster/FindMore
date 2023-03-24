@@ -1,11 +1,11 @@
-import { DomSearcher } from './DOMSearch/domSearcher.js';
-import { Highlighter } from './DOMSearch/highlighter.js';
+import { DOMCrawler } from './domCrawling/domCrawler.js';
+import { Highlighter } from './rendering/highlighter.js';
 import { Panel } from './panel.js';
 import { Root, GetOptionsChangeEvent } from './root.js';
 
-//Nexus class for UI Panel, DOMSearcher and Highlighter:
+//Nexus class for UI Panel, DOMCrawler and Highlighter:
 //Panel holds and controls UI for the search, top element is used to dispatch events
-//DOMSearcher goes through DOM tree of the document and sends all matches to Highlighter
+//DOMCrawler goes through DOM tree of the document and sends all matches to Highlighter
 //Highlighter takes matches and creates html elements to mark them
 
 export class Search {
@@ -19,7 +19,7 @@ export class Search {
         this.addSearchListeners(panel.GetLocalRoot());
 
         if (!this.State.IsEmpty())
-            this.startDomSearch();
+            this.startDOMCrawl();
     }
 
     Close() {
@@ -51,15 +51,15 @@ export class Search {
             () => this.clearPreviousSearch());
     }
 
-    domSearcher;
+    domCrawler;
     highlighter;
-    startDomSearch() {
+    startDOMCrawl() {
         this.clearPreviousSearch();
 
         if (!this.State.IsEmpty()) {
             this.highlighter = this.highlighter || new Highlighter(this.id, this.panel.GetLocalRoot());
 
-            this.domSearcher = new DomSearcher(
+            this.domCrawler = new DOMCrawler(
                 this.State.searchString, this.State.GetRegex(true), this.panel.GetLocalRoot(), this.highlighter);
         }
         this.changeIndex();
@@ -67,8 +67,8 @@ export class Search {
 
     clearPreviousSearch() {
         this.secondatySearch = true;
-        this.domSearcher?.Interrupt();
-        this.domSearcher = null;
+        this.domCrawler?.Interrupt();
+        this.domCrawler = null;
         this.highlighter?.Clear();
         this.selectedIndex = null;
     }
@@ -92,7 +92,7 @@ export class Search {
 
     restartSearch() {
         this.dontAccentNewMatches = this.selectedIndex > 0;
-        this.startDomSearch();
+        this.startDOMCrawl();
     }
 }
 
@@ -117,7 +117,7 @@ export function GetClosePanelsEvent(id) {
 }
 
 export function GetNewMatchesEvent(count) {
-    const event = new Event("fm-matches-new");
+    const event = new Event("fm-new-matches");
     event.count = count;
     return event;
 }

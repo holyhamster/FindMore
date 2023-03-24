@@ -1,4 +1,5 @@
 import { ColorCount } from './cssStyling/cssInjection.js'
+
 //Holds all user-editable data about a single search
 //Serialized when passed to background script for caching
 
