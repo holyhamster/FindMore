@@ -1,6 +1,6 @@
-import { Search, GetClosePanelsEvent } from './search.js';
-import { Root } from './root.js';
-import { State } from './state.js';
+import { Search, GetClosePanelsEvent } from './search/search.js';
+import { Root } from './search/root.js';
+import { State } from './search/state.js';
 
 //Main content script, talks to background script via runtime events, creates new Searches
 export function main() {

@@ -109,7 +109,7 @@ function firstNonInlineAncestor(node) {
 function nodeIsInlineEditing(node) {
     return inlineNodeNames.includes(node?.nodeName?.toUpperCase());
 }
-const inlineNodeNames = ['A', 'B', 'I', 'EM', 'MARK', 'STRONG', 'SMALL', 'LI', 'SUP', 'SUB']; 
+const inlineNodeNames = ['A']; 
 
 export function GetNewIframeEvent(iframe) {
     const event = new Event("fm-new-iframe");

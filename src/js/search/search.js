@@ -13,10 +13,9 @@ export class Search {
         this.id = id;
         this.State = state;
 
-        const panel = new Panel(id, state, options);
-        this.panel = panel;
+        this.panel = new Panel(id, state, options);
 
-        this.addSearchListeners(panel.GetLocalRoot());
+        this.addSearchListeners(this.panel.GetLocalRoot());
 
         if (!this.State.IsEmpty())
             this.startDOMCrawl();
