@@ -1,94 +1,103 @@
-//Extension daemon running on the background
-//Sends and recieves events between content and popup scripts, keeps a cached copy of all searches
+//Extension service worker, sends and recieves events between content and popup scripts
+//Caches content script data between page reloads
+//Saves option and searches into storage
 
-var options;
-chrome.storage.sync.get("fmSavedOptions", (storage) => {
-    options = storage?.fmSavedOptions;
+var tabCache = new Map();
+
+chrome.runtime.onMessage.addListener((runTimeEvent, sender) => {
+    console.log(runTimeEvent.context);
+    if (runTimeEvent?.context?.includes("fm-content")) {
+        const tabId = runTimeEvent.tabId || sender?.tab?.id;
+        processContentEvent(tabId, runTimeEvent);
+    }
+    if (runTimeEvent?.context?.includes("fm-popup"))
+        processPopupEvent(runTimeEvent)
 });
 
-var tabSearches = new Map();
-//chrome.runtime events are used to communicate with content script and with the popup script
-chrome.runtime.onMessage.addListener((runTimeEvent, sender) => {
-    const tabId = runTimeEvent.tabId || sender?.tab?.id;
-
-    switch (runTimeEvent.message) {
-        case "fm-content-cache-state":
-            if (runTimeEvent.data)
-                tabSearches.set(tabId, runTimeEvent.data);
-            else
-                tabSearches.delete(tabId)
-            break;
+//events send by the content script of the page
+function processContentEvent(tabId, event) {
+    switch (event.context) {
         //when content script is loaded, send all pinned searches from cache
         //if there's' a new request that didnt have a response from content script, send it again
         case "fm-content-script-loaded":
-            const previousTabData = tabSearches.get(tabId);
+            loadOptions((option) => messageTab(tabId, { context: `fm-content-update-options`, options: option }));
+            const previousTabData = tabCache.get(tabId);
             if (previousTabData)
-                messageTab(tabId, { context: `fm-content-update-search`, data: previousTabData, pinnedOnly: true });
-
-            if (newSearchRequests.includes(tabId)) {
-                requestNewSearchOnActiveWindow();
-                newSearchRequests.splice(newSearchRequests.indexOf(tabId), 1);
-            }
+                messageTab(tabId, { context: `fm-content-update-search`, data: previousTabData });
+            tabCache.delete(tabId);
+            resendCachedMessages(tabId);
             break;
-        //background script <-> popup script
+
+        case "fm-content-visible":
+            loadOptions((option) => messageTab(tabId, { context: `fm-content-update-options`, options: option }));
+            break;
+
+        case "fm-content-cache":
+            if (!event.data)
+                return;
+            tabCache.set(tabId, event.data);
+            break;
+    }
+}
+
+//events send by popup script
+function processPopupEvent(event) {
+
+    switch (event.context) {
         case "fm-popup-options-change":
-            {
-                options = runTimeEvent.options;
-                tabSearches.forEach((data, id) => messageTab(id, { context: `fm-content-update-options` }));
-            }
+            callOnActiveId((id) => messageTab(id, { context: `fm-content-update-options`, options: event.options }));
             break;
 
         case "fm-popup-new-search":
-            requestNewSearchOnActiveWindow();
+            callOnActiveId((id) => messageTab(id, { context: "fm-content-add-new" }));
             break;
 
         //if there's no active window, remove saved data
         case "fm-popup-save-search":
-            callOnActiveId(
-                (id) => saveWindowToStorage(id),
-                () => chrome.storage.local.remove(["fmSavedSearch"]));
+            saveActiveTabIntoStorage();
             break;
 
         case "fm-popup-load-search":
-            callOnActiveId((id) => loadStorageToWindow(id));
+            loadStorageToActiveTab();
             break;
 
         case "fm-popup-current-search-request":
-            const message = { message: "fm-popup-current-search-answer" };
+            const respondToPopup = (id, hasData) =>
+                chrome.runtime.sendMessage({ context: "fm-popup-current-search-answer", id: id, hasData: hasData });
             callOnActiveId((id) => {
-                message.id = id;
-                message.data = tabSearches.has(id);
-                chrome.runtime.sendMessage(message);
-            }, () => chrome.runtime.sendMessage(message));
+                messageTab(id, { context: "fm-content-state-request" },
+                    (data) => respondToPopup(id, data && data != "[]"),
+                    () => respondToPopup(id)
+                );
+            }, () => respondToPopup());
             break;
     }
-});
+}
 
 //Hotkey commands defined in manifest.json
 chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
+    console.log(HOTKEY_COMMAND);
     switch (HOTKEY_COMMAND) {
         case 'fm-hotkey-new-search':
-            requestNewSearchOnActiveWindow();
+            callOnActiveId((id) => messageTab(id, { context: "fm-content-add-new" }));
             break;
         case 'fm-hotkey-focus-search':
-            callOnActiveId((id) => messageTab(id, {context: "fm-content-focus-search"}));
+            callOnActiveId((id) => messageTab(id, { context: "fm-content-focus-search" }));
             break;
         case 'fm-hotkey-save-search':
-            callOnActiveId((id) => saveWindowToStorage(id), () => chrome.storage.local.remove(["fmSavedSearch"]));
+            saveActiveTabIntoStorage();
             break;
         case 'fm-hotkey-load-search':
-            callOnActiveId((id) => loadStorageToWindow(id));
+            loadStorageToActiveTab();
             break;
     }
 });
 
-//call for a forced redraw when window boundary changes
-chrome.windows.onBoundsChanged.addListener(() => 
-    tabSearches.forEach((data, id) =>
-        messageTab(id, { context: `fm-content-update-search`, data: data, forcedUpdate: true }))
-);
+//tell content script to restart search of view boudnary changed
+chrome.windows.onBoundsChanged.addListener(() =>
+    callOnActiveId((id) => messageTab(id, { context: `fm-content-restart-search` })));
 
-//Callbacks with an id of the active tab, executes onNoActive if none exists
+//Calls back with an id of the active tab, executes onNoActive if none exists
 function callOnActiveId(onActiveID, onNoActive) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const url = tabs?.[0]?.url;
@@ -99,24 +108,34 @@ function callOnActiveId(onActiveID, onNoActive) {
     });
 }
 
-const reponseTime = 5000;
+function loadOptions(onLoadedOptions) {
+    chrome.storage.sync.get("fmSavedOptions", (storage) => {
+        onLoadedOptions(storage?.fmSavedOptions);
+    });
+}
+
 //Sends a message to tab's content scripts
-//If recieves reponse under reponseTime, calls onSuccess. Otherwise, onTimeOut
+//message is cached in case the page hasn't loaded content-main.js yet
+//If recieves reponse under reponseTime, calls onSuccess. Otherwise onTimeOut
+messageCache = new Map();
+const reponseTime = 5000;
 async function messageTab(tabId, args, onSuccess, onTimeOut) {
-    const message = {
-        tabId: tabId,
-        options: options
-    };
+    const message = { tabId: tabId };
     Object.assign(message, args);
 
+    if (!messageCache.get(tabId))
+        messageCache.set(tabId, []);
+    messageCache.get(tabId).push(message);
     try {
         const response = await Promise.race([
             chrome.tabs.sendMessage(tabId, message),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), reponseTime))
         ]);
 
-        if (response === 'success')
-            onSuccess?.();
+        const tabMessages = messageCache.get(tabId);
+        if (tabMessages?.includes(message))
+            tabMessages.splice(tabMessages.indexOf(message), 1);
+        onSuccess?.(response);
     }
     catch (error) {
         if (error.message === "timeout")
@@ -124,38 +143,49 @@ async function messageTab(tabId, args, onSuccess, onTimeOut) {
     }
 }
 
-function saveWindowToStorage(id) {
-    if (tabSearches.has(id)) {
-        chrome.storage.local.set({ "fmSavedSearch": tabSearches.get(id) });
-    }
-    else
-        chrome.storage.local.remove(["fmSavedSearch"])
-    showSuccessStatus();
+function resendCachedMessages(id) {
+    if (!messageCache.has(id))
+        return;
+    const tabMessages = Array.from(messageCache.get(id));
+    messageCache.delete(id);
+    tabMessages.forEach((message) => messageTab(id, message));
 }
 
-function loadStorageToWindow(id) {
-    chrome.storage.local.get("fmSavedSearch", (storage) => {
-        const loadedData = storage.fmSavedSearch;
-        if (!loadedData)
-            return;
-
-        tabSearches.set(id, loadedData);
-        messageTab(id, { context: "fm-content-update-search", data: loadedData, forcedUpdate: true });
-        showSuccessStatus();
-    });
+//saves the current tab data into storage
+//if there's no data or no active tab, clears storage
+function saveActiveTabIntoStorage() {
+    const removeData = () => chrome.storage.local.remove(["fmSavedSearch"]);
+    callOnActiveId(
+        (id) => {
+            messageTab(id, { context: "fm-content-state-request" },
+                (data) => {
+                    if (data && data != "[]")
+                        chrome.storage.local.set({ "fmSavedSearch": data });
+                    else
+                        removeData();
+                    showSuccessStatus();
+                });
+        }, () => {
+            removeData();
+            showSuccessStatus();
+        });
 }
 
-var newSearchRequests = [];
-function requestNewSearchOnActiveWindow() {
-    callOnActiveId((id) => {
-        if (!newSearchRequests.includes(id))
-            newSearchRequests.push(id);
-        const onResponse = () => newSearchRequests.splice(newSearchRequests.indexOf(id), 1);
-        messageTab(id, { context: "fm-content-add-new" }, onResponse);
-    });
+function loadStorageToActiveTab() {
+    callOnActiveId(
+        (id) => {
+            chrome.storage.local.get("fmSavedSearch", (storage) => {
+                const loadedData = storage.fmSavedSearch;
+                if (!loadedData)
+                    return;
+
+                messageTab(id, { context: "fm-content-update-search", data: loadedData });
+                showSuccessStatus();
+            });
+        });
 }
 
-//show a small checkmark badge on top of the extension's icon'
+//show a small checkmark badge on top of the extension's icon
 function showSuccessStatus(duration = 3000) {
     chrome.action.setBadgeText({ text: "\u{2713}" });
     setTimeout(() => chrome.action.setBadgeText({ text: "" }),

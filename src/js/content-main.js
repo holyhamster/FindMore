@@ -1,4 +1,4 @@
-import { Search, GetClosePanelsEvent, GetStateChangeEvent } from './search.js';
+import { Search, GetClosePanelsEvent } from './search.js';
 import { Root } from './root.js';
 import { State } from './state.js';
 
@@ -9,12 +9,8 @@ export function main() {
     var searchMap = new Map();
 
     Root.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
-        if (searchMap.has(args.id))
-            searchMap.delete(args.id);
-        sendToCaching(searchMap);
+        searchMap.delete(args.id);
     });
-
-    Root.Get().addEventListener(GetStateChangeEvent().type, () => sendToCaching(searchMap));
 
     document.addEventListener('keydown', (args) => {
         if (args.key == "Escape") {
@@ -23,18 +19,35 @@ export function main() {
                     search.Close();
                 }
             });
-            sendToCaching(searchMap);
         }
+    });
+
+    //when script is unloaded, cache contents within background script
+    window.addEventListener('unload', () => {
+        console.log("unload");
+        if (searchMap.size == 0)
+            return;
+        const pinnedSearches = new Map();
+        getStatesMap(searchMap).forEach((state, id) => {
+            if (state.pinned)
+                pinnedSearches.set(id, state)
+        });
+        sendMessageToService({
+            context: "fm-content-cache",
+            tabId: tabId,
+            data: serializeMap(pinnedSearches)
+        });
+    });
+
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState == 'visible')
+            sendMessageToService({ context: "fm-content-visible" });
     });
 
     chrome.runtime.onMessage.addListener(
         (request, sender, sendResponse) => {
-            sendResponse("success");
-
             tabId = tabId || request.tabId;
-            const options = request.options;
-            if (options)
-                setOptions(options, searchMap);
+            let response = "accepted";
 
             switch (request.context) {
                 case `fm-content-focus-search`:
@@ -46,38 +59,45 @@ export function main() {
                     if (searchMap.size >= maxSearches)
                         break;
                     const newSearch = new State();
-                    newSearch.pinned = options?.StartPinned || false;
+
+                    newSearch.pinned = Search.Options?.StartPinned || false;
                     newSearch.colorIndex = State.GetNextColor(Array.from(getStatesMap(searchMap).values()));
 
-                    const id = getNewID(searchMap);
+                    const id = newSearchState(searchMap);
                     searchMap.set(id, new Search(id, newSearch, request.options));
+                    break;
 
-                    sendToCaching(searchMap);
+                case "fm-content-restart-search":
+                    searchMap.forEach((search) => search.Restart())
                     break;
 
                 case "fm-content-update-search":
-                    if (!request.data)
-                        return;
-
                     searchMap.forEach((oldSearch) => oldSearch.Close())
                     searchMap = new Map();
 
-                    const loadedMap = deserializeIntoMap(request.data);
+                    const loadedMap = deserializeStateMap(request.data);
                     loadedMap?.forEach((state) => {
-                        if (request.pinnedOnly && !state.pinned)
-                            return;
-
-                        const newId = getNewID(searchMap);
+                        const newId = newSearchState(searchMap);
                         searchMap.set(newId, new Search(newId, state));
                     });
                     break;
-                case `fm-content-update-options`:
+
+                case `fm-content-state-request`:
+                    response = serializeMap(getStatesMap(searchMap));
                     break;
+
+                case `fm-content-update-options`:
+                    setOptions(request.options, searchMap);
+                    break;
+
                 default:
-                    console.log("uncaught message: " + request.message);
+                    console.log("unknown message: " + request.context);
             }
+            sendResponse(response);
         }
     );
+
+    sendMessageToService({ context: "fm-content-script-loaded" });
 
     function getStatesMap(searches) {
         const map = new Map;
@@ -89,7 +109,7 @@ export function main() {
         Search.SetOptions(options, Array.from(searches.values));
     }
 
-    function getNewID(searches) {
+    function newSearchState(searches) {
         let id = 0;
         while (searches.has(id))
             id += 1;
@@ -100,19 +120,18 @@ export function main() {
         return JSON.stringify(Array.from(map.entries()));
     }
 
-    function deserializeIntoMap(string) {
+    function deserializeStateMap(string) {
         const map = new Map(JSON.parse(string));
         map?.forEach((val, key, map) => map.set(key, State.Load(val)));
         return map;
     }
 
-    function sendToCaching(searchMap) {
-        const message = { message: "fm-content-cache-state", tabId: tabId };
-        const states = getStatesMap(searchMap)
-        if (states.size > 0)
-            message.data = serializeMap(states);
-        chrome.runtime.sendMessage(message);
+    function sendMessageToService(message) {
+        try {
+            chrome.runtime.sendMessage(message);
+        }
+        catch (error) {
+            console.log(`Error ${error.context}: can't reach service worker `)
+        }
     }
-
-    chrome.runtime.sendMessage({ message: "fm-content-script-loaded" });
 }

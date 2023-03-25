@@ -5,10 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
 
     chrome.runtime.onMessage.addListener((event) => {
-        if (event.message == "fm-popup-current-search-answer")
-            setSavedButtonAs(!isNaN(event.id), event.data);
+        console.log(event);
+        if (event.context == "fm-popup-current-search-answer")
+            setSavedButtonAs(!isNaN(event.id), event.hasData);
     });
-    chrome.runtime.sendMessage({ message: "fm-popup-current-search-request" });
+    chrome.runtime.sendMessage({ context: "fm-popup-current-search-request" });
 
     addEventsToUI();
 
@@ -24,17 +25,17 @@ function addEventsToUI() {
     };
 
     document.getElementById('findButton')?.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ message: "fm-popup-new-search" });
+        chrome.runtime.sendMessage({ context: "fm-popup-new-search" });
         close();
     });
 
     document.getElementById('saveButton')?.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ message: "fm-popup-save-search" });
+        chrome.runtime.sendMessage({ context: "fm-popup-save-search" });
         close();
     });
 
     document.getElementById('loadButton')?.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ message: "fm-popup-load-search" });
+        chrome.runtime.sendMessage({ context: "fm-popup-load-search" });
         close();
     });
 
@@ -133,7 +134,7 @@ class Options {
     }
 
     static SendToBackground(options) {
-        chrome.runtime.sendMessage({ message: "fm-popup-options-change", options: options });
+        chrome.runtime.sendMessage({ context: "fm-popup-options-change", options: options });
     }
 }
 
