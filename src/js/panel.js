@@ -3,7 +3,7 @@ import { Styler } from './cssStyling/styler.js';
 import { GetPanelColorCSS } from './cssStyling/cssInjection.js';
 import { State } from './state.js';
 import {
-    GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent, GetStateChangeEvent
+    GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent
 } from './search.js';
 
 //Controls on-page UI for a single search, and css through Styler instance
@@ -35,7 +35,6 @@ export class Panel {
         mainNode.querySelector(`.colorButton`).addEventListener("click", () => {
             state.NextColor();
             mainNode.style = GetPanelColorCSS(state.colorIndex);
-            mainNode.dispatchEvent(GetStateChangeEvent(id));
             mainNode.dispatchEvent(GetColorchangeEvent(state.colorIndex));
         });
 
@@ -60,7 +59,6 @@ export class Panel {
                 return;
 
             state.caseSensitive = args.target.checked;
-            mainNode.dispatchEvent(GetStateChangeEvent(id));
             mainNode.dispatchEvent(GetSearchRestartEvent());
         });
 
@@ -69,7 +67,6 @@ export class Panel {
                 return;
 
             state.wholeWord = args.target.checked;
-            mainNode.dispatchEvent(GetStateChangeEvent(id));
             mainNode.dispatchEvent(GetSearchRestartEvent());
         });
 
@@ -82,7 +79,6 @@ export class Panel {
 
             if (args?.target)
                 args.target.textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
-            mainNode.dispatchEvent(GetStateChangeEvent(id));
         });
 
         const searchInput = mainNode.querySelector(`.searchInput`);
@@ -94,7 +90,6 @@ export class Panel {
             const inputChanged = safeValue != state.searchString;
             state.searchString = safeValue;
             if (inputChanged) {
-                mainNode.dispatchEvent(GetStateChangeEvent(id));
                 mainNode.dispatchEvent(GetSearchRestartEvent());
             }
         });
