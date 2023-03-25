@@ -103,7 +103,7 @@ export const rootCSS = `
     min-height: calc(var(--scale-ratio) * 30px);
     border-radius: calc(var(--scale-ratio) * 5px);
     border-style: solid;
-    border-width: calc(var(--scale-ratio) * 5px);
+    border-width: calc(var(--scale-ratio) * 3px);
     border-color: transparent;
     background-color: var(--color1);
     color: var(--color2);
@@ -146,10 +146,10 @@ button:active {
     background-color: white;
     border-radius: calc(var(--scale-ratio) * 5px);
     font-size: calc(var(--scale-ratio) * 15px);
-    border: 4px solid transparent;
+    border: calc(var(--scale-ratio) * 4px) solid transparent;
 }
 .searchInput:focus {
-     border: 4px solid hsl(${colors.accent});
+    border: calc(var(--scale-ratio) * 4px) solid hsl(${colors.accent});
 }
 
 .caseCheck, .wordCheck {
