@@ -27,6 +27,7 @@ export class Search {
     }
 
     static SetOptions(options) {
+        Search.Options = options;
         Root.Get().dispatchEvent(GetOptionsChangeEvent(options));
     }
     static NextFocus() {
@@ -40,7 +41,7 @@ export class Search {
 
         element.addEventListener(
             GetSearchRestartEvent().type,
-            () => this.restartSearch());
+            () => this.Restart());
 
         element.addEventListener(
             GetNewMatchesEvent().type,
@@ -90,7 +91,7 @@ export class Search {
         this.panel.updateLabels(this.selectedIndex, matchCount);
     }
 
-    restartSearch() {
+    Restart() {
         this.dontAccentNewMatches = this.selectedIndex > 0;
         this.startDOMCrawl();
     }
@@ -130,10 +131,5 @@ export function GetChangeIndexEvent(change) {
 
 export function GetSearchRestartEvent() {
     const event = new Event("fm-search-restart");
-    return event;
-}
-
-export function GetStateChangeEvent() {
-    const event = new Event("fm-state-change", { bubbles: true });
     return event;
 }
