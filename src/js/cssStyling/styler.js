@@ -34,7 +34,7 @@ export class Styler {
         parentElement.addEventListener(GetColorchangeEvent().type,
             (args) => {
                 if (args?.colorIndex) {
-                    this.colorIndex = colorIndex;
+                    this.colorIndex = args.colorIndex;
                     this.updateStyle();
                 }
             });
