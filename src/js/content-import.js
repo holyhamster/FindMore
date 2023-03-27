@@ -1,4 +1,4 @@
-//Shell script that's loaded first to allow imports in javascript pages
+//Shell script that allows imports in subsequent pages
 (async () => {
     const src = chrome.runtime.getURL('src/js/content-main.js');
 
