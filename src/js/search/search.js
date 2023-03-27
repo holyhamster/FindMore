@@ -1,7 +1,7 @@
 import { DOMCrawler } from './domCrawling/domCrawler.js';
 import { Highlighter } from './rendering/highlighter.js';
 import { Panel } from './panel.js';
-import { Root, GetOptionsChangeEvent } from './root.js';
+import { RootNode, GetOptionsChangeEvent } from './rootNode.js';
 
 //Nexus class for UI Panel, DOMCrawler and Highlighter:
 //Panel holds and controls UI for the search, top element is used to dispatch events
@@ -15,25 +15,30 @@ export class Search {
 
         this.panel = new Panel(id, state, options);
 
-        this.addSearchListeners(this.panel.GetLocalRoot());
+        this.addEvents(this.panel.GetEventRoot());
 
         if (!this.State.IsEmpty())
             this.startDOMCrawl();
     }
 
     Close() {
-        this.panel.GetLocalRoot().dispatchEvent(GetClosePanelsEvent(this.id));
+        this.panel.GetEventRoot().dispatchEvent(GetClosePanelsEvent(this.id));
+    }
+
+    Restart() {
+        this.dontAccentNewMatches = this.selectedIndex > 0;
+        this.startDOMCrawl();
     }
 
     static SetOptions(options) {
         Search.Options = options;
-        Root.Get().dispatchEvent(GetOptionsChangeEvent(options));
+        RootNode.Get().dispatchEvent(GetOptionsChangeEvent(options));
     }
     static NextFocus() {
         Panel.NextFocus();
     }
 
-    addSearchListeners(element) {
+    addEvents(element) {
         element.addEventListener(
             GetChangeIndexEvent().type,
             (args) => this.changeIndex(args.change));
@@ -57,10 +62,10 @@ export class Search {
         this.clearPreviousSearch();
 
         if (!this.State.IsEmpty()) {
-            this.highlighter = this.highlighter || new Highlighter(this.id, this.panel.GetLocalRoot());
+            this.highlighter = this.highlighter || new Highlighter(this.id, this.panel.GetEventRoot());
 
             this.domCrawler = new DOMCrawler(
-                this.State.searchString, this.State.GetRegex(true), this.panel.GetLocalRoot(), this.highlighter);
+                this.State.searchString, this.State.GetRegex(true), this.panel.GetEventRoot(), this.highlighter);
         }
         this.changeIndex();
     }
@@ -88,11 +93,6 @@ export class Search {
         }
 
         this.panel.updateLabels(this.selectedIndex, matchCount);
-    }
-
-    Restart() {
-        this.dontAccentNewMatches = this.selectedIndex > 0;
-        this.startDOMCrawl();
     }
 }
 

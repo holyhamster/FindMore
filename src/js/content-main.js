@@ -1,14 +1,14 @@
 import { Search, GetClosePanelsEvent } from './search/search.js';
-import { Root } from './search/root.js';
+import { RootNode } from './search/rootNode.js';
 import { State } from './search/state.js';
 
-//Main content script, talks to background script via runtime events, creates new Searches
+//Content script loaded in pages, talks to background script via runtime events, creates new Searches
 export function main() {
     const maxSearches = 15;
     var tabId;
     var searchMap = new Map();
 
-    Root.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
+    RootNode.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
         searchMap.delete(args.id);
     });
 

@@ -1,4 +1,4 @@
-import { Root } from './root.js';
+import { RootNode } from './rootNode.js';
 import { Styler } from './cssStyling/styler.js';
 import { GetPanelColorCSS } from './cssStyling/cssInjection.js';
 import { State } from './state.js';
@@ -6,7 +6,7 @@ import {
     GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent
 } from './search.js';
 
-//Controls on-page UI for a single search, and css through Styler instance
+//Creates and controls on-page UI for a single search, and css through Styler instance
 //Head element is used to dispatch events
 
 export class Panel {
@@ -16,11 +16,11 @@ export class Panel {
         this.id = id;
         this.state = stateRef;
 
-        const mainNode = getPanel(id, stateRef);
+        const mainNode = buildPanel(id, stateRef);
         this.mainNode = mainNode;
         this.addHTMLEvents();
 
-        Root.Get().appendChild(mainNode);
+        RootNode.Get().appendChild(mainNode);
 
         if (stateRef.IsEmpty())
             this.mainNode.querySelector(`.searchInput`).focus();
@@ -28,7 +28,7 @@ export class Panel {
         new Styler(id, mainNode, stateRef.colorIndex, options?.highlightAlpha);
     }
 
-    
+
     addHTMLEvents() {
         const mainNode = this.mainNode, state = this.state, id = this.id;
 
@@ -123,18 +123,22 @@ export class Panel {
         return this.mainNode.classList.contains("focused");
     }
 
+    GetEventRoot() {
+        return this.mainNode;
+    }
+
     //If one of the panels is focused, focuses previously adjustened
     //if none selected, selects the one that focused last
     //if none selected and last focused doesn't exists, selects the first one
     static NextFocus() {
-        const panelsNodes = Root.GetLocalEventRoots();
+        const panelsNodes = RootNode.GetLocalEventRoots();
         const currentFocusedPanel = panelsNodes.filter((node) => node.classList.contains("focused"))?.[0];
-        
+
         let newFocusedPanel;
         if (!currentFocusedPanel) {
             newFocusedPanel = Panel.lastFocusedPanel || panelsNodes[0];
         }
-        
+
         if (!newFocusedPanel && panelsNodes.length > 1) {
             const focusedIndex = panelsNodes.indexOf(currentFocusedPanel);
             const newFocusIndex = focusedIndex - 1 >= 0 ? focusedIndex - 1 : panelsNodes.length - 1;
@@ -151,13 +155,9 @@ export class Panel {
         this.selectedMatchLabel.textContent = length == 0 ? "0" : `${index + 1}`;
         this.totalMatchesLabel.textContent = length;
     }
-
-    GetLocalRoot() {
-        return this.mainNode;
-    }
 }
 
-function getPanel(id, state) {
+function buildPanel(id, state) {
     const mainNode = document.createElement("div");
     mainNode.setAttribute("id", `FMPanel${id}`);
     mainNode.setAttribute("class", `FMPanel`);
