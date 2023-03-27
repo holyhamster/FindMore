@@ -1,26 +1,37 @@
-# ![128x128](https://user-images.githubusercontent.com/27297124/227235689-eb566c47-f16e-47f7-a12c-94cc886eaf17.png) FindMore 
+![promogithub](https://user-images.githubusercontent.com/27297124/227906313-a08a6ca4-a8a6-4c96-b913-053392bf4d77.png)
 
-This is a repository of FindMore🔎, an extension for Chrome browser that lets you create multiple panels for unlimited page search!
 
-![showcase](https://user-images.githubusercontent.com/27297124/227232663-9fa30105-8746-47d9-a3ce-dd070838aa8f.png)
+FindMore is a pure javascript extension for Chrome browser that lets you create multiple panels to help you with research.
+Get it from Chrome store(link) or load it yourself from source code.
 
-Features:
-Multiple independent searches with customizable layout
-Can be set as persistent to follow you around from page to page
-Save and load your entire setup to move it between tabs and sessions
-Optimized search and render algorythmes
-Pleasant colorblind-friendly palette
+<b>Features:</b>
 
-Hotkeys: 
+* Start multiple independent queries
+* Customize layout and sesseion persistence
+* Save and load your entire setup to move it between tabs and sessions
+* Optimized search and render algorythmes
+* Colorblind-friendly palette
+* No data leaves your browser
 
-CTRL + Q -- open a new panel
+![screenshot3](https://user-images.githubusercontent.com/27297124/227904056-0afb85d0-9e2e-4db8-8d62-4cbc09df65de.png)
 
-ALT + Q -- cycle focus between different panels, open a new one if none exists
 
-CTRL + Y -- save all panels from the current page
+<b>Hotkeys: </b>
 
-CTRL + B -- load saved setup into the page
+- CTRL + Q -- open a new panel
+- ALT + Q -- cycle focus between panels (open a new one if none exists)
+- CTRL + Y -- save all panels from the current page
+- CTRL + B -- load saved setup into the page
 
-Install it from Chrome store or get the source code from github.
+<b>Mechanism: </b>
 
-All UI (except extension popup) exists within the page. Html elements are added but existing elements are not altered.
+Background.js is run as a service worker to listen to the hotkey commands, messages from popup page and active tab.
+Individual searches exist within the page javascript: Content-main.js is injected in every page and creates new Search instances on command from background script.
+Search uses DomCrawler to comb through the page DOM tree and sends all matches to Highlighter, which creates colored rectangles around them. 
+IntersectionObserver library is used by Highlighter to coordinate different stages of drawing process, in order to minimize reflow calls to the browser.
+Popup.html with popup.js send option changes and save/load events to service worker.
+
+<b>Known issues:</b>
+
+While existing DOM tree elements are not altered, addition of new ones can occasionally change page layout depending on a page layout.
+Some websites capture input and prevent keyboard presses from reaching search ui.
