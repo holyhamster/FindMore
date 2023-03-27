@@ -1,4 +1,4 @@
-//CSS strings for injection with content scripts
+//Strings with css for injection with content scripts
 
 export const ColorCount = 9;
 const colors = {

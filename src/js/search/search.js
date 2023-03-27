@@ -6,7 +6,7 @@ import { RootNode, GetOptionsChangeEvent } from './rootNode.js';
 //Nexus class for UI Panel, DOMCrawler and Highlighter:
 //Panel holds and controls UI for the search, top element is used to dispatch events
 //DOMCrawler goes through DOM tree of the document and sends all matches to Highlighter
-//Highlighter takes matches and creates html elements to mark them
+//Highlighter takes matches and creates html elements around them
 
 export class Search {
     constructor(id, state, options) {
@@ -14,7 +14,6 @@ export class Search {
         this.State = state;
 
         this.panel = new Panel(id, state, options);
-
         this.addEvents(this.panel.GetEventRoot());
 
         if (!this.State.IsEmpty())
@@ -41,7 +40,7 @@ export class Search {
     addEvents(element) {
         element.addEventListener(
             GetChangeIndexEvent().type,
-            (args) => this.changeIndex(args.change));
+            (args) => this.updateIndex(args.change));
 
         element.addEventListener(
             GetSearchRestartEvent().type,
@@ -49,7 +48,7 @@ export class Search {
 
         element.addEventListener(
             GetNewMatchesEvent().type,
-            () => this.changeIndex());
+            () => this.updateIndex());
 
         element.addEventListener(
             GetClosePanelsEvent().type,
@@ -67,7 +66,7 @@ export class Search {
             this.domCrawler = new DOMCrawler(
                 this.State.searchString, this.State.GetRegex(true), this.panel.GetEventRoot(), this.highlighter);
         }
-        this.changeIndex();
+        this.updateIndex();
     }
 
     clearPreviousSearch() {
@@ -79,7 +78,7 @@ export class Search {
     }
 
     selectedIndex;
-    changeIndex(indexChange) {
+    updateIndex(indexChange) {
         //if index isn't being incremented and selectedIndex is either null or 0, get new Index
         if (!indexChange && !this.selectedIndex)
             this.selectedIndex = this.highlighter?.GetNewIndex();

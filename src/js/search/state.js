@@ -37,6 +37,7 @@ export class State {
         return this.searchString == "";
     }
 
+    //Takes array of states, returns a free colorIndex
     static GetNextColor(states) {
         if (!states || states.length == 0)
             return 0;
