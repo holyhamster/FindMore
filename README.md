@@ -7,9 +7,9 @@ Get it from Chrome store(link) or load it yourself from source code.
 <b>Features:</b>
 
 * Start multiple independent queries
-* Customize layout and sesseion persistence
+* Customize layout and sessioon persistence
 * Save and load your entire setup to move it between tabs and sessions
-* Optimized search and render algorythmes
+* Optimized search and render algorithms
 * Colorblind-friendly palette
 * No data leaves your browser
 
