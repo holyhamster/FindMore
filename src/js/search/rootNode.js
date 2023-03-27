@@ -4,16 +4,16 @@ import { rootCSS } from './cssStyling/cssInjection.js';
 //Has the following structure:
 //  Document.body -> 
 //  fm-shadowholder with a closed shadow node -> 
-//  css div that resets page's style and adds its own -> 
+//  css div that resets page's style and adds UI css -> 
 //  root div holding all search panels
 //Listenes to option change events to adjust style accordingly
 
-export class Root {
+export class RootNode {
     static build() {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];
         if (!shadowHolder) {
             shadowHolder = document.createElement("fm-shadowholder");
-            Root.append(shadowHolder);
+            RootNode.append(shadowHolder);
         }
 
         const shadow = shadowHolder.attachShadow({ mode: "closed" });
@@ -28,7 +28,7 @@ export class Root {
         root.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
                 convertOptionsToStyle(args?.options, root.style);
-                Root.GetLocalEventRoots().forEach((panel) => {
+                RootNode.GetLocalEventRoots().forEach((panel) => {
                     panel.dispatchEvent(GetOptionsChangeEvent(args?.options));
                 });
             });
@@ -42,18 +42,18 @@ export class Root {
         if (document.body)
             document.body.appendChild(shadowHolder);
         else
-            setTimeout(() => Root.append(shadowHolder), 5);
+            setTimeout(() => RootNode.append(shadowHolder), 5);
     }
 
     static instance;
     static Get() {
-        if (!Root.instance)
-            Root.instance = Root.build();
-        return Root.instance;
+        if (!RootNode.instance)
+            RootNode.instance = RootNode.build();
+        return RootNode.instance;
     }
 
     static GetLocalEventRoots() {
-        return Array.from(Root.Get().getElementsByClassName(`FMPanel`));
+        return Array.from(RootNode.Get().getElementsByClassName(`FMPanel`));
     }
 }
 
