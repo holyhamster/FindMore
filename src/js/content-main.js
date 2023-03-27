@@ -2,12 +2,12 @@ import { Search, GetClosePanelsEvent } from './search/search.js';
 import { RootNode } from './search/rootNode.js';
 import { State } from './search/state.js';
 
-//Content script loaded in pages, talks to background script via runtime events, creates new Searches
+//Content script loaded after page is loaded
+//Talks to background script via runtime events, creates new Searches
 export function main() {
     const maxSearches = 15;
-    var tabId;
-    var searchMap = new Map();
-
+    
+    var searchMap = new Map();  //all searches by their IDs
     RootNode.Get().addEventListener(GetClosePanelsEvent().type, (args) => {
         searchMap.delete(args.id);
     });
@@ -22,9 +22,9 @@ export function main() {
         }
     });
 
+    var tabId;
     //when script is unloaded, cache contents within background script
     window.addEventListener('unload', () => {
-        console.log("unload");
         if (searchMap.size == 0)
             return;
         const pinnedSearches = new Map();

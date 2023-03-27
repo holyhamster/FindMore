@@ -5,7 +5,6 @@
 var tabCache = new Map();
 
 chrome.runtime.onMessage.addListener((runTimeEvent, sender) => {
-    console.log(runTimeEvent.context);
     if (runTimeEvent?.context?.includes("fm-content")) {
         const tabId = runTimeEvent.tabId || sender?.tab?.id;
         processContentEvent(tabId, runTimeEvent);
@@ -76,7 +75,6 @@ function processPopupEvent(event) {
 
 //Hotkey commands defined in manifest.json
 chrome.commands.onCommand.addListener((HOTKEY_COMMAND) => {
-    console.log(HOTKEY_COMMAND);
     switch (HOTKEY_COMMAND) {
         case 'fm-hotkey-new-search':
             callOnActiveId((id) => messageTab(id, { context: "fm-content-add-new" }));

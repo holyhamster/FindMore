@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
 
     chrome.runtime.onMessage.addListener((event) => {
-        console.log(event);
         if (event.context == "fm-popup-current-search-answer")
             setSavedButtonAs(!isNaN(event.id), event.hasData);
     });
@@ -65,7 +64,6 @@ function addEventsToUI() {
 
     const alignmentButton = document.getElementById('alignmentButton');
     alignmentButton.selectIndex = (index) => {
-        console.log(index);
         alignmentButton.selectedIndex = index || 0;
         if (index === 1)
             alignmentButton.textContent = `\u{21C6}`;
@@ -131,8 +129,7 @@ class Options {
         const scaleValue = parseFloat(document.getElementById('scale')?.value);
         if (typeof scaleValue === 'number')
             options.MenuScale = scaleValue;
-        console.log(scaleValue);
-        //options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO
+        //options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO: add slider
         return options;
     }
 
@@ -147,7 +144,6 @@ class Options {
     }
 
     static FillUI(options) {
-        console.log(options);
         const cornerIndex =
             (options.StartTop & options.StartLeft ? 3 : 0) +
             (options.StartTop & !options.StartLeft ? 0 : 0) +
