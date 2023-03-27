@@ -11,7 +11,7 @@ import { GetOptionsChangeEvent } from '../rootNode.js'
 //for performance css is split in two: part that's shared between all searches and personal color settings
 
 export class Styler {
-    constructor(id, eventElemenet, colorIndex, highlightAlpha = .8) {
+    constructor(id, eventElemenet, colorIndex, highlightAlpha) {
         this.id = id;
         this.eventElement = eventElemenet;
         this.colorIndex = colorIndex;
@@ -25,8 +25,8 @@ export class Styler {
 
         eventElement.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
-                if (args?.options.highlightAlpha) {
-                    this.highlightAlpha = args.options.highlightAlpha;
+                if (args?.options.HighlightOpacity) {
+                    this.highlightAlpha = args.options.HighlightOpacity;
                     this.updateStyle();
                 }
             });

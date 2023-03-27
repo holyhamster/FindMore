@@ -65,6 +65,7 @@ function addEventsToUI() {
 
     const alignmentButton = document.getElementById('alignmentButton');
     alignmentButton.selectIndex = (index) => {
+        console.log(index);
         alignmentButton.selectedIndex = index || 0;
         if (index === 1)
             alignmentButton.textContent = `\u{21C6}`;
@@ -97,22 +98,47 @@ function addEventsToUI() {
 }
 
 class Options {
-    static GetFromUI() {
+    static build() {
         const options = new Options();
-        const cornerValue = document.getElementById('cornerButton')?.selectedIndex || 0;
-        options.StartTop = cornerValue === 3 || cornerValue === 0;
-        options.StartLeft = cornerValue === 3 || cornerValue === 2;
-        options.Horizontal = document.getElementById('alignmentButton')?.selectedIndex === 1;
-        options.StartPinned = document.getElementById('pinButton')?.selectedIndex === 1;
-        options.MenuOpacity = document.getElementById('opacity')?.value || 1;
-        options.MenuScale = document.getElementById('scale')?.value || 1;
-        options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO
+        options.StartTop = false;
+        options.StartLeft = false;
+        options.Horizontal = false;
+        options.StartPinned = false;
+        options.MenuOpacity = 1;
+        options.MenuScale = 1;
+        options.HighlightOpacity = 0.45; 
+        return options;
+    }
+    static GetFromUI() {
+        const options = Options.build();
+        const cornerValue = document.getElementById('cornerButton')?.selectedIndex;
+        if (typeof cornerValue === 'number') {
+            options.StartTop = cornerValue === 3 || cornerValue === 0;
+            options.StartLeft = cornerValue === 3 || cornerValue === 2;
+        }
+        const alignmentIndex = document.getElementById('alignmentButton')?.selectedIndex;
+        if (typeof alignmentIndex === 'number')
+            options.Horizontal = alignmentIndex === 1;
+
+        const pinnedIndex = document.getElementById('pinButton')?.selectedIndex;
+        if (typeof pinnedIndex === 'number')
+            options.StartPinned = pinnedIndex === 1;
+
+        const opacityValue = parseFloat(document.getElementById('opacity')?.value);
+        if (typeof opacityValue === 'number')
+            options.MenuOpacity = opacityValue;
+
+        const scaleValue = parseFloat(document.getElementById('scale')?.value);
+        if (typeof scaleValue === 'number')
+            options.MenuScale = scaleValue;
+        console.log(scaleValue);
+        //options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO
         return options;
     }
 
     static FillFromMemory() {
         chrome.storage.sync.get("fmSavedOptions", function (storage) {
-            Options.FillUI(storage?.fmSavedOptions);
+            Options.FillUI(storage?.fmSavedOptions || Options.build());
         });
     }
 
@@ -121,6 +147,7 @@ class Options {
     }
 
     static FillUI(options) {
+        console.log(options);
         const cornerIndex =
             (options.StartTop & options.StartLeft ? 3 : 0) +
             (options.StartTop & !options.StartLeft ? 0 : 0) +

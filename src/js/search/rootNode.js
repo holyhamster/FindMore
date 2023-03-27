@@ -65,7 +65,7 @@ function convertOptionsToStyle(options, styleRef) {
     styleRef.left = options?.StartLeft ? screenGap : "";
     styleRef.right = options?.StartLeft ? "" : screenGap;
 
-    if (options.Horizontal) {
+    if (options?.Horizontal) {
         styleRef.flexDirection = options?.StartLeft ? "row" : "row-reverse";
         styleRef.flexWrap = options?.StartTop ? "wrap" : "wrap-reverse";
     }

@@ -12,9 +12,9 @@ const colors = {
         dark: `333 90% 15%`,
         light: `330 100% 58%`
     }, 2: {
-        highlight: `330 100% 86%`,
-        dark: `330 18% 20%`,
-        light: `330 100% 86%`
+        highlight: `32 72% 50%`,
+        dark: `30 100% 23%`,
+        light: `22 100% 77%`
     }, 3: {
         highlight: `228 100% 43%`,
         dark: `202 100% 9%`,
@@ -32,9 +32,9 @@ const colors = {
         dark: `0 100% 15%`,
         light: `0 95% 71%`
     }, 7: {
-        highlight: `32 72% 50%`,
-        dark: `30 100% 23%`,
-        light: `22 100% 77%`
+        highlight: `330 100% 86%`,
+        dark: `330 18% 20%`,
+        light: `330 100% 86%`
     }, 8: {
         highlight: `120 100% 57%`,
         dark: `120 80% 20%`,
@@ -209,7 +209,7 @@ export const SharedHighlightCSS =
     }
     fm-highlight {
         position: absolute;
-        opacity: 0.6;
+        opacity: 0.45;
         z-index: 2147483646;
         pointer-events: none;
     }`;
@@ -217,10 +217,11 @@ export const SharedHighlightCSS =
 //applied for each different search to document's adopted sheet and all iframes individually
 export function GetPersonalHighlightCSS(id, colorIndex, opacity) {
     return `fm-highlight.fm-${id} {
-            background-color: hsl(var(--color-${colorIndex}-hsl) / ${opacity}); 
+            background-color: hsl(var(--color-${colorIndex}-hsl) / 1);
+            ${opacity ? ('opacity: ' + opacity + ';'): ""}
         }
         fm-highlight.fm-${id}.fm-accented {
-            background-color: hsl(var(--color-accented-hsl) / ${opacity}); 
+            background-color: hsl(var(--color-accented-hsl)); 
         }`;
 }
 
