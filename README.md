@@ -1,15 +1,15 @@
 ![promogithub](https://user-images.githubusercontent.com/27297124/227906313-a08a6ca4-a8a6-4c96-b913-053392bf4d77.png)
 
 
-FindMore is a pure javascript extension for Chrome browser that lets you create multiple panels to help you with research.
-Get it from Chrome store(link) or load it yourself from source code.
+FindMore is a pure javascript extension for the Chrome browser that lets you create multiple panels to help you with research.
+Get it from the Chrome store(link) or load it yourself from the source code.
 
 <b>Features:</b>
 
 * Start multiple independent queries
-* Customize layout and sesseion persistence
+* Customize layout and session persistence
 * Save and load your entire setup to move it between tabs and sessions
-* Optimized search and render algorythmes
+* Optimized search and render algorithms
 * Colorblind-friendly palette
 * No data leaves your browser
 
@@ -25,9 +25,9 @@ Get it from Chrome store(link) or load it yourself from source code.
 
 <b>Mechanism: </b>
 
-Background.js is run as a service worker to listen to the hotkey commands, messages from popup page and active tab.
+Background.js is run as a service worker to listen to hotkey commands, messages from popup page and active tab.
 Individual searches exist within the page javascript: Content-main.js is injected in every page and creates new Search instances on command from background script.
-Search uses DomCrawler to comb through the page DOM tree and sends all matches to Highlighter, which creates colored rectangles around them. 
+Search uses DomCrawler to comb through the page DOM tree and sends all matches to Highlighter, which creates colored rectangles around them. 
 IntersectionObserver library is used by Highlighter to coordinate different stages of drawing process, in order to minimize reflow calls to the browser.
 Popup.html with popup.js send option changes and save/load events to service worker.
 
