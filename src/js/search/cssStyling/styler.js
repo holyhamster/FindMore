@@ -2,7 +2,7 @@ import { GetPersonalHighlightCSS, SharedHighlightCSS } from './cssInjection.js'
 import { GetClosePanelsEvent } from '../search.js'
 import { GetColorchangeEvent } from '../panel.js'
 import { GetNewIframeEvent } from '../domCrawling/searchRegion.js'
-import { GetOptionsChangeEvent } from '../root.js'
+import { GetOptionsChangeEvent } from '../rootNode.js'
 
 //Adds and edits css elements for highlight rectangles by:
 //-adding an adopted sheet to the main document
@@ -11,40 +11,50 @@ import { GetOptionsChangeEvent } from '../root.js'
 //for performance css is split in two: part that's shared between all searches and personal color settings
 
 export class Styler {
-    constructor(id, parentElement, colorIndex, highlightAlpha = .8) {
+    constructor(id, eventElemenet, colorIndex, highlightAlpha = .8) {
         this.id = id;
-        this.parentElement = parentElement;
+        this.eventElement = eventElemenet;
         this.colorIndex = colorIndex;
         this.highlightAlpha = highlightAlpha;
-
-        parentElement.addEventListener(GetClosePanelsEvent().type,
+        this.addEvents(eventElemenet);
+        this.updateStyle();
+    }
+    addEvents(eventElement) {
+        eventElement.addEventListener(GetClosePanelsEvent().type,
             () => this.clearStyles());
 
-        parentElement.addEventListener(GetOptionsChangeEvent().type,
+        eventElement.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
                 if (args?.options.highlightAlpha) {
                     this.highlightAlpha = args.options.highlightAlpha;
                     this.updateStyle();
                 }
             });
-        
-        parentElement.addEventListener(GetNewIframeEvent().type,
-            (args) => this.onIframeDiscover(args?.iframe?.contentDocument));
 
-        parentElement.addEventListener(GetColorchangeEvent().type,
+        eventElement.addEventListener(GetNewIframeEvent().type,
+            (args) => {
+                const newIFrame = args.iframe.contentDocument;
+                if (!newIFrame)
+                    return;
+                
+                if (!this.iframes.includes(newIFrame))
+                    this.iframes.push(newIFrame);
+
+                this.updateIframe(newIFrame);
+            });
+
+        eventElement.addEventListener(GetColorchangeEvent().type,
             (args) => {
                 if (args?.colorIndex) {
                     this.colorIndex = args.colorIndex;
                     this.updateStyle();
                 }
             });
-
-        this.updateStyle();
     }
 
     updateStyle() {
         this.updateAdoptedSheet();
-        this.updateIframeStyle();
+        this.iframes.forEach((iframe) => this.updateIframe(iframe));
     }
 
     personalSheet;
@@ -65,7 +75,7 @@ export class Styler {
 
     removeAdoptedStyle() {
         const personalSheetIndex = Array.from(document.adoptedStyleSheets)
-            .findIndex((style) => style === this.personalSheet );
+            .findIndex((style) => style === this.personalSheet);
         if (isNaN(personalSheetIndex))
             return;
 
@@ -76,46 +86,27 @@ export class Styler {
     }
 
     iframes = [];
-    updateIframeStyle() {
-        const styleClass = `fm-iframe${this.id}`;
-        this.iframes.forEach((iframe) => {
-            const existingStyle = iframe.getElementsByClassName(styleClass)[0];
-            const cssString = GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha);
-            if (existingStyle)
-                existingStyle.innerHTML = cssString;
-            else
-                addStyleToIFrame(iframe, styleClass, cssString)
-
-        })
-    }
-
-    removeIframeStyles() {
-        this.iframes.forEach((_iframe) => {
-            _iframe.getElementsByClassName(`fm-iframe${this.id}`)[0]?.remove();
-        });
-        this.iframes = [];
-    }
-
-    onIframeDiscover(newIFrame) {
-        if (!newIFrame)
-            return;
-
-        if (!this.iframes.includes(newIFrame)) {
-            this.iframes.push(newIFrame);
-        }
-
+    updateIframe(iframe) {
         const sharedStyleClass = `fm-iframeDefStyle`;
-        let existingSharedStyle = newIFrame.getElementsByClassName(sharedStyleClass)[0]
+        let existingSharedStyle = iframe.getElementsByClassName(sharedStyleClass)[0];
         if (!existingSharedStyle) {
-            addStyleToIFrame(newIFrame, sharedStyleClass, SharedHighlightCSS);
+            addStyleToIFrame(iframe, sharedStyleClass, SharedHighlightCSS);
         }
 
         const personalStyleClass = `fm-iframe${this.id}`;
-        const existingPersonalStyle = newIFrame.getElementsByClassName(personalStyleClass)[0];
-        if (!existingPersonalStyle) {
-            addStyleToIFrame(newIFrame, personalStyleClass,
-                GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha))
-        }
+        const existingPersonalStyle = iframe.getElementsByClassName(personalStyleClass)[0];
+        const personalCSS = GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha);
+        if (existingPersonalStyle)
+            existingPersonalStyle.innerHTML = personalCSS;
+        else
+            addStyleToIFrame(iframe, personalStyleClass, GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha));
+    }
+
+    removeIframeStyles() {
+        this.iframes.forEach((iframe) => {
+            iframe.getElementsByClassName(`fm-iframe${this.id}`)[0]?.remove();
+        });
+        this.iframes = [];
     }
 
     clearStyles() {
