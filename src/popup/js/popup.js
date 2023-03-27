@@ -168,11 +168,13 @@ class Options {
 function setSavedButtonAs(hasActiveWindow, hasActiveSearches) {
     const saveButton = document.getElementById('saveButton');
     const loadButton = document.getElementById('loadButton');
+    const newButton = document.getElementById('findButton');
 
     chrome.storage.local.get("fmSavedSearch", (_storage) => {
         const hasSavedData = Boolean(_storage.fmSavedSearch);
         loadButton.disabled = !(hasSavedData && hasActiveWindow);
         saveButton.disabled = !(hasActiveSearches || hasSavedData);
+        newButton.disabled = !hasActiveWindow;
         const saveButtonClearsInstead = !hasActiveSearches && hasSavedData;
         saveButton.innerHTML = saveButtonClearsInstead ? "Clear" : "Save";
         document.getElementById('saveTooltip').innerHTML = saveButtonClearsInstead ?
