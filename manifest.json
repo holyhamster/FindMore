@@ -3,7 +3,7 @@
   "name": "FindMore",
   "description": "Persistent search tool to help your research🔎",
   "version": "1.0",
-  "permissions": [ "activeTab", "scripting", "storage" ],
+  "permissions": [ "activeTab", "storage" ],
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_icon": "16.png"
@@ -21,7 +21,7 @@
 
   "content_scripts": [
     {
-      "matches": [ "<all_urls>", "*://*/*" ],
+      "matches": [ "<all_urls>"],
       "all_frames": false,
       "js": [ "src/js/content-import.js" ],
       "run_at": "document_end"
