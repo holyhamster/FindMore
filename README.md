@@ -2,7 +2,8 @@
 
 
 FindMore is a pure javascript extension for the Chrome browser that lets you create multiple panels to help you with research.
-Get it from the Chrome store(link) or load it yourself from the source code.
+
+Get it from the Chrome store(approval pending) or load it yourself from the source code!
 
 <b>Features:</b>
 
