@@ -87,8 +87,6 @@ export class Panel {
         }, true);
 
         searchInput.addEventListener("input", (args) => {
-            console.log("input");
-            console.log(args);
             if (!args?.target)
                 return;
             const safeValue = formatIncomingString(args.target.value);
