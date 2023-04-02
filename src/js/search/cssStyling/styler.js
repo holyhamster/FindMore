@@ -25,7 +25,7 @@ export class Styler {
 
         eventElement.addEventListener(GetOptionsChangeEvent().type,
             (args) => {
-                if (args?.options.HighlightOpacity) {
+                if (args?.options?.HighlightOpacity) {
                     this.highlightAlpha = args.options.HighlightOpacity;
                     this.updateStyle();
                 }
