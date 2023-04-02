@@ -82,7 +82,13 @@ export class Panel {
         });
 
         const searchInput = mainNode.querySelector(`.searchInput`);
+        searchInput.addEventListener("keypress", function (event) {
+            event.stopPropagation();
+        }, true);
+
         searchInput.addEventListener("input", (args) => {
+            console.log("input");
+            console.log(args);
             if (!args?.target)
                 return;
             const safeValue = formatIncomingString(args.target.value);
