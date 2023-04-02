@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "FindMore",
   "description": "Persistent search tool to help your research🔎",
-  "version": "1.0",
+  "version": "1.01",
   "permissions": [ "activeTab", "storage" ],
   "action": {
     "default_popup": "src/popup/popup.html",
