@@ -60,9 +60,8 @@ export class SearchRegion
                 nodeOffset += 1;
             }
             const end = { offset: regexMatch.index + this.searchString.length - charOffset, node: this.nodes[nodeOffset] };
-            //appending to nodes with inline editing can cause issues and layout shifts, find the closest ancestor without it
-            const parent = firstNonInlineAncestor(start.node);
-            matches.push(new Match(start, end, parent));
+
+            matches.push(new Match(start, end, findSafeAncestor(start.node)));
         });
 
         if (matches.length > 0)
@@ -94,22 +93,23 @@ export class SearchRegion
     }
 }
 
+//some tags are unsafe to edit, climb up to find closest safe one
+function findSafeAncestor(node) {
+    const parent = node?.parentNode;
 
-function firstNonInlineAncestor(node) {
-    const parent = node.parentNode;
     if (!parent)
         return node;
 
-    if (!nodeIsInlineEditing(parent))
-        return parent;
+    if (!unsafeTags.includes(parent.nodeName?.toUpperCase()))
+        return node;
 
-    if (parent.parentNode)
-        return firstNonInlineAncestor(parent)
+    return findSafeAncestor(parent);
 }
+
 function nodeIsInlineEditing(node) {
-    return inlineNodeNames.includes(node?.nodeName?.toUpperCase());
+    return;
 }
-const inlineNodeNames = ['A']; 
+const unsafeTags = ['A'];
 
 export function GetNewIframeEvent(iframe) {
     const event = new Event("fm-new-iframe");

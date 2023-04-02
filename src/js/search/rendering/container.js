@@ -8,10 +8,11 @@
 
 export class Container
 {
-    constructor(parentNode, id)
+    constructor(parentNode, targetNode, panelId)
     {
         this.parentNode = parentNode;
-        this.id = id;
+        this.targetNode = targetNode;
+        this.id = panelId;
 
         this.headElement = document.createElement('FM-CONTAINER');
         if (relativePositionRequired(parentNode))
@@ -38,7 +39,7 @@ export class Container
 
     AppendSelf()
     {
-        this.parentNode.append(this.headElement);
+        this.targetNode.after(this.headElement);
     }
 
     quedMatches = [];
@@ -93,7 +94,7 @@ export class Container
             this.headElement.append(this.precalculatedNodes.shift());
 
         if (HEAVY_CONTAINER)
-            this.parentNode.appendChild(this.headElement);
+            this.AppendSelf();
     }
 
     GetMatch(index) {
@@ -122,6 +123,7 @@ export class Container
 //  (in the latter case, position:absolute element will not be affected by the nested scrollbar)
 function relativePositionRequired(node) 
 {
+    return true;
     for (let iNode = node; iNode; iNode = iNode.parentNode)
     {
         if (iNode.nodeType != Node.ELEMENT_NODE)

@@ -53,10 +53,10 @@ export class Highlighter {
     }
 
     getContainer(match) {
-        const parentNode = match.parentNode;
+        const parentNode = match.parent;
         let container = this.parentToContainer.get(parentNode);
         if (!container) {
-            container = new Container(parentNode, this.id);
+            container = new Container(parentNode, match.target, this.id);
             this.parentToContainer.set(parentNode, container);
         }
 
