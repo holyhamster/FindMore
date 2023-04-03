@@ -14,8 +14,9 @@
 
 ### Get it from <a href=https://chrome.google.com/webstore/detail/findmore/gboabaailmimjgjabafbphbgopcgfpie>Chrome store</a> or load it from the source.
 
-![screenshot3](https://user-images.githubusercontent.com/27297124/227904056-0afb85d0-9e2e-4db8-8d62-4cbc09df65de.png)
+<br>
 
+![screenshot](https://user-images.githubusercontent.com/27297124/229439448-aea62c41-9e85-4b40-b96d-1cc5d7b95f15.png)
 
 ## Hotkeys:
 
@@ -26,8 +27,8 @@
 
 ## Technical info:
 
-- Background.js is run as a service worker to listen to hotkey commands, messages from popup page and active tab.
-- Individual searches exist within the page javascript: Content-main.js is injected in every page and creates new Search instances on command from the service worker.
+- Background.js is run as a service worker to listen to hotkey commands, messages from popup and active tab.
+- Individual searches exist within the page's javascript: injected Content-main.js creates new Search instances on command from the service worker.
 - Search uses DomCrawler to comb through the page DOM tree and sends all matches to Highlighter
 - IntersectionObserver library is used by Highlighter to coordinate different stages of drawing process to minimize reflow calls to the browser.
 - Popup.html with popup.js send option changes and save/load events to service worker.
