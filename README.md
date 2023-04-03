@@ -27,8 +27,10 @@
 
 ## Technical info:
 
-- Background.js is run as a service worker to listen to hotkey commands, messages from popup and active tab.
-- Individual searches exist within the page's javascript: injected Content-main.js creates new Search instances on command from the service worker.
-- Search uses DomCrawler to comb through the page DOM tree and sends all matches to Highlighter
-- IntersectionObserver library is used by Highlighter to coordinate different stages of drawing process to minimize reflow calls to the browser.
-- Popup.html with popup.js send option changes and save/load events to service worker.
+- <a href=https://github.com/holyhamster/FindMore/blob/dev/background.js>Background.js</a> is run as a service worker to listen to hotkey commands, messages from popup and active tab.
+- Individual searches exist within the page's javascript: injected <a href=https://github.com/holyhamster/FindMore/blob/dev/src/js/content-main.js>Content-main.js</a> creates new <a href=https://github.com/holyhamster/FindMore/blob/dev/src/js/search/search.js>Search</a> instances on command from the service worker.
+- Search creates <a href=https://github.com/holyhamster/FindMore/blob/dev/src/js/search/panel.js>UI panel</a> and uses <a href=https://github.com/holyhamster/FindMore/blob/dev/src/js/search/domCrawling/domCrawler.js>DomCrawler</a> to comb through the page DOM tree and sends all matches to <a href=https://github.com/holyhamster/FindMore/blob/dev/src/js/search/rendering/highlighter.js>Highlighter</a>
+- UI exists within a <a href=https://github.com/holyhamster/FindMore/blob/dev/src/js/search/rootNode.js>closed shadow element</a> to prevent any other script on the page from interfering
+- <a href=https://github.com/holyhamster/FindMore/blob/dev/src/js/search/rendering/highlighter.js>Highlighter</a> adds html tags with colored background to matches' location
+- Match nodes of the same parent are organized into the same <a href=https://github.com/holyhamster/FindMore/blob/dev/src/js/search/rendering/container.js>container</a> for better performance
+- IntersectionObserver library is used to coordinate different stages of drawing process to minimize reflow calls to the browser.
