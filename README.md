@@ -1,7 +1,7 @@
 ![promogithub](https://user-images.githubusercontent.com/27297124/227906313-a08a6ca4-a8a6-4c96-b913-053392bf4d77.png)
 
 
-### Boost your research with FindMore, a multi-query page searching extension for Chrome browser.
+### Boost your research with FindMore, multi-query page searching extension for Chrome browser.
 
 ## Features:
 
