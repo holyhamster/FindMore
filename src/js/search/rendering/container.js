@@ -15,8 +15,6 @@ export class Container
         this.id = panelId;
 
         this.headElement = document.createElement('FM-CONTAINER');
-        if (relativePositionRequired(parentNode))
-            this.headElement.classList.add(`fm-relative`)
     }
 
     SetAccent(matchIndex, accentState)
@@ -115,29 +113,4 @@ export class Container
         this.quedMatches = [];
         this.precalculatedNodes = [];
     }
-}
-
-//container head element can be created with relative or absolute positioning
-//position:absolute is preffered: it's taken out of the document's flow and will not affect its layout
-//position:relative is required when there's an ancestor with a nested scrollbar and no other position:relative node between them
-//  (in the latter case, position:absolute element will not be affected by the nested scrollbar)
-function relativePositionRequired(node) 
-{
-    return true;
-    for (let iNode = node; iNode; iNode = iNode.parentNode)
-    {
-        if (iNode.nodeType != Node.ELEMENT_NODE)
-            continue;
-
-        if (iNode.scrollTop > 0 || iNode.scrollLeft > 0)
-            return true;
-
-        const style = window.getComputedStyle(iNode);
-        if (style.overflow === 'auto' || style.overflow === 'scroll')
-            return true;
-
-        if (style.getPropertyValue("position") == "relative")
-            return false;
-    }
-    return false;
 }

@@ -198,15 +198,12 @@ export const SharedHighlightCSS =
         --color-7-hsl: ${colors[7].highlight};
         --color-8-hsl: ${colors[8].highlight};
         --color-accented-hsl: ${colors.accent};
-        position: absolute; 
-        display: flex;
-    }
-    fm-container.fm-relative { 
-        position: relative; 
-        display:inline-block; 
+         position: relative; 
+        display: inline-block;
         width:0px; 
-        height: 0px; 
+        height: 0px;
     }
+
     fm-highlight {
         position: absolute;
         opacity: 0.45;
