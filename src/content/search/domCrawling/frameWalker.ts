@@ -11,7 +11,7 @@ export class FrameWalker {
     }
 
     
-    nextNode(): Element | null {
+    public NextNode(): Element | null {
         if (this.que.length == 0)
             return null;
 
@@ -19,7 +19,7 @@ export class FrameWalker {
 
         if (!node) {
             this.que.pop();
-            return this.nextNode();
+            return this.NextNode();
         }
 
         if (node.nodeName.toUpperCase() == 'IFRAME'){
@@ -29,12 +29,13 @@ export class FrameWalker {
                 this.onNewIframes?.(node as HTMLIFrameElement);
                 this.que.push(iDocument.createTreeWalker(iDocument.body, NodeFilter.SHOW_ALL, condition));
             }
-            return this.nextNode();
+            return this.NextNode();
         }
 
         return node as Element;
     }
 }
+
 export interface TextNode extends Node {
     textContent: string;
 }

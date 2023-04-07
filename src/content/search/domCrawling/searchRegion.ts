@@ -11,17 +11,17 @@ export class SearchRegion
         private regexp: RegExp,
         eventElement: Element) {
 
-        this.treeWalk = FrameWalker.build(
-            document.body,
+        this.treeWalk = FrameWalker.build(document.body,
             (iframe: HTMLIFrameElement) => eventElement.dispatchEvent(new NewIFrameEvent(iframe)));
     }
 
     stringRegion = "";
     nodes: Element[] = [];
     offset = 0;//offset of the string from the start of the first node
+
     //expands region, returns true if tree hasn't ended
-    TryExpand(): boolean {
-        const newNode = this.treeWalk.nextNode();
+    public TryExpand(): boolean {
+        const newNode = this.treeWalk.NextNode();
 
         if (!newNode)
             return false;
@@ -34,7 +34,7 @@ export class SearchRegion
     }
 
     //get all matches from the current region, trims it to the end of the last match
-    GetMatches(): Match[]
+    public GetMatches(): Match[]
     {
         if (this.nodes.length == 0)
             return [];
@@ -77,7 +77,7 @@ export class SearchRegion
         return matches;
     }
 
-    trim()
+    private trim()
     {
         let REGION_IS_TOO_LONG;
         while (this.nodes.length > 0 && (REGION_IS_TOO_LONG = 
@@ -89,7 +89,7 @@ export class SearchRegion
         }
     }
 
-    trimToPoint(node: Element, offset: number)
+    private trimToPoint(node: Element, offset: number)
     {
         this.offset = offset;
         this.nodes = this.nodes.slice(this.nodes.indexOf(node));

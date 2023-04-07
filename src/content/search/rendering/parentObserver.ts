@@ -13,7 +13,7 @@ export class ParentObserver {
         this.observer = new IntersectionObserver((entries) => this.onObserve(entries));
     }
 
-    onObserve(entries: IntersectionObserverEntry[]) {
+    private onObserve(entries: IntersectionObserverEntry[]) {
         const visibleContainers: Container[] = [];
         entries.forEach((entry: IntersectionObserverEntry) => {
             this.observer.unobserve(entry.target);
@@ -37,7 +37,7 @@ export class ParentObserver {
         });
     }
 
-    Observe(container: Container) {
+    public Observe(container: Container) {
         this.observer.observe(container.parentNode);
     }
 

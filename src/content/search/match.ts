@@ -11,7 +11,7 @@ export class Match {
         this.parent = this.target.parentElement || this.target;
     }
 
-    GetRectangles(range: Range): DOMRect[] {
+    public  GetRectangles(range: Range): DOMRect[] {
         range.setStart(this.startNode, this.startOffset);
         range.setEnd(this.endNode, this.endOffset);
         return Array.from(range.getClientRects());
@@ -19,7 +19,7 @@ export class Match {
 
     //finds a closest to targetMatch among matches
     //TODO: currently only searches among matches with the same startNode
-    static FindIndexOfClosest(matches: Match[], targetMatch: Match ) {
+    public static FindIndexOfClosest(matches: Match[], targetMatch: Match ) {
         let resultMatch: Match | undefined;
         let resultDistance: number = Infinity;
 

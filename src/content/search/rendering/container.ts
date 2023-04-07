@@ -1,3 +1,5 @@
+import { Match } from "../match";
+
 //Holds all highlight rectangles for matches under a single parent element in DOM tree
 //Creating a highlight is split into stages to be done in batches to minimize browser reflow calls:
 //QueMatch() -> 
@@ -5,8 +7,6 @@
 //AppendSelf() -> 
 //PrecalculateRectangles() -> 
 //AppendPrecalculated()
-
-import { Match } from "../match";
 
 export class Container {
     headElement: Element;
@@ -20,7 +20,7 @@ export class Container {
 
         const elements = Array.from(this.headElement.getElementsByClassName(`fm-${this.id}-${matchIndex}`));
 
-        elements.forEach((span) => {
+        elements.forEach((span: Element) => {
             if (accentState)
                 span.classList.add(`fm-accented`);
             else
@@ -30,20 +30,15 @@ export class Container {
         return elements;
     }
 
-    AppendSelf() {
-        this.parentNode.insertBefore(this.headElement, this.targetNode.nextSibling);
-    }
-
     quedMatches: Match[] = [];
     QueMatch(match: Match) {
         this.quedMatches.push(match);
     }
 
     indexedMatches: IndexedMatch[] = [];
-
     IndexNextMatch(newIndex: number) {
         if (this.quedMatches.length == 0)
-            return;
+            return false;
 
         const match = this.quedMatches.shift() as IndexedMatch;
         match.index = newIndex;
@@ -61,10 +56,7 @@ export class Container {
             match.GetRectangles(range).forEach((rect) => {
                 const rectElement = document.createElement('FM-HIGHLIGHT');
                 rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${match.index}`);
-                rectElement.style.height = rect.height + 'px';
-                rectElement.style.width = rect.width + 'px';
-                rectElement.style.left = rect.left - anchor.x + 'px';
-                rectElement.style.top = rect.top - anchor.y + 'px';
+                Object.assign(rectElement.style, rectangleToStyle(rect, anchor));
                 elements.push(rectElement);
             });
 
@@ -85,26 +77,39 @@ export class Container {
             this.AppendSelf();
     }
 
-    GetMatch(index: number) {
-        this.indexedMatches.forEach(
+    public AppendSelf() {
+        this.parentNode.insertBefore(this.headElement, this.targetNode.nextSibling);
+    }
+
+    public GetMatch(index: number) {
+        this.GetAllMatches().forEach(
             (match: IndexedMatch) => {
                 if (match.index == index) return match;
             })
         return undefined;
     }
 
-    GetAllMatches() {
+    public GetAllMatches() {
         return Array.from(this.indexedMatches);
     }
 
-    Remove() {
+    public Remove() {
         this.headElement.remove();
         this.ClearCache();
     }
 
-    ClearCache() {
+    private ClearCache() {
         this.quedMatches = [];
         this.precalculatedNodes = [];
+    }
+}
+
+function rectangleToStyle(rect: DOMRect, anchor: DOMRect) {
+    return {
+        height: rect.height + 'px',
+        width: rect.width + 'px',
+        left: rect.left - anchor.x + 'px',
+        top: rect.top - anchor.y + 'px'
     }
 }
 

@@ -36,7 +36,10 @@ export class Highlighter {
         this.invoked = false;
 
         this.containerObserver = this.containerObserver || new ContainerObserver(this.parentToContainer,
-            () => this.eventElement.dispatchEvent(new NewMatchesEvent(this.GetMatchcount())));
+            () => {
+                ContainerRemoval.Trigger();
+                this.eventElement.dispatchEvent(new NewMatchesEvent(this.GetMatchcount()));
+            });
         this.parentObserver = this.parentObserver || new ParentObserver(this.parentToContainer, this.indexToContainer,
             (container: Container) => this.containerObserver!.Observe(container));
 

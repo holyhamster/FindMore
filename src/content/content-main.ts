@@ -15,20 +15,7 @@ class SearchMap extends Map<number, Search> {
 };
 var searchMap = new SearchMap();  //all searches by their IDs
 
-RootNode.Get().addEventListener(ClosePanelsEvent.type, (args: any) => {
-    searchMap.delete(args.id);
-});
-
-document.addEventListener('keydown', (args: any) => {
-    if (args.key == "Escape") {
-        searchMap.forEach((search) => {
-            if (!search.state.pinned) {
-                search.Close();
-            }
-        });
-    }
-});
-
+//process events from service worker
 var tabId: number;
 chrome.runtime.onMessage.addListener(
     (request: any, sender: any, sendResponse: (response: any) => void) => {
@@ -83,6 +70,20 @@ chrome.runtime.onMessage.addListener(
     }
 );
 
+//remove search from a map if its panel is closed
+RootNode.Get().addEventListener(ClosePanelsEvent.type, (args: any) => searchMap.delete(args.id));
+
+//close all unpinned searches when escape is pressed
+document.addEventListener('keydown', (args: any) => {
+    if (args.key == "Escape") {
+        searchMap.forEach((search) => {
+            if (!search.state.pinned)
+                search.Close();
+        });
+    }
+});
+
+//send any pinned searches to service worker when the window is unloaded
 window.addEventListener('unload', () => {
     if (searchMap.size == 0)
         return;
@@ -99,11 +100,13 @@ window.addEventListener('unload', () => {
     sendMessageToService(message);
 });
 
+//signal to service worker when the window is visible
 window.addEventListener('visibilitychange', () => {
     if (document.visibilityState == 'visible')
         sendMessageToService({ context: "fm-content-visible" });
 });
 
+//signal to service worker that script is loaded in a page
 sendMessageToService({ context: "fm-content-script-loaded" });
 
 function setOptions(options: any) {

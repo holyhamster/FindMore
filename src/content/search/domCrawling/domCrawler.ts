@@ -11,17 +11,15 @@ export class DOMCrawler {
         regex: RegExp,
         eventElem: Element,
         highlighterRef: Highlighter) {
-        setTimeout(() => {
-            this.search(new SearchRegion(searchString, regex, eventElem), highlighterRef)
-        }, 1);
+        setTimeout(() => this.search(new SearchRegion(searchString, regex, eventElem), highlighterRef), 1);
     }
 
     interrupted = false;
-    Interrupt() {
+    public Interrupt() {
         this.interrupted = true;
     }
 
-    search(searchRegion: SearchRegion, highlighter: Highlighter, executionTime = 0) {
+    private search(searchRegion: SearchRegion, highlighter: Highlighter, executionTime = 0) {
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
         const measurer = new PerformanceTimer();
 
@@ -35,12 +33,10 @@ export class DOMCrawler {
         if (!WALK_IN_PROGRESS)
             return;
 
-        if ((executionTime += measurer.Get()) < recursionTimeLimit) {
+        if ((executionTime += measurer.Get()) < recursionTimeLimit)
             this.search(searchRegion, highlighter, executionTime)
-        }
-        else {
+        else 
             setTimeout(() => this.search(searchRegion, highlighter), DelayTime);
-        }
     }
 }
 
