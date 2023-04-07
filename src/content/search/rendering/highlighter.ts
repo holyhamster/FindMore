@@ -1,10 +1,10 @@
-import { Container } from './container.js';
-import { ContainerObserver } from './containerObserver.js';
-import { ParentObserver } from './parentObserver.js';
-import { ContainerRemoval } from './containerRemoval.js';
-import { PerformanceTimer } from '../performanceTimer.js';
-import { GetNewMatchesEvent } from '../search.js';
-import { Match } from '../match.js';
+import { Container } from './container';
+import { ContainerObserver } from './containerObserver';
+import { ParentObserver } from './parentObserver';
+import { ContainerRemoval } from './containerRemoval';
+import { PerformanceTimer } from '../performanceTimer';
+import { NewMatchesEvent } from '../search';
+import { Match } from '../match';
 
 //Accepts matches and creates highlight elements for them
 //Happens in four stages to optimize browser's reflow calls:
@@ -13,15 +13,13 @@ import { Match } from '../match.js';
 // - NodeObserver asynchronously decides if the parent node of the match is visible, if yes appends the container
 // - ContainerObserver asynchronously calculates all highlight rectangles, appends them to the container
 export class Highlighter {
-    constructor(id, eventElement) {
-        this.id = id;
-        this.eventElement = eventElement;
+    constructor(private id: number, private eventElement: Element) {
     }
 
     //#region RECURSIVE HIGHLIGHT 
-    matches = [];       //que of DOMCrawler matches for processing
-    invoked;
-    QueMatches(matches) {
+    matches: Match[] = [];       //que of DOMCrawler matches for processing
+    invoked = false;
+    QueMatches(matches: Match[]) {
         this.matches = [...this.matches, ...matches];
         if (this.invoked)
             return;
@@ -30,19 +28,21 @@ export class Highlighter {
         setTimeout(() => this.processMatches(), 1);
     }
 
-    indexToContainer = new Map();
-    parentToContainer = new Map();
+    indexToContainer = new Map<number, Container>();
+    parentToContainer = new Map<Element, Container>();
+    containerObserver: ContainerObserver | undefined;
+    parentObserver: ParentObserver | undefined;
     processMatches() {
         this.invoked = false;
 
         this.containerObserver = this.containerObserver || new ContainerObserver(this.parentToContainer,
-            () => this.eventElement.dispatchEvent(GetNewMatchesEvent(this.GetMatchcount())));
+            () => this.eventElement.dispatchEvent(new NewMatchesEvent(this.GetMatchcount())));
         this.parentObserver = this.parentObserver || new ParentObserver(this.parentToContainer, this.indexToContainer,
-            (container) => this.containerObserver.Observe(container));
+            (container: Container) => this.containerObserver!.Observe(container));
 
         const timer = new PerformanceTimer();
-        while (timer.Get() < processingMSLimit && this.matches.length > 0) {
-            const container = this.getContainer(this.matches.shift());
+        while (timer.IsUnder(processingMSLimit) && this.matches.length > 0) {
+            const container = this.getContainer(this.matches.shift()!);
             this.parentObserver.Observe(container);
         }
 
@@ -52,7 +52,7 @@ export class Highlighter {
         }
     }
 
-    getContainer(match) {
+    getContainer(match: Match): Container {
         const parentNode = match.parent;
         let container = this.parentToContainer.get(parentNode);
         if (!container) {
@@ -64,29 +64,33 @@ export class Highlighter {
         return container;
     }
 
-    AccentMatch(index, scrollTowards) {
+    accentedIndex: number | undefined;
+    scrollObserver: IntersectionObserver | undefined;
+    AccentMatch(index: number, scrollTowards: boolean) {
         if (index === this.accentedIndex)
             return;
 
-        const oldAccentContainer = this.indexToContainer.get(this.accentedIndex);
-        if (oldAccentContainer) {
-            oldAccentContainer.SetAccent(this.accentedIndex, false);
-            this.accentedIndex = null;
+        if (this.accentedIndex) {
+            const oldAccentContainer = this.indexToContainer.get(this.accentedIndex);
+            if (oldAccentContainer) {
+                oldAccentContainer.SetAccent(this.accentedIndex, false);
+                this.accentedIndex = undefined;
+            }
         }
 
         if (isNaN(index) || index < 0 || this.GetMatchcount() == 0)
             return;
 
         const accentTarget = this.getAccentTarget(index);
-        this.accentedIndex = accentTarget.processed ? index : null;
+        this.accentedIndex = accentTarget?.processed ? index : undefined;
 
         this.scrollObserver = this.scrollObserver || getScrollObserver();
-        if (scrollTowards && accentTarget.element)
-            this.scrollObserver.observe(accentTarget.element);
+        if (scrollTowards && accentTarget?.element)
+            this.scrollObserver.observe(accentTarget.element as Element);
     }
 
     //returns an element that should be highlighted and scrolled towards from the given match index
-    getAccentTarget(index) {
+    getAccentTarget(index: number) {
         const TARGET_HAS_BEEN_PROCESSED = index < this.indexToContainer.size;
         if (TARGET_HAS_BEEN_PROCESSED) {
             this.accentedIndex = index;
@@ -101,7 +105,7 @@ export class Highlighter {
         if (TARGET_IN_PROCESSING)
             return {
                 processed: false,
-                element: this.matches[index - this.indexToContainer.size]?.parentNode
+                element: this.matches[index - this.indexToContainer.size]?.parent
             }
     }
 
@@ -112,25 +116,26 @@ export class Highlighter {
     //returns index of the match closest to accent of the previous search. 
     //0 if there's no previous accent
     //null if there's no matches
-    GetNewIndex() {
+    GetNewIndex(): number | undefined {
         if (this.GetMatchcount() == 0)
             return;
+        if (!this.prevSearchAccent || this.parentToContainer?.has(this.prevSearchAccent.parent))
+            return 0;
 
-        const containerOfPreviousAccent = this.parentToContainer?.get(this.prevSearchAccent?.parent);
-        if (containerOfPreviousAccent) {
-            const match = Match.FindClosestAmong(containerOfPreviousAccent.GetAllMatches(), this.prevSearchAccent.match);
-            return match?.index;
-        }
-        
+        const pastMatches =
+            this.parentToContainer.get(this.prevSearchAccent.parent)!.GetAllMatches();
+        const matchIndex = Match.FindIndexOfClosest(
+            pastMatches, this.prevSearchAccent.match);
 
-        return 0;
+        return matchIndex ? pastMatches[matchIndex].index : undefined;
     }
 
+    prevSearchAccent: { match: Match, parent: Element } | undefined
     Clear() {
-        if (this.accentedIndex > 0)
+        if (this.accentedIndex && this.accentedIndex > 0)
             this.prevSearchAccent = this.getAccentData(this.accentedIndex);
 
-        this.accentedIndex = null;
+        this.accentedIndex = undefined;
         this.parentObserver?.StopObserving();
         this.containerObserver?.StopObserving();
         ContainerRemoval.Que(Array.from(this.parentToContainer.values()));
@@ -140,11 +145,11 @@ export class Highlighter {
         this.parentToContainer.clear();
     }
 
-    getAccentData(index) {
+    getAccentData(index: number) {
         const container = this.indexToContainer.get(index);
         const match = container?.GetMatch(index);
         if (container && match)
-            return { match: match, parent: container.parentNode }
+            return { match: match, parent: container.parentNode as Element }
     }
 }
 

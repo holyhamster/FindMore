@@ -1,4 +1,4 @@
-import { rootCSS } from './cssStyling/cssInjection.js';
+import { rootCSS } from './cssStyling/cssInjection';
 
 //Singleton that holds all in-page UI. 
 //Has the following structure:
@@ -8,8 +8,9 @@ import { rootCSS } from './cssStyling/cssInjection.js';
 //  root div holding all search panels
 //Listenes to option change events to adjust style accordingly
 
-export class RootNode {
-    static build() {
+export class RootNode extends HTMLDivElement{
+  
+    static build(): RootNode {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];
         if (!shadowHolder) {
             shadowHolder = document.createElement("fm-shadowholder");
@@ -19,46 +20,46 @@ export class RootNode {
         const shadow = shadowHolder.attachShadow({ mode: "closed" });
 
         const css = document.createElement("div");
-        css.style = "all: initial";
+        css.setAttribute("style", "all: initial");
         css.innerHTML = `<style>${rootCSS}</style>`;
         shadow.appendChild(css);
 
         const root = document.createElement("div");
         root.setAttribute("id", `FMPanelContainer`);
-        root.addEventListener(GetOptionsChangeEvent().type,
-            (args) => {
+        root.addEventListener(OptionsChangeEvent.type,
+            (args: any) => {
                 convertOptionsToStyle(args?.options, root.style);
-                RootNode.GetLocalEventRoots().forEach((panel) => {
-                    panel.dispatchEvent(GetOptionsChangeEvent(args?.options));
+                RootNode.GetLocalEventRoots().forEach((panel: Element) => {
+                    panel.dispatchEvent(new OptionsChangeEvent(args?.options));
                 });
             });
 
         css.appendChild(root);
-        return root;
+        return root as RootNode;
     }
 
     //if the document body isn't accessible at the time, wait and try again
-    static append(shadowHolder) {
+    static append(shadowHolder: Element) {
         if (document.body)
             document.body.appendChild(shadowHolder);
         else
             setTimeout(() => RootNode.append(shadowHolder), 5);
     }
 
-    static instance;
-    static Get() {
+    static instance: RootNode;
+    static Get(): RootNode {
         if (!RootNode.instance)
             RootNode.instance = RootNode.build();
         return RootNode.instance;
     }
 
-    static GetLocalEventRoots() {
+    static GetLocalEventRoots(): Element[] {
         return Array.from(RootNode.Get().getElementsByClassName(`FMPanel`));
     }
 }
 
 //reads Options() from popup script and applies it to style object
-function convertOptionsToStyle(options, styleRef) {
+function convertOptionsToStyle(options: any, styleRef: CSSStyleDeclaration) {
     const screenGap = "5px";
     styleRef.top = options?.StartTop ? screenGap : "";
     styleRef.bottom = options?.StartTop ? "" : screenGap;
@@ -79,8 +80,9 @@ function convertOptionsToStyle(options, styleRef) {
     return styleRef;
 }
 
-export function GetOptionsChangeEvent(options) {
-    const event = new Event("fm-options-change");
-    event.options = options;
-    return event;
+export class OptionsChangeEvent extends Event {
+    static readonly type: string = "fm-options-change";
+    constructor(public options: any) {
+        super(OptionsChangeEvent.type);
+    }
 }

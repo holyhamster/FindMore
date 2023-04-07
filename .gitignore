@@ -2,3 +2,5 @@ focus-mode.css
 package-lock.json
 /.vs/slnx.sqlite
 /.vs
+/node_modules
+/dist

@@ -1,10 +1,10 @@
-import { RootNode } from './rootNode.js';
-import { Styler } from './cssStyling/styler.js';
-import { GetPanelColorCSS } from './cssStyling/cssInjection.js';
-import { State } from './state.js';
+import { RootNode } from './rootNode';
+import { Styler } from './cssStyling/styler';
+import { GetPanelColorCSS } from './cssStyling/cssInjection';
+import { State } from './state';
 import {
-    GetClosePanelsEvent, GetSearchRestartEvent, GetChangeIndexEvent
-} from './search.js';
+    ClosePanelsEvent, SearchRestartEvent, IndexChangeEvent
+} from './search';
 
 //Creates and controls on-page UI for a single search, and css through Styler instance
 //Head element is used to dispatch events
@@ -12,65 +12,62 @@ import {
 export class Panel {
     mainNode;
 
-    constructor(id, stateRef, options) {
-        this.id = id;
-        this.state = stateRef;
-
-        const mainNode = buildPanel(id, stateRef);
-        this.mainNode = mainNode;
+    constructor(public id: number, public state: State, options: any) {
+        this.mainNode = buildPanel(id, state);
         this.addHTMLEvents();
 
-        RootNode.Get().appendChild(mainNode);
+        RootNode.Get().appendChild(this.mainNode);
+        
+        if (state.IsEmpty())
+            (this.mainNode.querySelector(`.searchInput`) as HTMLInputElement)?.focus();
 
-        if (stateRef.IsEmpty())
-            this.mainNode.querySelector(`.searchInput`).focus();
-
-        new Styler(id, mainNode, stateRef.colorIndex, options?.highlightAlpha);
+        new Styler(id, this.mainNode, state.colorIndex, options?.highlightAlpha);
     }
 
 
     addHTMLEvents() {
         const mainNode = this.mainNode, state = this.state, id = this.id;
 
-        mainNode.querySelector(`.colorButton`).addEventListener("click", () => {
+        mainNode.querySelector(`.colorButton`)?.addEventListener("click", () => {
             state.NextColor();
-            mainNode.style = GetPanelColorCSS(state.colorIndex);
-            mainNode.dispatchEvent(GetColorchangeEvent(state.colorIndex));
+            mainNode.setAttribute("style", GetPanelColorCSS(state.colorIndex));
+            mainNode.dispatchEvent(new ColorChangeEvent(state.colorIndex));
         });
 
-        mainNode.querySelector(`.refreshButton`).addEventListener("click", () => {
-            mainNode.dispatchEvent(GetSearchRestartEvent());
+        mainNode.querySelector(`.refreshButton`)?.addEventListener("click", () => {
+            mainNode.dispatchEvent(new SearchRestartEvent());
         });
 
-        mainNode.querySelector(`.downButton`).addEventListener("click", () => {
-            mainNode.dispatchEvent(GetChangeIndexEvent(1));
+        mainNode.querySelector(`.downButton`)?.addEventListener("click", () => {
+            mainNode.dispatchEvent(new IndexChangeEvent(1));
         });
 
-        mainNode.querySelector(`.upButton`).addEventListener("click", () => {
-            mainNode.dispatchEvent(GetChangeIndexEvent(-1));
+        mainNode.querySelector(`.upButton`)?.addEventListener("click", () => {
+            mainNode.dispatchEvent(new IndexChangeEvent(-1));
         });
 
-        mainNode.querySelector(`.closeButton`).addEventListener("click", () => {
-            mainNode.dispatchEvent(GetClosePanelsEvent(id));
+        mainNode.querySelector(`.closeButton`)?.addEventListener("click", () => {
+            mainNode.dispatchEvent(new ClosePanelsEvent(id));
         });
 
-        mainNode.querySelector(`.caseCheck`).addEventListener("input", (args) => {
-            if (state.caseSensitive == args.target.checked)
+        mainNode.querySelector(`.caseCheck`)?.addEventListener("input", (args) => {
+            if (state.caseSensitive == (args?.target as HTMLInputElement)?.checked)
                 return;
 
-            state.caseSensitive = args.target.checked;
-            mainNode.dispatchEvent(GetSearchRestartEvent());
+            state.caseSensitive = (args?.target as HTMLInputElement)?.checked;
+            mainNode.dispatchEvent(new SearchRestartEvent());
         });
 
-        mainNode.querySelector(`.wordCheck`).addEventListener("input", (args) => {
-            if (state.wholeWord == args?.target?.checked)
+        mainNode.querySelector(`.wordCheck`)?.addEventListener("input", (args) => {
+            if (state.wholeWord == (args?.target as HTMLInputElement)?.checked)
                 return;
 
-            state.wholeWord = args.target.checked;
-            mainNode.dispatchEvent(GetSearchRestartEvent());
+            state.wholeWord = (args.target as HTMLInputElement).checked;
+            mainNode.dispatchEvent(new SearchRestartEvent());
         });
 
-        mainNode.querySelector(`.pinButton`).addEventListener("click", (args) => {
+        mainNode.querySelector(`.pinButton`)?.addEventListener("click", (args) => {
+            
             state.pinned = !state.pinned;
             if (state.pinned)
                 mainNode.classList.add('pinned');
@@ -78,15 +75,15 @@ export class Panel {
                 mainNode.classList.remove('pinned');
 
             if (args?.target)
-                args.target.textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
+                (args.target as HTMLElement).textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
         });
 
         const searchInput = mainNode.querySelector(`.searchInput`);
-        searchInput.addEventListener("keypress", function (event) {
+        searchInput?.addEventListener("keypress", function (event) {
             event.stopPropagation();
         }, true);
 
-        searchInput.addEventListener("input", (args) => {
+        searchInput?.addEventListener("input", (args: any) => {
             if (!args?.target)
                 return;
             const safeValue = formatIncomingString(args.target.value);
@@ -94,30 +91,30 @@ export class Panel {
             const inputChanged = safeValue != state.searchString;
             state.searchString = safeValue;
             if (inputChanged) {
-                mainNode.dispatchEvent(GetSearchRestartEvent());
+                mainNode.dispatchEvent(new SearchRestartEvent());
             }
         });
-        searchInput.addEventListener("keydown", (event) => {
+        searchInput?.addEventListener("keydown", (event: any) => {
             if (event.key === "Enter")
-                mainNode.dispatchEvent(GetChangeIndexEvent(1));
+                mainNode.dispatchEvent(new IndexChangeEvent(1));
             else if (event.key === "Escape")
-                mainNode.dispatchEvent(GetClosePanelsEvent(id));
+                mainNode.dispatchEvent(new ClosePanelsEvent(id));
             //prevent other javascript in the document from reacting to keypresses
             event.stopImmediatePropagation();
         });
-        searchInput.addEventListener("focus", () => {
+        searchInput?.addEventListener("focus", () => {
             mainNode.classList.add('focused');
         });
-        searchInput.addEventListener("focusout", () => {
+        searchInput?.addEventListener("focusout", () => {
             Panel.lastFocusedPanel = mainNode;
             mainNode.classList.remove('focused');
         });
 
-        mainNode.addEventListener(GetClosePanelsEvent().type, () => {
+        mainNode.addEventListener(ClosePanelsEvent.type, () => {
             const refocus = this.IsFocused();
             mainNode.remove();
             if (Panel.lastFocusedPanel == mainNode)
-                Panel.lastFocusedPanel = null;
+                Panel.lastFocusedPanel = undefined;
             if (refocus)
                 Panel.NextFocus();
         });
@@ -134,6 +131,7 @@ export class Panel {
     //If one of the panels is focused, focuses previously adjustened
     //if none selected, selects the one that focused last
     //if none selected and last focused doesn't exists, selects the first one
+    static lastFocusedPanel?: HTMLElement;
     static NextFocus() {
         const panelsNodes = RootNode.GetLocalEventRoots();
         const currentFocusedPanel = panelsNodes.filter((node) => node.classList.contains("focused"))?.[0];
@@ -148,20 +146,24 @@ export class Panel {
             const newFocusIndex = focusedIndex - 1 >= 0 ? focusedIndex - 1 : panelsNodes.length - 1;
             newFocusedPanel = panelsNodes[newFocusIndex];
         }
-        newFocusedPanel?.querySelector(`.searchInput`)?.focus();
+        (newFocusedPanel?.querySelector(`.searchInput`) as HTMLInputElement)?.focus();
     }
 
-    updateLabels(index, length) {
+    totalMatchesLabel?: HTMLElement;
+    selectedMatchLabel?: HTMLElement;
+    updateLabels(index: number, length: number) {
         if (!this.totalMatchesLabel) {
-            this.totalMatchesLabel = this.mainNode.querySelector('.totalMatches');
-            this.selectedMatchLabel = this.mainNode.querySelector('.selectedMatch');
+            this.totalMatchesLabel = this.mainNode.querySelector('.totalMatches') as HTMLElement;
+            this.selectedMatchLabel = this.mainNode.querySelector('.selectedMatch') as HTMLElement;
         }
-        this.selectedMatchLabel.textContent = length == 0 ? "0" : `${index + 1}`;
-        this.totalMatchesLabel.textContent = length;
+        if (this.selectedMatchLabel)
+            this.selectedMatchLabel.textContent = length == 0 ? "0" : `${index + 1}`;
+        if (this.totalMatchesLabel)
+            this.totalMatchesLabel.textContent = length.toString();
     }
 }
 
-function buildPanel(id, state) {
+function buildPanel(id: number, state: State) {
     const mainNode = document.createElement("div");
     mainNode.setAttribute("id", `FMPanel${id}`);
     mainNode.setAttribute("class", `FMPanel`);
@@ -190,17 +192,18 @@ function buildPanel(id, state) {
             <button class="pinButton"> ${state.pinned ? "\u{25A3}" : "\u{25A2}"}</button>
         </div>`;
 
-    mainNode.style = GetPanelColorCSS(state.colorIndex);
+    mainNode.setAttribute("style", GetPanelColorCSS(state.colorIndex));
     return mainNode;
 }
 
-function formatIncomingString(incomingString) {
+function formatIncomingString(incomingString: string) {
     incomingString = incomingString || "";
     return incomingString.substring(0, 100);
 }
 
-export function GetColorchangeEvent(colorIndex) {
-    const event = new Event("fm-color-change");
-    event.colorIndex = colorIndex;
-    return event;
+export class ColorChangeEvent extends Event {
+    static readonly type: string = "fm-color-change";
+    constructor(public colorIndex: number) {
+        super(ColorChangeEvent.type);
+    }
 }

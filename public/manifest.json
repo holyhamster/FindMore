@@ -5,7 +5,7 @@
   "version": "1.01",
   "permissions": [ "activeTab", "storage" ],
   "action": {
-    "default_popup": "src/popup/popup.html",
+    "default_popup": "popup.html",
     "default_icon": "16.png"
   },
 
@@ -23,15 +23,8 @@
     {
       "matches": [ "<all_urls>"],
       "all_frames": false,
-      "js": [ "src/js/content-import.js" ],
+      "js": [ "content-main.js" ],
       "run_at": "document_end"
-    }
-  ],
-
-  "web_accessible_resources": [
-    {
-      "resources": [ "src/js/*" ],
-      "matches": [ "<all_urls>" ]
     }
   ],
 

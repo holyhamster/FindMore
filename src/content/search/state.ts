@@ -1,28 +1,27 @@
-import { ColorCount } from './cssStyling/cssInjection.js'
+import { ColorCount } from './cssStyling/cssInjection'
 
 //Holds all user-editable data about a single search
 //Serialized when passed to background script for caching
 
 export class State {
-    constructor(colorIndex = 0, searchString = "") {
-        this.searchString = searchString;
-        this.colorIndex = colorIndex;
-        this.pinned = false;
-        this.caseSensitive = false;
-        this.wholeWord = false;
+    public pinned = false;
+    public caseSensitive = false;
+    public wholeWord = false;
+    constructor(public colorIndex = 0, public searchString = "") {
+
     }
 
-    static Load(state) {
+    static Load(state: State): State {
         const result = new State();
         Object.assign(result, state);
         return result;
     }
 
-    NextColor() {
+    NextColor(): void {
         this.colorIndex = this.colorIndex == ColorCount - 1 ? 0 : this.colorIndex + 1;
     }
 
-    GetRegex(escape = true) {
+    GetRegex(escape = true): RegExp {
         let regexString = escape ? this.searchString.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
             : this.searchString;
 
@@ -33,17 +32,17 @@ export class State {
         return new RegExp(regexString, regexOptions);
     }
 
-    IsEmpty() {
+    IsEmpty(): boolean {
         return this.searchString == "";
     }
 
     //Takes array of states, returns a free colorIndex
-    static GetNextColor(states) {
+    static GetNextColor(states: State[]): number {
         if (!states || states.length == 0)
             return 0;
 
-        const takenColors = [];
-        states.forEach((state) => takenColors.push(state?.colorIndex));
+        const takenColors: number[] = [];
+        states.forEach((state: State) => takenColors.push(state.colorIndex));
         for (let colorCandidate = 0; colorCandidate < ColorCount; colorCandidate += 1)
             if (!takenColors.includes(colorCandidate))
                 return colorCandidate;
