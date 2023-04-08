@@ -2,10 +2,12 @@ import { Search, ClosePanelsEvent } from './search/search';
 import { RootNode } from './search/rootNode';
 import { State } from './search/state';
 
-//Content script loaded after page is loaded
-//Talks to background script via runtime events, creates new Searches
+//Content script thta's loaded into pages
+//Talks to background script via runtime events, initiates new Searches
+
 const maxSearches = 15;
 
+ //all searches by their internal IDs
 class SearchMap extends Map<number, Search> {
     public getStatesMap(): Map<number, State> {
         const map = new Map<number, State>();
@@ -13,7 +15,7 @@ class SearchMap extends Map<number, Search> {
         return map;
     }
 };
-var searchMap = new SearchMap();  //all searches by their IDs
+var searchMap = new SearchMap(); 
 
 //process events from service worker
 var tabId: number;
@@ -45,10 +47,12 @@ chrome.runtime.onMessage.addListener(
                 break;
 
             case "fm-content-update-search":
+                if (request.options)
+                    Search.SetOptions(request.options);
                 searchMap.forEach((oldSearch) => oldSearch.Close())
                 searchMap.clear();
 
-                const loadedMap = deserializeStateMap(request.data) as Map<number, State>;
+                const loadedMap = deserializeArray(request.data) as State[];
                 loadedMap?.forEach((state: State) => {
                     const newId = getNewID(searchMap);
                     searchMap.set(newId, new Search(newId, state));
@@ -56,11 +60,11 @@ chrome.runtime.onMessage.addListener(
                 break;
 
             case `fm-content-state-request`:
-                response = serializeMap(searchMap.getStatesMap());
+                response = serializeArray(Array.from(searchMap.getStatesMap().values()));
                 break;
 
             case `fm-content-update-options`:
-                setOptions(request.options);
+                Search.SetOptions(request.options);
                 break;
 
             default:
@@ -85,17 +89,18 @@ document.addEventListener('keydown', (args: any) => {
 
 //send any pinned searches to service worker when the window is unloaded
 window.addEventListener('unload', () => {
-    if (searchMap.size == 0)
-        return;
+    
     const pinnedSearches = new Map<number, State>();
     searchMap.getStatesMap().forEach((state, id) => {
         if (state.pinned)
             pinnedSearches.set(id, state)
     });
+    if (pinnedSearches.size == 0)
+        return;
     const message = {
         context: "fm-content-cache",
         tabId: tabId,
-        data: serializeMap(pinnedSearches)
+        data: serializeArray(Array.from(pinnedSearches.values()))
     };
     sendMessageToService(message);
 });
@@ -109,10 +114,6 @@ window.addEventListener('visibilitychange', () => {
 //signal to service worker that script is loaded in a page
 sendMessageToService({ context: "fm-content-script-loaded" });
 
-function setOptions(options: any) {
-    Search.SetOptions(options);
-}
-
 function getNewID(searches: SearchMap) {
     let id = 0;
     while (searches.has(id))
@@ -120,13 +121,14 @@ function getNewID(searches: SearchMap) {
     return id;
 }
 
-function serializeMap(map: Map<any, any>) {
-    return JSON.stringify(Array.from(map.entries()));
+function serializeArray(array: any[]) {
+    return JSON.stringify(array);
 }
 
-function deserializeStateMap(string: string): Map<number, State> {
-    const map = new Map<number, State>(JSON.parse(string));
-    map?.forEach((val, key, map) => map.set(key, State.Load(val)));
+function deserializeArray(string: string): State[] {
+    const map = Array.from(JSON.parse(string)) as State[];
+    for (let i = 0; i < map.length; i++)
+        map[i] = State.Load(map[i]);
     return map;
 }
 
