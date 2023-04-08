@@ -40,17 +40,11 @@ export class Search {
     }
 
     addEvents(element: Element) {
-        element.addEventListener(
-            IndexChangeEvent.type,
-            (args: any) => this.updateIndex(args.change));
+        element.addEventListener(IndexChangeEvent.type, (args: any) => this.updateIndex(args.change));
 
-        element.addEventListener(
-            SearchRestartEvent.type,
-            () => this.Restart());
+        element.addEventListener(SearchRestartEvent.type, () => this.Restart());
 
-        element.addEventListener(
-            NewMatchesEvent.type,
-            () => this.updateIndex());
+        element.addEventListener(NewMatchesEvent.type, () => this.updateIndex());
 
         element.addEventListener(
             ClosePanelsEvent.type,
@@ -66,7 +60,10 @@ export class Search {
             this.highlighter = this.highlighter || new Highlighter(this.id, this.panel.GetEventRoot());
 
             this.domCrawler = new DOMCrawler(
-                this.state.searchString, this.state.GetRegex(true), this.panel.GetEventRoot(), this.highlighter);
+                this.state.searchString,
+                this.state.GetRegex(true),
+                this.panel.GetEventRoot(),
+                this.highlighter);
         }
         this.updateIndex();
     }
@@ -102,14 +99,11 @@ Search.Options = undefined;
 function normalizeSearchIndex(current: number, change: number, matchCount: number) {
     if (matchCount <= 0)
         return;
-
     current = (current || 0) + (change || 0);
-
     if (current < 0)
         current = matchCount - 1;
     else if (current >= matchCount)
         current = 0;
-
     return current;
 }
 

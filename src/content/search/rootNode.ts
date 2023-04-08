@@ -1,4 +1,4 @@
-import { rootCSS } from './cssStyling/cssInjection';
+import { rootCSS } from './cssStyling/rootCSS';
 
 //Singleton that holds all in-page UI. 
 //Has the following structure:
@@ -9,7 +9,6 @@ import { rootCSS } from './cssStyling/cssInjection';
 //Listenes to option change events to adjust style accordingly
 
 export class RootNode extends HTMLDivElement{
-  
     static build(): RootNode {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];
         if (!shadowHolder) {

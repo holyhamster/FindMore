@@ -2,8 +2,6 @@
 //Builds Options() according to its ui, communicates with background script via runtime events
 
 document.addEventListener('DOMContentLoaded', () => {
-    
-
     chrome.runtime.onMessage.addListener((event) => {
         if (event.context == "fm-popup-current-search-answer")
             setSavedButtonAs(!isNaN(event.id), event.hasData);
@@ -46,16 +44,16 @@ function addEventsToUI() {
         cornerButton.selectedIndex = index <= 3 ? index : 0;
         switch (index) {
             case 1:
-                cornerButton.textContent = `\u{25F2}`;
+                cornerButton.innerHTML = `\u25F2`;
                 break;
             case 2:
-                cornerButton.textContent = `\u{25F1}`;
+                cornerButton.innerHTML = `\u25F1`;
                 break;
             case 3:
-                cornerButton.textContent = `\u{25F0}`;
+                cornerButton.innerHTML = '\u25F0';
                 break;
             default:
-                cornerButton.textContent = `\u{25F3}`;
+                cornerButton.innerHTML = `\u25F3`;
                 break;
         }
     }
