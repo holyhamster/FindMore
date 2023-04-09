@@ -4,3 +4,5 @@ package-lock.json
 /.vs
 /node_modules
 /dist
+/obj/Debug
+/bin
