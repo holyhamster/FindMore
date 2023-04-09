@@ -1,8 +1,9 @@
 <html>
 <head>
+    <meta charset="UTF-8">
     <style>
         html {
-            height:20em;
+            height: 20em;
         }
 
         body {
@@ -27,22 +28,23 @@
             min-width: 1.7em;
         }
 
-        button:hover {
-            background-color: var(--main-color);
-            color: var(--secondary-color);
-        }
+            button:hover {
+                background-color: var(--main-color);
+                color: var(--secondary-color);
+            }
 
-        button:active {
-            transform: translateY(1px);
-        }
+            button:active {
+                transform: translateY(1px);
+            }
 
         .tooltippedButtons {
             position: relative;
             margin-bottom: 3em;
-            display: flex; 
-            flex-flow: row; 
-            justify-content:space-around;
+            display: flex;
+            flex-flow: row;
+            justify-content: space-around;
         }
+
         .tooltip {
             visibility: hidden;
             position: absolute;
@@ -53,33 +55,35 @@
         .tooltippedButtons button:hover + .tooltip {
             visibility: visible;
         }
-        #findButton:hover + div > #findToolTip  {
+
+        #findButton:hover + div > #findToolTip {
             visibility: visible;
         }
+
         .sliderContainer {
-            display: flex; 
-            flex-flow: row; 
-            justify-content:space-around;
+            display: flex;
+            flex-flow: row;
+            justify-content: space-around;
         }
 
-        .sliderContainer > div {
-            display: flex;
-            flex-flow: column;
-        }
-        .sliderContainer label {
-            text-align: center;
-        }
+            .sliderContainer > div {
+                display: flex;
+                flex-flow: column;
+            }
+
+            .sliderContainer label {
+                text-align: center;
+            }
 
         .footer {
             margin-left: 5px;
-            display:flex;
-            flex-wrap:wrap;
+            display: flex;
+            flex-wrap: wrap;
         }
-        
     </style>
 </head>
 <body>
-    <script src="js/popup.js"></script>
+    <script src="popup.js"></script>
     <div style="display:flex; flex-flow:column; justify-content:center;">
         <div style="display: flex; justify-content: center;">
             <h1>

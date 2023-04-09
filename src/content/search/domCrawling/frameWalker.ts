@@ -1,14 +1,17 @@
 //Treewalker wrapper that goes into iframes with a callback when locating one
 
 export class FrameWalker {
-    static createFrameWalker(root, onNewIframes) {
+    onNewIframes?: (iframe: HTMLIFrameElement) => void;
+    que: TreeWalker[] = [];
+    static build(root: Element, onNewIframes: (iframe: HTMLIFrameElement) => void) {
         const frameWalker = new FrameWalker();
         frameWalker.onNewIframes = onNewIframes;
         frameWalker.que = [document.createTreeWalker(root, NodeFilter.SHOW_ALL, condition)];
         return frameWalker;
     }
 
-    nextNode() {
+    
+    public NextNode(): Element | null {
         if (this.que.length == 0)
             return null;
 
@@ -16,26 +19,30 @@ export class FrameWalker {
 
         if (!node) {
             this.que.pop();
-            return this.nextNode();
+            return this.NextNode();
         }
 
         if (node.nodeName.toUpperCase() == 'IFRAME'){
-            const iDocument = node.contentDocument;
+            const iDocument = (node as HTMLIFrameElement).contentDocument;
             if (iDocument) {
-                this.onNewIframes?.(node);
+                console.log(node);
+                this.onNewIframes?.(node as HTMLIFrameElement);
                 this.que.push(iDocument.createTreeWalker(iDocument.body, NodeFilter.SHOW_ALL, condition));
             }
-            return this.nextNode();
+            return this.NextNode();
         }
 
-        return node;
+        return node as Element;
     }
 }
 
+export interface TextNode extends Node {
+    textContent: string;
+}
 //Target nodes with textcontent
 //Iframes are accepted to be processed by the framewalker, style and script tags are rejected
 const condition = {
-    acceptNode: (node) =>
+    acceptNode: (node: any) =>
     {
         if (node.nodeName.toUpperCase() == "IFRAME")
             return NodeFilter.FILTER_ACCEPT;

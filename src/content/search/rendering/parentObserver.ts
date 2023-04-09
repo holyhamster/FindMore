@@ -1,19 +1,21 @@
+import { Container } from './container';
+
 //Wrapper for IntersectionObserver
 //Watches parent elements of nodes with matches
 //Determines if they're visile, indexes into the map and callbacks with containers on success.
 
 export class ParentObserver {
-    constructor(nodeMap, indexMapRef, containerCallback) {
-        this.nodeMap = nodeMap;
-        this.indexMap = indexMapRef;
-        this.sendToProcessing = containerCallback;
-
+    observer: IntersectionObserver;
+    constructor(
+        private nodeMap: Map<Element, Container>,
+        private indexMap: Map<number, Container>,
+        private sendToProcessing: (container: Container) => void) {
         this.observer = new IntersectionObserver((entries) => this.onObserve(entries));
     }
 
-    onObserve(entries) {
-        const visibleContainers = [];
-        entries.forEach((entry) => {
+    private onObserve(entries: IntersectionObserverEntry[]) {
+        const visibleContainers: Container[] = [];
+        entries.forEach((entry: IntersectionObserverEntry) => {
             this.observer.unobserve(entry.target);
             const parentStyle = window.getComputedStyle(entry.target);
             const elementVisible =
@@ -35,7 +37,7 @@ export class ParentObserver {
         });
     }
 
-    Observe(container) {
+    public Observe(container: Container) {
         this.observer.observe(container.parentNode);
     }
 

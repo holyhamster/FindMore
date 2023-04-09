@@ -1,10 +1,11 @@
-import { PerformanceTimer } from '../performanceTimer.js'
+import { PerformanceTimer } from '../performanceTimer'
+import { Container } from './container';
 
 //Static class that asymchronously removes old containers, shared between all page searches
 
 export class ContainerRemoval {
-    static array;
-    static Que(containers) {
+    static array: Container[];
+    static Que(containers: Container[]) {
         ContainerRemoval.array = ContainerRemoval.array || [];
         ContainerRemoval.array = [...ContainerRemoval.array, ...containers];
 
@@ -14,7 +15,7 @@ export class ContainerRemoval {
     static Trigger() {
         const timer = new PerformanceTimer();
         let container;
-        while ((timer.Get() < removalMSLimit) && (container = ContainerRemoval.array?.shift()))
+        while ((timer.IsUnder(removalMSLimit)) && (container = ContainerRemoval.array?.shift()))
             container.Remove();
 
         if (ContainerRemoval.array?.length > 0)

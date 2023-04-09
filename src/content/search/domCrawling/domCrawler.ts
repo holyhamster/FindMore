@@ -1,22 +1,25 @@
-import { SearchRegion } from './searchRegion.js';
-import { PerformanceTimer } from '../performanceTimer.js';
+import { SearchRegion } from './searchRegion';
+import { PerformanceTimer } from '../performanceTimer';
+import { Highlighter } from '../rendering/highlighter.js';
 
 //Goes recursively through SearchRegion, sends matches to Highlighter
 
 export class DOMCrawler {
 
-    constructor(searchString, regex, eventElem, highlighterRef) {
-        setTimeout(() => {
-            this.search(new SearchRegion(searchString, regex, eventElem), highlighterRef)
-        }, 1);
+    constructor(
+        searchString: string,
+        regex: RegExp,
+        eventElem: Element,
+        highlighterRef: Highlighter) {
+        setTimeout(() => this.search(new SearchRegion(searchString, regex, eventElem), highlighterRef), 1);
     }
 
-    interrupted;
-    Interrupt() {
+    interrupted = false;
+    public Interrupt() {
         this.interrupted = true;
     }
 
-    search(searchRegion, highlighter, executionTime = 0) {
+    private search(searchRegion: SearchRegion, highlighter: Highlighter, executionTime = 0) {
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
         const measurer = new PerformanceTimer();
 
@@ -30,12 +33,10 @@ export class DOMCrawler {
         if (!WALK_IN_PROGRESS)
             return;
 
-        if ((executionTime += measurer.Get()) < recursionTimeLimit) {
+        if ((executionTime += measurer.Get()) < recursionTimeLimit)
             this.search(searchRegion, highlighter, executionTime)
-        }
-        else {
+        else 
             setTimeout(() => this.search(searchRegion, highlighter), DelayTime);
-        }
     }
 }
 

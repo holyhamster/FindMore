@@ -1,8 +1,8 @@
-import { GetPersonalHighlightCSS, SharedHighlightCSS } from './cssInjection.js'
-import { GetClosePanelsEvent } from '../search.js'
-import { GetColorchangeEvent } from '../panel.js'
-import { GetNewIframeEvent } from '../domCrawling/searchRegion.js'
-import { GetOptionsChangeEvent } from '../rootNode.js'
+import { GetPersonalHighlightCSS, SharedHighlightCSS } from './cssInjection'
+import { ClosePanelsEvent } from '../search'
+import { ColorChangeEvent } from '../panel'
+import { NewIFrameEvent } from '../domCrawling/searchRegion'
+import { OptionsChangeEvent } from '../rootNode'
 
 //Adds and edits css elements for highlight rectangles by:
 //-adding an adopted sheet to the main document
@@ -11,31 +11,33 @@ import { GetOptionsChangeEvent } from '../rootNode.js'
 //for performance css is split in two: part that's shared between all searches and personal color settings
 
 export class Styler {
-    constructor(id, eventElemenet, colorIndex, highlightAlpha) {
-        this.id = id;
-        this.eventElement = eventElemenet;
-        this.colorIndex = colorIndex;
-        this.highlightAlpha = highlightAlpha;
-        this.addEvents(eventElemenet);
+    iframes: Document[] = [];
+    constructor(
+        private id: number,
+        private eventElemenet: Element,
+        private colorIndex: number,
+        private highlightAlpha: string) {
+        this.addEvents(this.eventElemenet);
         this.updateStyle();
     }
-    addEvents(eventElement) {
-        eventElement.addEventListener(GetClosePanelsEvent().type,
+    addEvents(eventElement: Element) {
+        eventElement.addEventListener(ClosePanelsEvent.type,
             () => this.clearStyles());
 
-        eventElement.addEventListener(GetOptionsChangeEvent().type,
-            (args) => {
+        eventElement.addEventListener(OptionsChangeEvent.type,
+            (args: any) => {
                 if (args?.options?.HighlightOpacity) {
                     this.highlightAlpha = args.options.HighlightOpacity;
                     this.updateStyle();
                 }
             });
 
-        eventElement.addEventListener(GetNewIframeEvent().type,
-            (args) => {
-                const newIFrame = args.iframe.contentDocument;
+        eventElement.addEventListener(NewIFrameEvent.type,
+            (args: any) => {
+                const newIFrame = args?.iframe?.contentDocument as Document;
                 if (!newIFrame)
                     return;
+                const f = HTMLIFrameElement;
                 
                 if (!this.iframes.includes(newIFrame))
                     this.iframes.push(newIFrame);
@@ -43,8 +45,8 @@ export class Styler {
                 this.updateIframe(newIFrame);
             });
 
-        eventElement.addEventListener(GetColorchangeEvent().type,
-            (args) => {
+        eventElement.addEventListener(ColorChangeEvent.type,
+            (args: any) => {
                 if (args?.colorIndex) {
                     this.colorIndex = args.colorIndex;
                     this.updateStyle();
@@ -57,7 +59,8 @@ export class Styler {
         this.iframes.forEach((iframe) => this.updateIframe(iframe));
     }
 
-    personalSheet;
+    personalSheet: CSSStyleSheet | undefined;
+    static sharedSheet: CSSStyleSheet | undefined;
     updateAdoptedSheet() {
         if (!Styler.sharedSheet) {
             Styler.sharedSheet = new CSSStyleSheet();
@@ -82,11 +85,10 @@ export class Styler {
         const currentAdoptedArray = Array.from(document.adoptedStyleSheets);
         currentAdoptedArray.splice(personalSheetIndex, 1);
         document.adoptedStyleSheets = currentAdoptedArray;
-        this.personalSheet = null;
+        this.personalSheet = undefined;
     }
 
-    iframes = [];
-    updateIframe(iframe) {
+    updateIframe(iframe: Document) {
         const sharedStyleClass = `fm-iframeDefStyle`;
         let existingSharedStyle = iframe.getElementsByClassName(sharedStyleClass)[0];
         if (!existingSharedStyle) {
@@ -114,15 +116,18 @@ export class Styler {
         this.removeIframeStyles();
     }
 }
-function addStyleToIFrame(iframe, styleclass, styletext) {
+function addStyleToIFrame(iframe: Document, styleclass: string, styletext: string) {
     const style = iframe.createElement(`style`);
     style.setAttribute("class", styleclass);
     style.innerHTML = styletext;
     iframe.head.appendChild(style);
 }
 
-export function GetStyleChangeEvent(args) {
-    const event = new Event("fm-style-change");
-    Object.assign(event, args);
-    return event;
+
+export class StyleChangeEvent extends Event {
+    static readonly type: string = "fm-style-change";
+    constructor(args: any) {
+        super(StyleChangeEvent.type);
+        Object.assign(this, args);
+    }
 }
