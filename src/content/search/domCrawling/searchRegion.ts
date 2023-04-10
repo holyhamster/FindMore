@@ -11,7 +11,7 @@ export class SearchRegion
         private regexp: RegExp,
         eventElement: Element) {
 
-        this.treeWalk = FrameWalker.build(document.body,
+        this.treeWalk = new FrameWalker(document.body,
             (iframe: HTMLIFrameElement) => eventElement.dispatchEvent(new NewIFrameEvent(iframe)));
     }
 

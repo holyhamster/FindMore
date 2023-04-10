@@ -1,6 +1,6 @@
 import { SearchRegion } from './searchRegion';
 import { PerformanceTimer } from '../performanceTimer';
-import { Highlighter } from '../rendering/highlighter.js';
+import { Match } from '../match';
 
 //Goes recursively through SearchRegion, sends matches to Highlighter
 
@@ -10,8 +10,8 @@ export class DOMCrawler {
         searchString: string,
         regex: RegExp,
         eventElem: Element,
-        highlighterRef: Highlighter) {
-        setTimeout(() => this.search(new SearchRegion(searchString, regex, eventElem), highlighterRef), 1);
+        passMatches: (match: Match[]) => void) {
+        setTimeout(() => this.search(new SearchRegion(searchString, regex, eventElem), passMatches), 1);
     }
 
     interrupted = false;
@@ -19,7 +19,10 @@ export class DOMCrawler {
         this.interrupted = true;
     }
 
-    private search(searchRegion: SearchRegion, highlighter: Highlighter, executionTime = 0) {
+    private search(
+        searchRegion: SearchRegion,
+        passMatches: (match: Match[]) => void,
+        executionTime = 0) {
         let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
         const measurer = new PerformanceTimer();
 
@@ -27,16 +30,16 @@ export class DOMCrawler {
             (WALK_IN_PROGRESS = searchRegion.TryExpand())) {
             const matches = searchRegion.GetMatches();
             if (matches?.length > 0)
-                highlighter.QueMatches(matches);
+                passMatches(matches);
         }
 
         if (!WALK_IN_PROGRESS)
             return;
 
         if ((executionTime += measurer.Get()) < recursionTimeLimit)
-            this.search(searchRegion, highlighter, executionTime)
-        else 
-            setTimeout(() => this.search(searchRegion, highlighter), DelayTime);
+            this.search(searchRegion, passMatches, executionTime)
+        else
+            setTimeout(() => this.search(searchRegion, passMatches), DelayTime);
     }
 }
 
