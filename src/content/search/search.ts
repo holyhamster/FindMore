@@ -3,7 +3,8 @@ import { Highlighter } from './rendering/highlighter';
 import { Panel } from './panel';
 import { State } from './state';
 import { RootNode, OptionsChangeEvent } from './rootNode';
-
+import { Match } from './match';
+import { Styler } from './cssStyling/styler';
 //Nexus class for UI Panel, DOMCrawler and Highlighter:
 //Panel holds and controls UI for the search, top element is used to dispatch events
 //DOMCrawler goes through DOM tree of the document and sends all matches to Highlighter
@@ -13,11 +14,11 @@ export class Search {
     
     public panel: Panel;
     constructor(public id: number, public state: State, options: any = undefined) {
-        this.panel = new Panel(id, state, options);
+        this.panel = new Panel(id, state);
         this.addEvents(this.panel.GetEventRoot());
-
+        new Styler(id, this.panel.GetEventRoot(), state.colorIndex, options?.highlightAlpha);
         if (!this.state.IsEmpty())
-            this.startDOMCrawl();
+            this.start();
     }
     
     Close() {
@@ -27,7 +28,7 @@ export class Search {
     private dontAccentNewMatches: boolean = false;
     Restart() {
         this.dontAccentNewMatches = this.selectedIndex != undefined && this.selectedIndex > 0;
-        this.startDOMCrawl();
+        this.start();
     }
 
     public static Options: any;
@@ -53,7 +54,7 @@ export class Search {
 
     private domCrawler?: DOMCrawler;
     private highlighter?: Highlighter;
-    startDOMCrawl() {
+    start() {
         this.clearPreviousSearch();
 
         if (!this.state.IsEmpty()) {
@@ -63,7 +64,7 @@ export class Search {
                 this.state.searchString,
                 this.state.GetRegex(true),
                 this.panel.GetEventRoot(),
-                this.highlighter);
+                (matches: Match[]) => this.highlighter!.QueMatches(matches));
         }
         this.updateIndex();
     }
