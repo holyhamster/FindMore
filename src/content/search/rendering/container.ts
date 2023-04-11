@@ -1,4 +1,5 @@
 import { Match } from "../match";
+import { Highlight } from "./highlight";
 
 //Holds all highlight rectangles for matches under a single parent element in DOM tree
 //Creating a highlight is split into stages to be done in batches to minimize browser reflow calls:
@@ -10,7 +11,10 @@ import { Match } from "../match";
 
 export class Container {
     headElement: Element;
-    constructor(public parentNode: Element, private targetNode: Node, private id: number) {
+    constructor(
+        public parentNode: Element,
+        private targetNode: Node,
+        private id: number) {
         this.headElement = document.createElement('FM-CONTAINER');
     }
 
@@ -46,19 +50,15 @@ export class Container {
         return true;
     }
 
-    precalculatedNodes: Element[] = [];
+    precalculatedNodes: Highlight[] = [];
     PrecalculateRectangles(range: Range) {
         const anchor = this.headElement.getBoundingClientRect();
         while (this.indexedMatches.length > 0) {
             const match = this.indexedMatches.shift()!;
 
-            const elements: Element[] = [];
-            match.GetRectangles(range).forEach((rect) => {
-                const rectElement = document.createElement('FM-HIGHLIGHT');
-                rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${match.index}`);
-                Object.assign(rectElement.style, rectangleToStyle(rect, anchor));
-                elements.push(rectElement);
-            });
+            const elements: Highlight[] = [];
+            match.GetRectangles(range).forEach((rect) =>
+                elements.push(Highlight.build(rect, anchor, this.id, match.index)));
 
             this.precalculatedNodes = [...this.precalculatedNodes, ...elements];
         }
@@ -101,15 +101,6 @@ export class Container {
     private ClearCache() {
         this.quedMatches = [];
         this.precalculatedNodes = [];
-    }
-}
-
-function rectangleToStyle(rect: DOMRect, anchor: DOMRect) {
-    return {
-        height: rect.height + 'px',
-        width: rect.width + 'px',
-        left: rect.left - anchor.x + 'px',
-        top: rect.top - anchor.y + 'px'
     }
 }
 
