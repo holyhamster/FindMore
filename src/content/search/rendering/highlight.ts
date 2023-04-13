@@ -7,6 +7,8 @@ export class Highlight extends HTMLElement {
         Object.assign(element.style, rectangleToStyle(rect, anchor));
         return element;
     }
+
+    public accent() { }
 }
 
 //describe rectangle relative to given anchor as a .style object

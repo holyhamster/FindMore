@@ -1,25 +1,30 @@
+import { Options } from "./options";
+
 //Script running inside extension popup document
-//Builds Options() according to its ui, communicates with background script via runtime events
+//Builds Options() from ui and loads ui according to options
+//communicates with background script via runtime events
 
 document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.onMessage.addListener((event) => {
         if (event.context == "fm-popup-current-search-answer")
-            setSavedButtonAs(!isNaN(event.id), event.hasData);
+            setButtonsAs(!isNaN(event.id), event.hasData);
     });
     chrome.runtime.sendMessage({ context: "fm-popup-current-search-request" });
 
     addEventsToUI();
-
-    Options.FillFromMemory();
+    Options.TryLoad((options) => fillUI(options));
 
 });
-interface IndexedElement extends HTMLElement{
+
+//ui element with an index
+interface IndexedElement extends HTMLElement {
     selectedIndex: number;
     selectIndex: (i: number) => void;
 }
+
 function addEventsToUI() {
     const commitOptions = () => {
-        const options = Options.GetFromUI();
+        const options = buildOptionsFromUI();
         Options.Save(options);
         Options.SendToBackground(options);
     };
@@ -96,74 +101,47 @@ function addEventsToUI() {
     });
 }
 
-class Options {
-    public StartTop = false;
-    public StartLeft = false;
-    public Horizontal = false;
-    public StartPinned = false;
-    public MenuOpacity = 1;
-    public MenuScale = 1;
-    public HighlightOpacity = 0.45;
+function fillUI(options: Options) {
+    const cornerIndex =
+        (options.StartTop && options.StartLeft ? 3 : 0) +
+        (options.StartTop && !options.StartLeft ? 0 : 0) +
+        (!options.StartTop && !options.StartLeft ? 1 : 0) +
+        (!options.StartTop && options.StartLeft ? 2 : 0);
 
-    static GetFromUI() {
-        const options = new Options();
-        const cornerValue = 
-            (document.getElementById('cornerButton') as IndexedElement)?.selectedIndex;
-        if (typeof cornerValue === 'number') {
-            options.StartTop = cornerValue === 3 || cornerValue === 0;
-            options.StartLeft = cornerValue === 3 || cornerValue === 2;
-        }
-        const alignmentIndex =
-            (document.getElementById('alignmentButton') as IndexedElement)?.selectedIndex;
-        if (typeof alignmentIndex === 'number')
-            options.Horizontal = alignmentIndex === 1;
-
-        const pinnedIndex =
-            (document.getElementById('pinButton') as IndexedElement)?.selectedIndex;
-        if (typeof pinnedIndex === 'number')
-            options.StartPinned = pinnedIndex === 1;
-
-        const opacityValue =
-            parseFloat((document.getElementById('opacity') as any)?.value);
-        if (typeof opacityValue === 'number')
-            options.MenuOpacity = opacityValue;
-
-        const scaleValue = parseFloat((document.getElementById('scale')as any)?.value);
-        if (typeof scaleValue === 'number')
-            options.MenuScale = scaleValue;
-        //options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO: add slider
-        return options;
-    }
-
-    static FillFromMemory() {
-        chrome.storage.sync.get("fmSavedOptions", function (storage) {
-            Options.FillUI(storage?.fmSavedOptions || new Options());
-        });
-    }
-
-    static Save(options: any) {
-        chrome.storage.sync.set({ "fmSavedOptions": options });
-    }
-
-    static FillUI(options: any) {
-        const cornerIndex =
-            (options.StartTop && options.StartLeft ? 3 : 0) +
-            (options.StartTop && !options.StartLeft ? 0 : 0) +
-            (!options.StartTop && !options.StartLeft ? 1 : 0) +
-            (!options.StartTop && options.StartLeft ? 2 : 0);
-        (document.getElementById('cornerButton') as IndexedElement).selectIndex(cornerIndex || 0);
-        (document.getElementById('alignmentButton') as IndexedElement).selectIndex(options?.Horizontal ? 1 : 0);
-        (document.getElementById('pinButton') as IndexedElement).selectIndex(options?.StartPinned ? 1 : 0);
-        (document.getElementById('opacity')as any).value = options.MenuOpacity || 1;
-        (document.getElementById('scale') as any).value = options.MenuScale || 1;
-    }
-
-    static SendToBackground(options: Options) {
-        chrome.runtime.sendMessage({ context: "fm-popup-options-change", options: options });
-    }
+    (document.getElementById('cornerButton') as IndexedElement).selectIndex(cornerIndex || 0);
+    (document.getElementById('alignmentButton') as IndexedElement).selectIndex(options?.Horizontal ? 1 : 0);
+    (document.getElementById('pinButton') as IndexedElement).selectIndex(options?.StartPinned ? 1 : 0);
+    (document.getElementById('opacity') as any).value = options.MenuOpacity || 1;
+    (document.getElementById('scale') as any).value = options.MenuScale || 1;
 }
 
-function setSavedButtonAs(hasActiveWindow: boolean, hasActiveSearches: boolean) {
+function buildOptionsFromUI(): Options {
+    const options = new Options();
+    const cornerValue = (document.getElementById('cornerButton') as IndexedElement)?.selectedIndex;
+    if (typeof cornerValue === 'number') {
+        options.StartTop = cornerValue === 3 || cornerValue === 0;
+        options.StartLeft = cornerValue === 3 || cornerValue === 2;
+    }
+    const alignmentIndex = (document.getElementById('alignmentButton') as IndexedElement)?.selectedIndex;
+    if (typeof alignmentIndex === 'number')
+        options.Horizontal = alignmentIndex === 1;
+
+    const pinnedIndex = (document.getElementById('pinButton') as IndexedElement)?.selectedIndex;
+    if (typeof pinnedIndex === 'number')
+        options.StartPinned = pinnedIndex === 1;
+
+    const opacityValue = parseFloat((document.getElementById('opacity') as any)?.value);
+    if (typeof opacityValue === 'number')
+        options.MenuOpacity = opacityValue;
+
+    const scaleValue = parseFloat((document.getElementById('scale') as any)?.value);
+    if (typeof scaleValue === 'number')
+        options.MenuScale = scaleValue;
+    //options.HighlightOpacity = document.getElementById('highlightOpacity')?.value || 1;  //TODO: add slider
+    return options;
+}
+
+function setButtonsAs(hasActiveWindow: boolean, hasActiveSearches: boolean) {
     const saveButton = document.getElementById('saveButton') as any;
     const loadButton = document.getElementById('loadButton') as any;
     const newButton = document.getElementById('findButton') as any;

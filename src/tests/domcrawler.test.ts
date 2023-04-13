@@ -9,11 +9,11 @@ test('Look through document for a match', () => {
 
     jest.useFakeTimers();
     let matches: Match[] = [];
-    var state = new State("search_phrase", 1);
-    new DOMCrawler(state.searchString,
-        state.GetRegex(),
-        document.createElement('div'),
+
+    let crawler = new DOMCrawler(document.createElement('div'),
         (newMatches: Match[]) => matches = [...matches, ...newMatches]);
+    let state = new State("search_phrase", 1);
+    crawler.Start(state.searchString, state.GetRegex());
 
     jest.advanceTimersByTime(100);
     expect(matches.length).toBe(1);

@@ -36,6 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="jest.config.js" />
+    <Content Include="src\content\search\interruptable.ts" />
     <Content Include="src\options.ts" />
     <Content Include="src\tests\mockhtml.html" />
     <Content Include="webpack\webpack.config.js" />
@@ -78,10 +79,12 @@
     <TypeScriptCompile Include="src\content\search\rendering\highlight.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="src\content\search\rendering\highlighter.ts" />
+    <TypeScriptCompile Include="src\content\search\rendering\containerCollection.ts" />
+    <TypeScriptCompile Include="src\content\search\rendering\indexer.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\parentObserver.ts" />
     <TypeScriptCompile Include="src\content\search\rootNode.ts" />
     <TypeScriptCompile Include="src\content\search\search.ts" />
+    <TypeScriptCompile Include="src\content\search\searchEvents.ts" />
     <TypeScriptCompile Include="src\content\search\state.ts" />
     <TypeScriptCompile Include="src\messaging.ts" />
     <TypeScriptCompile Include="src\popup.ts" />

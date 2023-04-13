@@ -8,8 +8,7 @@ export class ContainerObserver {
 
     observer: IntersectionObserver;
     constructor(
-        private nodeMap: Map<Element, Container>,
-        private onNewMatches: () => void) {
+        private elementMap: Map<Element, Container>) {
         this.observer = new IntersectionObserver((entries) => this.onObserve(entries));
     }
 
@@ -31,12 +30,13 @@ export class ContainerObserver {
             (entry: IntersectionObserverEntry) => {
                 const headElement = entry.target;
                 this.observer.unobserve(headElement);
+                //if timer is over the limit, reinitiate observation
                 if (!timer.IsUnder(observerMSLimit)) {
                     this.observer.observe(headElement);
                     return;
                 }
 
-                const container = this.nodeMap.get(headElement.parentElement!);
+                const container = this.elementMap.get(headElement.parentElement!);
                 if (!container)
                     return;
 
@@ -45,7 +45,6 @@ export class ContainerObserver {
             });
 
         containers.forEach((container) => container.AppendPrecalculated());
-        this.onNewMatches();
     }
 }
 

@@ -28,7 +28,7 @@ export const SharedHighlightCSS =
     }`;
 
 //applied for each different search to document's adopted sheet and all iframes individually
-export function GetPersonalHighlightCSS(id: number, colorIndex: number, opacity: string) {
+export function GetPersonalHighlightCSS(id: number, colorIndex: number, opacity: number) {
     return `fm-highlight.fm-${id} {
             background-color: hsl(var(--color-${colorIndex}-hsl) / 1);
             ${opacity ? ('opacity: ' + opacity + ';'): ""}

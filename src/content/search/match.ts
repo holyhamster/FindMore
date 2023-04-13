@@ -1,17 +1,13 @@
 //Points at a region in the dom tree that contains a search match
 
 export class Match {
-    parent: Element;
     constructor(
         public startOffset: number,
         public startNode: Element,
         public endOffset: number,
-        public endNode: Element,
-        public target: Element) {
-        this.parent = this.target.parentElement || this.target;
-    }
+        public endNode: Element) { }
 
-    public  GetRectangles(range: Range): DOMRect[] {
+    public GetRectangles(range: Range): DOMRect[] {
         range.setStart(this.startNode, this.startOffset);
         range.setEnd(this.endNode, this.endOffset);
         return Array.from(range.getClientRects());
