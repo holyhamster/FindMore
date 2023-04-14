@@ -9,40 +9,47 @@ export class ParentObserver {
     constructor(
         private nodeMap: Map<Element, Container>,
         private indexMap: Map<number, Container>,
-        private sendToProcessing: (container: Container) => void) {
+        private sendToProcessing: (container: Container) => void,
+        private onNewMatches: (newMatches: number, total: number) => void) {
         this.observer = new IntersectionObserver((entries) => this.onObserve(entries));
     }
 
     private onObserve(entries: IntersectionObserverEntry[]) {
+
         const visibleContainers: Container[] = [];
         entries.forEach((entry: IntersectionObserverEntry) => {
             this.observer.unobserve(entry.target);
-            const parentStyle = window.getComputedStyle(entry.target);
-            const elementVisible =
-                entry.boundingClientRect.width > 1 &&
-                entry.boundingClientRect.height > 1 &&
-                parentStyle.visibility !== 'hidden' &&
-                parentStyle.display !== 'none';
-
             const container = this.nodeMap.get(entry.target);
-            if (container && elementVisible)
+            if (container && entryIsVisible(entry))
                 visibleContainers.push(container);
         });
+        const oldSize = this.indexMap.size;
 
         visibleContainers.forEach((container) => {
-            while (container.IndexNextMatch(this.indexMap.size))
+            let matchesAdded = container.IndexNewMatches(this.indexMap.size);
+            while (matchesAdded > 0) {
                 this.indexMap.set(this.indexMap.size, container);
+                matchesAdded--;
+            }
+
             container.AppendSelf();
             this.sendToProcessing(container);
         });
+        this.onNewMatches(this.indexMap.size - oldSize, this.indexMap.size);
     }
 
-    public Observe(container: Container) {
-        this.observer.observe(container.parentNode);
+    public Observe(parentElement: Element) {
+        this.observer.observe(parentElement);
     }
 
     StopObserving()
     {
         this.observer.disconnect();
     }
+}
+
+function entryIsVisible(entry: IntersectionObserverEntry) {
+    const parentStyle = window.getComputedStyle(entry.target);
+    return entry.boundingClientRect.width > 1 && entry.boundingClientRect.height > 1 &&
+        parentStyle.visibility !== 'hidden' && parentStyle.display !== 'none';
 }

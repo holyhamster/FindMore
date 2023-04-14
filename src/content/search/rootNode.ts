@@ -1,4 +1,6 @@
+import { Options } from '../../options';
 import { rootCSS } from './cssStyling/rootCSS';
+import { OptionsChangeEmitter, OptionsChangeEvent } from './searchEvents';
 
 //Singleton that holds all in-page UI. 
 //Has the following structure:
@@ -8,8 +10,15 @@ import { rootCSS } from './cssStyling/rootCSS';
 //  root div holding all search panels
 //Listenes to option change events to adjust style accordingly
 
-export class RootNode extends HTMLDivElement{
-    static build(): RootNode {
+export class RootNode extends HTMLDivElement implements OptionsChangeEmitter {
+
+    private static instance: RootNode;
+    static Get(): RootNode {
+        RootNode.instance = RootNode.instance || RootNode.build();
+        return RootNode.instance;
+    }
+
+    private static build(): RootNode {
         let shadowHolder = document.getElementsByTagName("fm-shadowholder")[0];
         if (!shadowHolder) {
             shadowHolder = document.createElement("fm-shadowholder");
@@ -23,18 +32,32 @@ export class RootNode extends HTMLDivElement{
         css.innerHTML = `<style>${rootCSS}</style>`;
         shadow.appendChild(css);
 
-        const root = document.createElement("div");
+        //TODO: declare root a custom element so its constructor can be used
+        const root = document.createElement("div") as RootNode;
+        root.emitOptionsChange = (options: Options) => {
+            RootNode.GetLocalEventRoots().forEach((panel: Element) => {
+                panel.dispatchEvent(new OptionsChangeEvent(options));
+            });
+        };
+
         root.setAttribute("id", `FMPanelContainer`);
         root.addEventListener(OptionsChangeEvent.type,
             (args: any) => {
-                convertOptionsToStyle(args?.options, root.style);
-                RootNode.GetLocalEventRoots().forEach((panel: Element) => {
-                    panel.dispatchEvent(new OptionsChangeEvent(args?.options));
-                });
+                const options: Options | undefined = args?.options;
+                if (!options)
+                    return;
+                convertOptionsToStyle(options!, root.style);
+                root.emitOptionsChange(options);
             });
 
         css.appendChild(root);
         return root as RootNode;
+    }
+
+    emitOptionsChange(options: Options) {
+        RootNode.GetLocalEventRoots().forEach((panel: Element) => {
+            panel.dispatchEvent(new OptionsChangeEvent(options));
+        });
     }
 
     //if the document body isn't accessible at the time, wait and try again
@@ -45,43 +68,30 @@ export class RootNode extends HTMLDivElement{
             setTimeout(() => RootNode.append(shadowHolder), 5);
     }
 
-    static instance: RootNode;
-    static Get(): RootNode {
-        if (!RootNode.instance)
-            RootNode.instance = RootNode.build();
-        return RootNode.instance;
-    }
-
     static GetLocalEventRoots(): Element[] {
         return Array.from(RootNode.Get().getElementsByClassName(`FMPanel`));
     }
 }
 
 //reads Options() from popup script and applies it to style object
-function convertOptionsToStyle(options: any, styleRef: CSSStyleDeclaration) {
+function convertOptionsToStyle(options: Options, styleRef: CSSStyleDeclaration) {
     const screenGap = "5px";
-    styleRef.top = options?.StartTop ? screenGap : "";
-    styleRef.bottom = options?.StartTop ? "" : screenGap;
-    styleRef.left = options?.StartLeft ? screenGap : "";
-    styleRef.right = options?.StartLeft ? "" : screenGap;
+    styleRef.top = options.StartTop ? screenGap : "";
+    styleRef.bottom = options.StartTop ? "" : screenGap;
+    styleRef.left = options.StartLeft ? screenGap : "";
+    styleRef.right = options.StartLeft ? "" : screenGap;
 
-    if (options?.Horizontal) {
-        styleRef.flexDirection = options?.StartLeft ? "row" : "row-reverse";
-        styleRef.flexWrap = options?.StartTop ? "wrap" : "wrap-reverse";
+    if (options.Horizontal) {
+        styleRef.flexDirection = options.StartLeft ? "row" : "row-reverse";
+        styleRef.flexWrap = options.StartTop ? "wrap" : "wrap-reverse";
     }
     else {
-        styleRef.flexDirection = options?.StartTop ? "column" : "column-reverse";
-        styleRef.flexWrap = options?.StartLeft ? "wrap" : "wrap-reverse";
+        styleRef.flexDirection = options.StartTop ? "column" : "column-reverse";
+        styleRef.flexWrap = options.StartLeft ? "wrap" : "wrap-reverse";
     }
 
-    styleRef.setProperty("--theme-alpha", isNaN(options?.MenuOpacity) ? .95 : options.MenuOpacity);
-    styleRef.setProperty("--scale-ratio", isNaN(options?.MenuScale) ? 1 : options.MenuScale);
+    styleRef.setProperty("--theme-alpha", options.MenuOpacity.toString());
+    styleRef.setProperty("--scale-ratio", options.MenuScale.toString());
     return styleRef;
 }
 
-export class OptionsChangeEvent extends Event {
-    static readonly type: string = "fm-options-change";
-    constructor(public options: any) {
-        super(OptionsChangeEvent.type);
-    }
-}

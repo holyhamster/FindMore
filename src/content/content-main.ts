@@ -1,6 +1,7 @@
-import { Search, ClosePanelsEvent } from './search/search';
+import { Search } from './search/search';
 import { RootNode } from './search/rootNode';
 import { State } from './search/state';
+import { ClosePanelsEvent } from './search/searchEvents';
 
 //Content script thta's loaded into pages
 //Talks to background script via runtime events, initiates new Searches

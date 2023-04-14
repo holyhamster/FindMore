@@ -5,14 +5,10 @@ import { FrameWalker } from './frameWalker'
 
 export class SearchRegion
 {
-    treeWalk: FrameWalker;
     constructor(
         private searchString: string,
         private regexp: RegExp,
-        eventElement: Element) {
-
-        this.treeWalk = FrameWalker.build(document.body,
-            (iframe: HTMLIFrameElement) => eventElement.dispatchEvent(new NewIFrameEvent(iframe)));
+        private frameWalker: FrameWalker) {
     }
 
     stringRegion = "";
@@ -21,7 +17,7 @@ export class SearchRegion
 
     //expands region, returns true if tree hasn't ended
     public TryExpand(): boolean {
-        const newNode = this.treeWalk.NextNode();
+        const newNode = this.frameWalker.NextNode();
 
         if (!newNode)
             return false;
@@ -65,8 +61,7 @@ export class SearchRegion
             const endOffset = index + this.searchString.length - charOffset;
             const endNode = this.nodes[nodeOffset];
 
-            matches.push(new Match(startOffset, startNode, endOffset, endNode,
-                findSafeAncestor(startNode)));
+            matches.push(new Match(startOffset, startNode, endOffset, endNode));
         });
 
         if (matches.length > 0)
@@ -95,27 +90,5 @@ export class SearchRegion
         this.nodes = this.nodes.slice(this.nodes.indexOf(node));
         this.stringRegion = "";
         this.nodes.forEach((nodes) => this.stringRegion += nodes.textContent );
-    }
-}
-
-//some tags are unsafe to edit, climb up to find closest safe one
-function findSafeAncestor(node: Element): Element {
-    const parent = node?.parentElement;
-
-    if (!parent)
-        return node;
-
-    if (!unsafeTags.includes(parent.nodeName?.toUpperCase()))
-        return node;
-
-    return findSafeAncestor(parent);
-}
-
-const unsafeTags = ['A'];
-
-export class NewIFrameEvent extends Event {
-    static readonly type: string = "fm-new-iframe";
-    constructor(public iframe: HTMLIFrameElement) {
-        super(NewIFrameEvent.type);
     }
 }

@@ -1,4 +1,6 @@
 import { Match } from "../match";
+import { HighlightedMatch } from "./highlightedMatch";
+import { IndexedMatch } from "./indexedMatch";
 
 //Holds all highlight rectangles for matches under a single parent element in DOM tree
 //Creating a highlight is split into stages to be done in batches to minimize browser reflow calls:
@@ -9,25 +11,26 @@ import { Match } from "../match";
 //AppendPrecalculated()
 
 export class Container {
-    headElement: Element;
-    constructor(public parentNode: Element, private targetNode: Node, private id: number) {
+    public headElement: Element;
+    public parentElement: Element;
+    constructor(private targetElement: ParentedElement, private searchId: number) {
         this.headElement = document.createElement('FM-CONTAINER');
+        this.parentElement = targetElement.parentElement;
     }
 
-    SetAccent(matchIndex: number, accentState: boolean) {
-        if (isNaN(matchIndex))
-            return;
-
-        const elements = Array.from(this.headElement.getElementsByClassName(`fm-${this.id}-${matchIndex}`));
-
-        elements.forEach((span: Element) => {
-            if (accentState)
-                span.classList.add(`fm-accented`);
-            else
-                span.classList.remove(`fm-accented`);
-        });
-
-        return elements;
+    private accentedIndex: number | undefined;
+    SetAccent(matchIndex: number | false) {
+        if (this.accentedIndex != undefined &&
+            (this.matchesMap.get(this.accentedIndex) instanceof HighlightedMatch)) {
+            (this.matchesMap.get(this.accentedIndex) as HighlightedMatch).SetAccent(false);
+        }
+        if (typeof matchIndex == "number") {
+            this.accentedIndex = matchIndex;
+            if (this.matchesMap.get(matchIndex) instanceof HighlightedMatch) {
+                
+                (this.matchesMap.get(matchIndex) as HighlightedMatch).SetAccent(true);
+            }
+        }
     }
 
     quedMatches: Match[] = [];
@@ -35,62 +38,62 @@ export class Container {
         this.quedMatches.push(match);
     }
 
-    indexedMatches: IndexedMatch[] = [];
-    IndexNextMatch(newIndex: number) {
-        if (this.quedMatches.length == 0)
-            return false;
+    matchesMap: Map<number, IndexedMatch> = new Map<number, IndexedMatch>();
+    quedIndexed: IndexedMatch[] = [];
+    IndexNewMatches(startIndex: number) {
+        let i = 0;
 
-        const match = this.quedMatches.shift() as IndexedMatch;
-        match.index = newIndex;
-        this.indexedMatches.push(match);
-        return true;
+        this.quedMatches.forEach((match: Match) => {
+            const newIndex = startIndex + i;
+            const indexedMatch = new IndexedMatch(match, newIndex)
+            this.matchesMap.set(newIndex, indexedMatch);
+            this.quedIndexed.push(indexedMatch);
+            i++;
+        })
+        this.quedMatches = [];
+        return i;
     }
 
-    precalculatedNodes: Element[] = [];
+    quedHighlighted: HighlightedMatch[] = [];
     PrecalculateRectangles(range: Range) {
         const anchor = this.headElement.getBoundingClientRect();
-        while (this.indexedMatches.length > 0) {
-            const match = this.indexedMatches.shift()!;
-
-            const elements: Element[] = [];
-            match.GetRectangles(range).forEach((rect) => {
-                const rectElement = document.createElement('FM-HIGHLIGHT');
-                rectElement.classList.add(`fm-${this.id}`, `fm-${this.id}-${match.index}`);
-                Object.assign(rectElement.style, rectangleToStyle(rect, anchor));
-                elements.push(rectElement);
-            });
-
-            this.precalculatedNodes = [...this.precalculatedNodes, ...elements];
-        }
+        this.quedIndexed.forEach((match: IndexedMatch) => {
+            const rects = match.GetRectangles(range);
+            const newMatch = new HighlightedMatch(match, this.searchId, rects, anchor);
+            if (match.index == this.accentedIndex)
+                newMatch.SetAccent(true);
+            this.matchesMap.set(match.index, newMatch);
+            this.quedHighlighted.push(newMatch);
+        })
+        this.quedIndexed = [];
     }
 
     AppendPrecalculated() {
-        //with many append operations it can be profitable to temporarily unappend parent element 
-        const HEAVY_CONTAINER = this.precalculatedNodes.length > 2;
+        //if many childs to append, temporarily unappend parent 
+        const HEAVY_CONTAINER = this.quedHighlighted.length > 2;
+
         if (HEAVY_CONTAINER)
             this.headElement.remove();
 
-        while (this.precalculatedNodes.length > 0)
-            this.headElement.append(this.precalculatedNodes.shift()!);
-
+        this.quedHighlighted.forEach((match: HighlightedMatch) =>
+            match.AppendSelf(this.headElement));
+            
         if (HEAVY_CONTAINER)
             this.AppendSelf();
+        this.quedHighlighted = [];
     }
 
     public AppendSelf() {
-        this.parentNode.insertBefore(this.headElement, this.targetNode.nextSibling);
+        this.targetElement.parentElement?.
+            insertBefore(this.headElement, this.targetElement?.nextSibling || null);
     }
 
-    public GetMatch(index: number) {
-        this.GetAllMatches().forEach(
-            (match: IndexedMatch) => {
-                if (match.index == index) return match;
-            })
-        return undefined;
+    public GetMatch(index: number): IndexedMatch | undefined {
+        return this.matchesMap.get(index);
     }
 
-    public GetAllMatches() {
-        return Array.from(this.indexedMatches);
+    public GetAllMatches(): IndexedMatch[] {
+        return Array.from(this.matchesMap.values());
     }
 
     public Remove() {
@@ -100,19 +103,29 @@ export class Container {
 
     private ClearCache() {
         this.quedMatches = [];
-        this.precalculatedNodes = [];
+        this.quedHighlighted = [];
+        this.quedIndexed = [];
+    }
+
+    //find the closest ancestor that is safe to edit and has a parent
+    public static GetSafeElement(match: Match): ParentedElement | undefined {
+        return findSafeAncestor(match.startNode);
     }
 }
 
-function rectangleToStyle(rect: DOMRect, anchor: DOMRect) {
-    return {
-        height: rect.height + 'px',
-        width: rect.width + 'px',
-        left: rect.left - anchor.x + 'px',
-        top: rect.top - anchor.y + 'px'
-    }
+function findSafeAncestor(node: Element): ParentedElement | undefined {
+    const parent = node.parentElement;
+
+    if (!parent)
+        return undefined;
+
+    if (!unsafeTags.includes(parent.nodeName?.toUpperCase()))
+        return node as ParentedElement;
+    return findSafeAncestor(parent);
 }
 
-interface IndexedMatch extends Match {
-    index: number;
+//element with a non-null parent
+interface ParentedElement extends Omit<Element, "parentElement"> {
+    parentElement: Element;
 }
+const unsafeTags = ['A'];

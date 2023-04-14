@@ -7,7 +7,7 @@ export class State {
     public pinned = false;
     public caseSensitive = false;
     public wholeWord = false;
-    constructor(public colorIndex = 0, public searchString = "") {
+    constructor(public searchString = "", public colorIndex = 0) {
     }
 
     static Load(state: State): State {

@@ -1,61 +1,99 @@
 import { RootNode } from './rootNode';
-import { Styler } from './cssStyling/styler';
 import { GetPanelColorCSS } from './cssStyling/cssInjection';
 import { State } from './state';
 import {
-    ClosePanelsEvent, SearchRestartEvent, IndexChangeEvent
-} from './search';
+    AdvanceIndexEvent, AdvanceIndexEmitter,
+    ClosePanelsEvent, ClosePanelEmitter, ClosePanelListener,
+    ColorChangeEvent, ColorChangeEmitter,
+    IndexChangeEvent, IndexChangeListener,
+    NewMatchesEvent, NewMatchesListener,
+    SearchRestartEvent, SearchRestartEmitter, SearchRestartListener
+} from './searchEvents';
 
 //Creates and controls on-page UI for a single search, and css through Styler instance
 //Head element is used to dispatch events
 
-export class Panel {
-    mainNode;
+export class Panel implements ClosePanelListener, ClosePanelEmitter, NewMatchesListener,
+    IndexChangeListener, SearchRestartEmitter, SearchRestartListener, ColorChangeEmitter,
+    AdvanceIndexEmitter {
 
-    constructor(public id: number, public state: State, options: any) {
+    public mainNode: HTMLDivElement;
+    constructor(public id: number, public state: State) {
         this.mainNode = buildPanel(id, state);
         this.addHTMLEvents();
 
         RootNode.Get().appendChild(this.mainNode);
-        
+
+        this.mainNode.addEventListener(ClosePanelsEvent.type, () => this.onClosePanel());
+
+        this.mainNode.addEventListener(NewMatchesEvent.type,
+            (args: any) => this.onNewMatches(args.newCount, args.totalCount));
+
+        this.mainNode.addEventListener(IndexChangeEvent.type,
+            (args: any) => this.onIndexChange(args.index));
+
+        this.mainNode.addEventListener(SearchRestartEvent.type, () => this.onSearchRestart());
+
         if (state.IsEmpty())
             (this.mainNode.querySelector(`.searchInput`) as HTMLInputElement)?.focus();
-
-        new Styler(id, this.mainNode, state.colorIndex, options?.highlightAlpha);
     }
 
+    //#region Events
+    emitClosePanel() { this.mainNode.dispatchEvent(new ClosePanelsEvent(this.id)); }
+    onClosePanel() {
+        this.mainNode.remove();
+        if (Panel.lastFocusedPanel == this.mainNode)
+            Panel.lastFocusedPanel = undefined;
+
+        if (this.IsFocused())
+            Panel.NextFocus();
+    }
+
+    onNewMatches(_: number, totalCount: number) { this.setTotalLabel(totalCount); }
+
+    onIndexChange(index: number) { this.setSelectedLabel(index + 1); }
+
+    emitSearchRestart() { this.mainNode.dispatchEvent(new SearchRestartEvent()); }
+    onSearchRestart() {
+        this.setSelectedLabel(0);
+        this.setTotalLabel(0);
+    }
+
+    emitColorChange(colorIndex: number) {
+        this.mainNode.dispatchEvent(new ColorChangeEvent(colorIndex));
+    }
+
+    emitAdvanceIndex(forward: boolean) {
+        this.mainNode.dispatchEvent(new AdvanceIndexEvent(forward));
+    }
 
     addHTMLEvents() {
-        const mainNode = this.mainNode, state = this.state, id = this.id;
+        const mainNode = this.mainNode, state = this.state;
 
         mainNode.querySelector(`.colorButton`)?.addEventListener("click", () => {
             state.NextColor();
             mainNode.setAttribute("style", GetPanelColorCSS(state.colorIndex));
-            mainNode.dispatchEvent(new ColorChangeEvent(state.colorIndex));
+            this.emitColorChange(state.colorIndex)
         });
 
-        mainNode.querySelector(`.refreshButton`)?.addEventListener("click", () => {
-            mainNode.dispatchEvent(new SearchRestartEvent());
-        });
+        mainNode.querySelector(`.refreshButton`)?.addEventListener("click",
+            () => this.emitSearchRestart());
 
-        mainNode.querySelector(`.downButton`)?.addEventListener("click", () => {
-            mainNode.dispatchEvent(new IndexChangeEvent(1));
-        });
+        mainNode.querySelector(`.downButton`)?.addEventListener("click",
+            () => this.emitAdvanceIndex(true));
 
-        mainNode.querySelector(`.upButton`)?.addEventListener("click", () => {
-            mainNode.dispatchEvent(new IndexChangeEvent(-1));
-        });
+        mainNode.querySelector(`.upButton`)?.addEventListener("click",
+            () => this.emitAdvanceIndex(false));
 
-        mainNode.querySelector(`.closeButton`)?.addEventListener("click", () => {
-            mainNode.dispatchEvent(new ClosePanelsEvent(id));
-        });
+        mainNode.querySelector(`.closeButton`)?.addEventListener("click",
+            () => this.emitClosePanel());
+
 
         mainNode.querySelector(`.caseCheck`)?.addEventListener("input", (args) => {
             if (state.caseSensitive == (args?.target as HTMLInputElement)?.checked)
                 return;
-
             state.caseSensitive = (args?.target as HTMLInputElement)?.checked;
-            mainNode.dispatchEvent(new SearchRestartEvent());
+            this.emitSearchRestart();
         });
 
         mainNode.querySelector(`.wordCheck`)?.addEventListener("input", (args) => {
@@ -63,76 +101,80 @@ export class Panel {
                 return;
 
             state.wholeWord = (args.target as HTMLInputElement).checked;
-            mainNode.dispatchEvent(new SearchRestartEvent());
+            this.emitSearchRestart();
         });
 
-        mainNode.querySelector(`.pinButton`)?.addEventListener("click", (args) => {
-            
+        const pinButton = mainNode.querySelector(`.pinButton`) as HTMLElement;
+        pinButton?.addEventListener("click", () => {
             state.pinned = !state.pinned;
             if (state.pinned)
                 mainNode.classList.add('pinned');
             else
                 mainNode.classList.remove('pinned');
-
-            if (args?.target)
-                (args.target as HTMLElement).textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
+            pinButton.textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
         });
 
-        const searchInput = mainNode.querySelector(`.searchInput`);
-        searchInput?.addEventListener("keypress", function (event) {
-            event.stopPropagation();
-        }, true);
+        const searchInput = mainNode.querySelector(`.searchInput`) as HTMLInputElement;
+        searchInput?.addEventListener("keypress", (event) =>
+            event.stopPropagation(), true);
 
-        searchInput?.addEventListener("input", (args: any) => {
-            if (!args?.target)
-                return;
-            const safeValue = formatIncomingString(args.target.value);
-            args.target.value = safeValue;
-            const inputChanged = safeValue != state.searchString;
-            state.searchString = safeValue;
-            if (inputChanged) {
-                mainNode.dispatchEvent(new SearchRestartEvent());
+        searchInput?.addEventListener("input", () => {
+            const safeValue = formatIncomingString(searchInput.value);
+            searchInput.value = safeValue;
+            if (safeValue != state.searchString) {
+                state.searchString = safeValue;
+                this.emitSearchRestart();
             }
         });
+
         searchInput?.addEventListener("keydown", (event: any) => {
             if (event.key === "Enter")
-                mainNode.dispatchEvent(new IndexChangeEvent(1));
+                this.emitAdvanceIndex(true);
             else if (event.key === "Escape")
-                mainNode.dispatchEvent(new ClosePanelsEvent(id));
+                this.emitClosePanel();
             //prevent other javascript in the document from reacting to keypresses
             event.stopImmediatePropagation();
         });
+
         searchInput?.addEventListener("focus", () => {
             mainNode.classList.add('focused');
         });
+
         searchInput?.addEventListener("focusout", () => {
             Panel.lastFocusedPanel = mainNode;
             mainNode.classList.remove('focused');
         });
+    }
+    //#endregion
 
-        mainNode.addEventListener(ClosePanelsEvent.type, () => {
-            const refocus = this.IsFocused();
-            mainNode.remove();
-            if (Panel.lastFocusedPanel == mainNode)
-                Panel.lastFocusedPanel = undefined;
-            if (refocus)
-                Panel.NextFocus();
-        });
+    private totalMatchesLabel?: HTMLElement;
+    private setTotalLabel(count: number) {
+        if (!this.totalMatchesLabel)
+            this.totalMatchesLabel = this.mainNode.querySelector('.totalMatches') as HTMLElement;
+        if (this.totalMatchesLabel)
+            this.totalMatchesLabel.textContent = count.toString();
+    }
+    private selectedMatchLabel?: HTMLElement;
+    private setSelectedLabel(count: number) {
+        if (!this.selectedMatchLabel)
+            this.selectedMatchLabel = this.mainNode.querySelector('.selectedMatch') as HTMLElement;
+        if (this.selectedMatchLabel)
+            this.selectedMatchLabel.textContent = count.toString();
     }
 
-    IsFocused() {
+    public IsFocused() {
         return this.mainNode.classList.contains("focused");
     }
 
-    GetEventRoot() {
+    public GetEventRoot() {
         return this.mainNode;
     }
 
     //If one of the panels is focused, focuses previously adjustened
     //if none selected, selects the one that focused last
     //if none selected and last focused doesn't exists, selects the first one
-    static lastFocusedPanel?: HTMLElement;
-    static NextFocus() {
+    private static lastFocusedPanel?: HTMLElement;
+    public static NextFocus() {
         const panelsNodes = RootNode.GetLocalEventRoots();
         const currentFocusedPanel = panelsNodes.filter((node) => node.classList.contains("focused"))?.[0];
 
@@ -147,19 +189,6 @@ export class Panel {
             newFocusedPanel = panelsNodes[newFocusIndex];
         }
         (newFocusedPanel?.querySelector(`.searchInput`) as HTMLInputElement)?.focus();
-    }
-
-    totalMatchesLabel?: HTMLElement;
-    selectedMatchLabel?: HTMLElement;
-    updateLabels(index: number, length: number) {
-        if (!this.totalMatchesLabel) {
-            this.totalMatchesLabel = this.mainNode.querySelector('.totalMatches') as HTMLElement;
-            this.selectedMatchLabel = this.mainNode.querySelector('.selectedMatch') as HTMLElement;
-        }
-        if (this.selectedMatchLabel)
-            this.selectedMatchLabel.textContent = length == 0 ? "0" : `${index + 1}`;
-        if (this.totalMatchesLabel)
-            this.totalMatchesLabel.textContent = length.toString();
     }
 }
 
@@ -199,11 +228,4 @@ function buildPanel(id: number, state: State) {
 function formatIncomingString(incomingString: string) {
     incomingString = incomingString || "";
     return incomingString.substring(0, 100);
-}
-
-export class ColorChangeEvent extends Event {
-    static readonly type: string = "fm-color-change";
-    constructor(public colorIndex: number) {
-        super(ColorChangeEvent.type);
-    }
 }

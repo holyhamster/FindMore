@@ -1,4 +1,5 @@
 import { Messaging } from "./messaging";
+import { Options } from "./options";
 
 //Extension service worker, sends and recieves events between content and popup scripts
 //Caches content script data between page reloads
@@ -22,26 +23,26 @@ function processContentEvent(tabId: number, event: any) {
         //when content script is loaded, send all pinned searches from cache
         //if there's' a new request that didnt have a response from content script, send it again
         case "fm-content-script-loaded":
-            loadOptions(
-                (option: any) => {
-                    const previousTabData = tabCache.get(tabId);
-                    tabCache.delete(tabId);
+            Options.TryLoad((option: any) => {
+                const previousTabData = tabCache.get(tabId);
+                tabCache.delete(tabId);
 
-                    if (!option && !previousTabData)
-                        return;
-                    const message = {
-                        options: option,
-                        data: previousTabData,
-                        context: previousTabData ? `fm-content-update-search` : `fm-content-update-options`
-                    };
+                if (!option && !previousTabData)
+                    return;
+                const message = {
+                    options: option,
+                    data: previousTabData,
+                    context: previousTabData ? `fm-content-update-search` : `fm-content-update-options`
+                };
 
-                    messaging.Send(tabId, message);
-                    messaging.ResendCached(tabId);
-                });
+                messaging.Send(tabId, message);
+                messaging.ResendCached(tabId);
+            });
             break;
 
         case "fm-content-visible":
-            loadOptions((option: any) => messaging.Send(tabId, { context: `fm-content-update-options`, options: option }));
+            Options.TryLoad(
+                (option: any) => messaging.Send(tabId, { context: `fm-content-update-options`, options: option }));
             break;
 
         case "fm-content-cache":
@@ -153,14 +154,6 @@ function callOnActiveId(onActiveID: (id: number) => void, onNoActive?: () => voi
             onNoActive?.();
     });
 }
-
-function loadOptions(onLoadedOptions: (savedOptions: any) => void) {
-    chrome.storage.sync.get("fmSavedOptions", (storage) => {
-        onLoadedOptions(storage?.fmSavedOptions);
-    });
-}
-
-
 
 //show a small checkmark badge on top of the extension's icon
 function showSuccessStatus(duration = 3000) {

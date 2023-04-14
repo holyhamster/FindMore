@@ -1,8 +1,6 @@
 import { GetPersonalHighlightCSS, SharedHighlightCSS } from './cssInjection'
-import { ClosePanelsEvent } from '../search'
-import { ColorChangeEvent } from '../panel'
-import { NewIFrameEvent } from '../domCrawling/searchRegion'
-import { OptionsChangeEvent } from '../rootNode'
+import { Options } from '../../../options'
+import { ClosePanelsEvent, ClosePanelListener, NewIFrameEvent, NewIFrameListener, OptionsChangeEvent, ColorChangeEvent, OptionsChangeListener, ColorChangeListener } from '../searchEvents';
 
 //Adds and edits css elements for highlight rectangles by:
 //-adding an adopted sheet to the main document
@@ -10,58 +8,59 @@ import { OptionsChangeEvent } from '../rootNode'
 //-if style changes, reapplying it to both adopted sheet and all previously discovered iframes
 //for performance css is split in two: part that's shared between all searches and personal color settings
 
-export class Styler {
+export class Styler implements
+    ClosePanelListener, NewIFrameListener, OptionsChangeListener, ColorChangeListener {
+
     iframes: Document[] = [];
     constructor(
         private id: number,
-        private eventElemenet: Element,
+        eventElement: Element,
         private colorIndex: number,
-        private highlightAlpha: string) {
-        this.addEvents(this.eventElemenet);
-        this.updateStyle();
-    }
-    addEvents(eventElement: Element) {
-        eventElement.addEventListener(ClosePanelsEvent.type,
-            () => this.clearStyles());
+        private highlightAlpha: number) {
+
+        eventElement.addEventListener(ClosePanelsEvent.type, () => this.onClosePanel());
 
         eventElement.addEventListener(OptionsChangeEvent.type,
-            (args: any) => {
-                if (args?.options?.HighlightOpacity) {
-                    this.highlightAlpha = args.options.HighlightOpacity;
-                    this.updateStyle();
-                }
-            });
+            (args: any) => this.onOptionsChange(args.options));
 
         eventElement.addEventListener(NewIFrameEvent.type,
-            (args: any) => {
-                const newIFrame = args?.iframe?.contentDocument as Document;
-                if (!newIFrame)
-                    return;
-                const f = HTMLIFrameElement;
-                
-                if (!this.iframes.includes(newIFrame))
-                    this.iframes.push(newIFrame);
-
-                this.updateIframe(newIFrame);
-            });
+            (args: any) => this.onNewIFrame(args.iframe));
 
         eventElement.addEventListener(ColorChangeEvent.type,
-            (args: any) => {
-                if (args?.colorIndex) {
-                    this.colorIndex = args.colorIndex;
-                    this.updateStyle();
-                }
-            });
+            (args: any) => this.onColorChange(args.index));
+        this.updateStyle();
     }
 
-    updateStyle() {
+    onClosePanel() { this.clear(); }
+
+    onNewIFrame(IFrame: HTMLIFrameElement) {
+        const iDoc = IFrame?.contentDocument;
+        if (!iDoc)
+            return;
+        const f = HTMLIFrameElement;
+
+        if (!this.iframes.includes(iDoc))
+            this.iframes.push(iDoc);
+
+        this.updateIframe(iDoc);
+    }
+
+    onOptionsChange(options: Options) {
+        this.highlightAlpha = options.HighlightOpacity;
+        this.updateStyle();
+    }
+    onColorChange(index: number) {
+        this.colorIndex = index;
+        this.updateStyle()
+    }
+    private updateStyle() {
         this.updateAdoptedSheet();
         this.iframes.forEach((iframe) => this.updateIframe(iframe));
     }
 
     personalSheet: CSSStyleSheet | undefined;
     static sharedSheet: CSSStyleSheet | undefined;
-    updateAdoptedSheet() {
+    private updateAdoptedSheet() {
         if (!Styler.sharedSheet) {
             Styler.sharedSheet = new CSSStyleSheet();
             Styler.sharedSheet.replaceSync(SharedHighlightCSS);
@@ -76,7 +75,7 @@ export class Styler {
         this.personalSheet.replaceSync(GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha));
     }
 
-    removeAdoptedStyle() {
+    private removeAdoptedStyle() {
         const personalSheetIndex = Array.from(document.adoptedStyleSheets)
             .findIndex((style) => style === this.personalSheet);
         if (isNaN(personalSheetIndex))
@@ -88,7 +87,7 @@ export class Styler {
         this.personalSheet = undefined;
     }
 
-    updateIframe(iframe: Document) {
+    private updateIframe(iframe: Document) {
         const sharedStyleClass = `fm-iframeDefStyle`;
         let existingSharedStyle = iframe.getElementsByClassName(sharedStyleClass)[0];
         if (!existingSharedStyle) {
@@ -104,14 +103,14 @@ export class Styler {
             addStyleToIFrame(iframe, personalStyleClass, GetPersonalHighlightCSS(this.id, this.colorIndex, this.highlightAlpha));
     }
 
-    removeIframeStyles() {
+    private removeIframeStyles() {
         this.iframes.forEach((iframe) => {
             iframe.getElementsByClassName(`fm-iframe${this.id}`)[0]?.remove();
         });
         this.iframes = [];
     }
 
-    clearStyles() {
+    private clear() {
         this.removeAdoptedStyle();
         this.removeIframeStyles();
     }
