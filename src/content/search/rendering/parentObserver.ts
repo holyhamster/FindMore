@@ -20,13 +20,18 @@ export class ParentObserver {
         entries.forEach((entry: IntersectionObserverEntry) => {
             this.observer.unobserve(entry.target);
             const container = this.nodeMap.get(entry.target);
-            if (container && isEntryVisible(entry))
+            if (container && entryIsVisible(entry))
                 visibleContainers.push(container);
         });
         const oldSize = this.indexMap.size;
+
         visibleContainers.forEach((container) => {
-            while (container.IndexNextMatch(this.indexMap.size))
+            let matchesAdded = container.IndexNewMatches(this.indexMap.size);
+            while (matchesAdded > 0) {
                 this.indexMap.set(this.indexMap.size, container);
+                matchesAdded--;
+            }
+
             container.AppendSelf();
             this.sendToProcessing(container);
         });
@@ -43,7 +48,7 @@ export class ParentObserver {
     }
 }
 
-function isEntryVisible(entry: IntersectionObserverEntry) {
+function entryIsVisible(entry: IntersectionObserverEntry) {
     const parentStyle = window.getComputedStyle(entry.target);
     return entry.boundingClientRect.width > 1 && entry.boundingClientRect.height > 1 &&
         parentStyle.visibility !== 'hidden' && parentStyle.display !== 'none';
