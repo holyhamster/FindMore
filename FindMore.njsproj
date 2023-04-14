@@ -76,10 +76,11 @@
     <TypeScriptCompile Include="src\content\search\rendering\container.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\containerObserver.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\containerRemoval.ts" />
-    <TypeScriptCompile Include="src\content\search\rendering\highlight.ts">
+    <TypeScriptCompile Include="src\content\search\rendering\highlightedMatch.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
     <TypeScriptCompile Include="src\content\search\rendering\containerCollection.ts" />
+    <TypeScriptCompile Include="src\content\search\rendering\indexedMatch.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\indexer.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\parentObserver.ts" />
     <TypeScriptCompile Include="src\content\search\rootNode.ts" />
