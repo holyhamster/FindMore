@@ -10,17 +10,14 @@ import {
     ClosePanelsEvent, ClosePanelEmitter,
     SearchRestartEvent, SearchRestartEmitter, SearchRestartListener, OptionsChangeEvent
 } from './searchEvents';
-//Nexus class for UI Panel, DOMCrawler and Highlighter:
-//Panel holds and controls UI for the search, top element is used to dispatch events
-//DOMCrawler goes through DOM tree of the document and sends all matches to Highlighter
-//Highlighter takes matches and creates html elements around them
+//Nexus class for UI Panel, DOMCrawler, ContainerCollection, Indexer and Styler
 
 export class Search implements
     ClosePanelEmitter, SearchRestartEmitter, SearchRestartListener {
 
     public panel: Panel;
     private crawler: DOMCrawler;
-    private highlighter: ContainerCollection;
+    private containers: ContainerCollection;
 
     constructor(
         public id: number,
@@ -32,12 +29,13 @@ export class Search implements
 
         const styler = new Styler(id, eventRoot, state.colorIndex, options?.highlightAlpha);
 
-        this.highlighter = new ContainerCollection(this.id, eventRoot);
+        this.containers = new ContainerCollection(eventRoot, this.id);
 
-        const indexer = new Indexer(this.highlighter.indexToContainer, eventRoot, !state.pinned);
+        const indexer = new Indexer(eventRoot, this.containers.indexToContainer,
+            !state.pinned);
 
-        this.crawler = new DOMCrawler(this.panel.GetEventRoot(),
-            (matches: Match[]) => this.highlighter.QueMatches(matches));
+        this.crawler = new DOMCrawler(eventRoot,
+            (matches: Match[]) => this.containers.QueMatches(matches));
 
         eventRoot.addEventListener(SearchRestartEvent.type, () => this.onSearchRestart());
 
@@ -52,17 +50,17 @@ export class Search implements
 
     onSearchRestart() { this.start(); }
 
-    start() {
+    private start() {
         if (this.state.IsEmpty())
             return;
         this.crawler.Start(this.state.searchString, this.state.GetRegex(true));
     }
 
-    Close() {
+    public Close() {
         this.emitClosePanel();
     }
 
-    Restart() {
+    public Restart() {
         this.emitSearchRestart();
     }
 

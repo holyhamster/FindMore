@@ -16,8 +16,8 @@ import {
 export class Panel implements ClosePanelListener, ClosePanelEmitter, NewMatchesListener,
     IndexChangeListener, SearchRestartEmitter, SearchRestartListener, ColorChangeEmitter,
     AdvanceIndexEmitter {
-    mainNode;
 
+    public mainNode: HTMLDivElement;
     constructor(public id: number, public state: State) {
         this.mainNode = buildPanel(id, state);
         this.addHTMLEvents();
@@ -68,7 +68,7 @@ export class Panel implements ClosePanelListener, ClosePanelEmitter, NewMatchesL
     }
 
     addHTMLEvents() {
-        const mainNode = this.mainNode, state = this.state, id = this.id;
+        const mainNode = this.mainNode, state = this.state;
 
         mainNode.querySelector(`.colorButton`)?.addEventListener("click", () => {
             state.NextColor();
@@ -104,31 +104,25 @@ export class Panel implements ClosePanelListener, ClosePanelEmitter, NewMatchesL
             this.emitSearchRestart();
         });
 
-        mainNode.querySelector(`.pinButton`)?.addEventListener("click", (args) => {
-
+        const pinButton = mainNode.querySelector(`.pinButton`) as HTMLElement;
+        pinButton?.addEventListener("click", () => {
             state.pinned = !state.pinned;
             if (state.pinned)
                 mainNode.classList.add('pinned');
             else
                 mainNode.classList.remove('pinned');
-
-            if (args?.target)
-                (args.target as HTMLElement).textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
+            pinButton.textContent = state.pinned ? "\u{25A3}" : "\u{25A2}";
         });
 
-        const searchInput = mainNode.querySelector(`.searchInput`);
-        searchInput?.addEventListener("keypress", function (event) {
-            event.stopPropagation();
-        }, true);
+        const searchInput = mainNode.querySelector(`.searchInput`) as HTMLInputElement;
+        searchInput?.addEventListener("keypress", (event) =>
+            event.stopPropagation(), true);
 
-        searchInput?.addEventListener("input", (args: any) => {
-            if (!args?.target)
-                return;
-            const safeValue = formatIncomingString(args.target.value);
-            args.target.value = safeValue;
-            const inputChanged = safeValue != state.searchString;
-            state.searchString = safeValue;
-            if (inputChanged) {
+        searchInput?.addEventListener("input", () => {
+            const safeValue = formatIncomingString(searchInput.value);
+            searchInput.value = safeValue;
+            if (safeValue != state.searchString) {
+                state.searchString = safeValue;
                 this.emitSearchRestart();
             }
         });
@@ -153,14 +147,14 @@ export class Panel implements ClosePanelListener, ClosePanelEmitter, NewMatchesL
     }
     //#endregion
 
-    totalMatchesLabel?: HTMLElement;
+    private totalMatchesLabel?: HTMLElement;
     private setTotalLabel(count: number) {
         if (!this.totalMatchesLabel)
             this.totalMatchesLabel = this.mainNode.querySelector('.totalMatches') as HTMLElement;
         if (this.totalMatchesLabel)
             this.totalMatchesLabel.textContent = count.toString();
     }
-    selectedMatchLabel?: HTMLElement;
+    private selectedMatchLabel?: HTMLElement;
     private setSelectedLabel(count: number) {
         if (!this.selectedMatchLabel)
             this.selectedMatchLabel = this.mainNode.querySelector('.selectedMatch') as HTMLElement;
@@ -168,19 +162,19 @@ export class Panel implements ClosePanelListener, ClosePanelEmitter, NewMatchesL
             this.selectedMatchLabel.textContent = count.toString();
     }
 
-    IsFocused() {
+    public IsFocused() {
         return this.mainNode.classList.contains("focused");
     }
 
-    GetEventRoot() {
+    public GetEventRoot() {
         return this.mainNode;
     }
 
     //If one of the panels is focused, focuses previously adjustened
     //if none selected, selects the one that focused last
     //if none selected and last focused doesn't exists, selects the first one
-    static lastFocusedPanel?: HTMLElement;
-    static NextFocus() {
+    private static lastFocusedPanel?: HTMLElement;
+    public static NextFocus() {
         const panelsNodes = RootNode.GetLocalEventRoots();
         const currentFocusedPanel = panelsNodes.filter((node) => node.classList.contains("focused"))?.[0];
 
