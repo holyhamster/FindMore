@@ -25,8 +25,8 @@ export class ContainerCollection implements
     parentObserver: ParentObserver;
 
     constructor(
-        private id: number,
-        private eventElement: Element) {
+        private eventElement: Element,
+        private id: number) {
 
         this.containerObserver = new ContainerObserver(this.parentToContainer);
 
