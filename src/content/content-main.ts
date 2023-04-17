@@ -1,7 +1,8 @@
 import { Search } from './search/search';
 import { RootNode } from './search/rootNode';
 import { State } from './search/state';
-import { ClosePanelsEvent } from './search/searchEvents';
+import { ClosePanelsEvent, OptionsChangeEvent } from './search/searchEvents';
+import { Options } from '../options';
 
 //Content script thta's loaded into pages
 //Talks to background script via runtime events, initiates new Searches
@@ -36,7 +37,7 @@ chrome.runtime.onMessage.addListener(
                     break;
                 const newSearch = new State();
 
-                newSearch.pinned = Search.Options?.StartPinned || false;
+                newSearch.pinned = Options.Get().StartPinned;
                 newSearch.colorIndex = State.GetNextColor(Array.from(searchMap.getStatesMap().values()));
 
                 const id = getNewID(searchMap);
@@ -48,8 +49,9 @@ chrome.runtime.onMessage.addListener(
                 break;
 
             case "fm-content-update-search":
+                console.log("updating search");
                 if (request.options)
-                    Search.SetOptions(request.options);
+                    setOptions(request.options);
                 searchMap.forEach((oldSearch) => oldSearch.Close())
                 searchMap.clear();
 
@@ -65,7 +67,9 @@ chrome.runtime.onMessage.addListener(
                 break;
 
             case `fm-content-update-options`:
-                Search.SetOptions(request.options);
+                console.log("updating options");
+                if (request.options)
+                    setOptions(request.options);
                 break;
 
             default:
@@ -89,8 +93,7 @@ document.addEventListener('keydown', (args: any) => {
 });
 
 //send any pinned searches to service worker when the window is unloaded
-window.addEventListener('unload', () => {
-    
+window.addEventListener('unloaDd', () => {
     const pinnedSearches = new Map<number, State>();
     searchMap.getStatesMap().forEach((state, id) => {
         if (state.pinned)
@@ -110,6 +113,21 @@ window.addEventListener('unload', () => {
 window.addEventListener('visibilitychange', () => {
     if (document.visibilityState == 'visible')
         sendMessageToService({ context: "fm-content-visible" });
+    else {
+        const pinnedSearches = new Map<number, State>();
+        searchMap.getStatesMap().forEach((state, id) => {
+            if (state.pinned)
+                pinnedSearches.set(id, state)
+        });
+        if (pinnedSearches.size == 0)
+            return;
+        const message = {
+            context: "fm-content-cache",
+            tabId: tabId,
+            data: serializeArray(Array.from(pinnedSearches.values()))
+        };
+        sendMessageToService(message);
+    }
 });
 
 //signal to service worker that script is loaded in a page
@@ -122,15 +140,21 @@ function getNewID(searches: SearchMap) {
     return id;
 }
 
+function setOptions(options: Options) {
+    Options.Set(options);
+    RootNode.Get().dispatchEvent(new OptionsChangeEvent(options));
+}
+
 function serializeArray(array: any[]) {
     return JSON.stringify(array);
 }
 
-function deserializeArray(string: string): State[] {
-    const map = Array.from(JSON.parse(string)) as State[];
-    for (let i = 0; i < map.length; i++)
-        map[i] = State.Load(map[i]);
-    return map;
+function deserializeArray(string: string): State[] | undefined {
+    const parsed = Array.from(JSON.parse(string));
+    const array: State[] = [];
+    parsed.forEach((state) =>
+        array.push(State.Load(state as State)));
+    return array;
 }
 
 function sendMessageToService(message: any) {
