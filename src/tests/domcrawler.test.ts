@@ -1,5 +1,5 @@
 ﻿import { DOMCrawler } from "../content/search/domCrawling/domCrawler";
-import { Match } from "../content/search/match";
+import { Match } from "../content/search/domCrawling/match";
 import { State } from "../content/search/state";
 import { mockHTML } from "./mockhtml";
 
