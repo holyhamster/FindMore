@@ -70,19 +70,19 @@
     <TypeScriptCompile Include="src\content\search\domCrawling\domCrawler.ts" />
     <TypeScriptCompile Include="src\content\search\domCrawling\frameWalker.ts" />
     <TypeScriptCompile Include="src\content\search\domCrawling\searchRegion.ts" />
-    <TypeScriptCompile Include="src\content\search\match.ts" />
+    <TypeScriptCompile Include="src\content\search\domCrawling\match.ts" />
     <TypeScriptCompile Include="src\content\search\panel.ts" />
     <TypeScriptCompile Include="src\content\search\performanceTimer.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\container.ts" />
-    <TypeScriptCompile Include="src\content\search\rendering\containerObserver.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\containerRemoval.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\highlightedMatch.ts">
       <SubType>Code</SubType>
     </TypeScriptCompile>
-    <TypeScriptCompile Include="src\content\search\rendering\containerCollection.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\indexedMatch.ts" />
     <TypeScriptCompile Include="src\content\search\rendering\indexer.ts" />
-    <TypeScriptCompile Include="src\content\search\rendering\parentObserver.ts" />
+    <TypeScriptCompile Include="src\content\search\rendering\observer.ts" />
+    <TypeScriptCompile Include="src\content\search\rendering\parentedElement.ts" />
+    <TypeScriptCompile Include="src\content\search\rendering\anchoredMatch.ts" />
     <TypeScriptCompile Include="src\content\search\rootNode.ts" />
     <TypeScriptCompile Include="src\content\search\search.ts" />
     <TypeScriptCompile Include="src\content\search\searchEvents.ts" />

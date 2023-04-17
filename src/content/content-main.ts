@@ -49,7 +49,6 @@ chrome.runtime.onMessage.addListener(
                 break;
 
             case "fm-content-update-search":
-                console.log("updating search");
                 if (request.options)
                     setOptions(request.options);
                 searchMap.forEach((oldSearch) => oldSearch.Close())
@@ -67,7 +66,6 @@ chrome.runtime.onMessage.addListener(
                 break;
 
             case `fm-content-update-options`:
-                console.log("updating options");
                 if (request.options)
                     setOptions(request.options);
                 break;
@@ -92,24 +90,7 @@ document.addEventListener('keydown', (args: any) => {
     }
 });
 
-//send any pinned searches to service worker when the window is unloaded
-window.addEventListener('unloaDd', () => {
-    const pinnedSearches = new Map<number, State>();
-    searchMap.getStatesMap().forEach((state, id) => {
-        if (state.pinned)
-            pinnedSearches.set(id, state)
-    });
-    if (pinnedSearches.size == 0)
-        return;
-    const message = {
-        context: "fm-content-cache",
-        tabId: tabId,
-        data: serializeArray(Array.from(pinnedSearches.values()))
-    };
-    sendMessageToService(message);
-});
-
-//signal to service worker when the window is visible
+//signal to service worker when the window is visible, cache data when its hidden
 window.addEventListener('visibilitychange', () => {
     if (document.visibilityState == 'visible')
         sendMessageToService({ context: "fm-content-visible" });

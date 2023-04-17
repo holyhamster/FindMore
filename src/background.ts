@@ -34,7 +34,6 @@ function processContentEvent(tabId: number, event: any) {
                     data: previousTabData,
                     context: previousTabData ? `fm-content-update-search` : `fm-content-update-options`
                 };
-                console.log(message);
                 messaging.Send(tabId, message);
                 messaging.ResendCached(tabId);
             });
@@ -46,7 +45,6 @@ function processContentEvent(tabId: number, event: any) {
             break;
 
         case "fm-content-cache":
-            console.log("caching");
             if (event.data)
                 tabCache.set(tabId, event.data);
             break;

@@ -27,4 +27,8 @@ export class Options {
     static SendToBackground(options: Options) {
         chrome.runtime.sendMessage({ context: "fm-popup-options-change", options: options });
     }
+
+    private static instance: Options;
+    public static Get() { return this.instance = this.instance || new Options(); }
+    public static Set(options: Options) { this.instance = options; }
 }
