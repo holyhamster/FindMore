@@ -1,8 +1,8 @@
-import { Match } from '../match';
 import { FrameWalker } from './frameWalker'
+import { Match } from './match';
 
-//Walks through DOM tree with frameWalker, keeps track of current position within, returns matches from it
-
+//Walks through DOM tree with FrameWalker, 
+//keeps track of current position within, returns matches from it
 export class SearchRegion
 {
     constructor(
@@ -29,7 +29,7 @@ export class SearchRegion
         return true;
     }
 
-    //get all matches from the current region, trims it to the end of the last match
+    //get all matches from the current scope, trims it to the end of the last match
     public GetMatches(): Match[]
     {
         if (this.nodes.length == 0)
@@ -42,6 +42,7 @@ export class SearchRegion
         regexMatches.forEach((regexMatch: RegExpMatchArray) =>
         {
             const index = this.offset + (regexMatch?.index || 0);
+            const match = {} as Match;
             let MATCH_OUTSIDE_NODE;
             while (MATCH_OUTSIDE_NODE =
                 (charOffset + this.nodes[nodeOffset]?.textContent!.length) <= index)
@@ -49,8 +50,8 @@ export class SearchRegion
                 charOffset += this.nodes[nodeOffset].textContent!.length;
                 nodeOffset += 1;
             }
-            const startOffset = index - charOffset;
-            const startNode = this.nodes[nodeOffset];
+            match.startOffset = index - charOffset;
+            match.startNode = this.nodes[nodeOffset];
 
             while (MATCH_OUTSIDE_NODE =
                 ((charOffset + this.nodes[nodeOffset].textContent!.length) < (index + this.searchString.length)))
@@ -58,10 +59,10 @@ export class SearchRegion
                 charOffset += this.nodes[nodeOffset].textContent!.length;
                 nodeOffset += 1;
             }
-            const endOffset = index + this.searchString.length - charOffset;
-            const endNode = this.nodes[nodeOffset];
+            match.endOffset = index + this.searchString.length - charOffset;
+            match.endNode = this.nodes[nodeOffset];
 
-            matches.push(new Match(startOffset, startNode, endOffset, endNode));
+            matches.push(match);
         });
 
         if (matches.length > 0)
