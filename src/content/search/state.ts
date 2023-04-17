@@ -10,7 +10,7 @@ export class State {
     constructor(public searchString = "", public colorIndex = 0) {
     }
 
-    static Load(state: State): State {
+    static Load(state: any): State {
         return Object.assign(new State(), state);
     }
 

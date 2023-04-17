@@ -1,12 +1,31 @@
+import { ParentedElement } from "./parentedElement";
 import { IndexedMatch } from "./indexedMatch";
 
-//match with
-export class HighlightedMatch extends IndexedMatch {
-    private elements: Element[] = [];
-    constructor(match: IndexedMatch, searchId: number, rects: DOMRect[], anchor: DOMRect) {
-        super(match, match.index);
-        rects.forEach((rect) =>
+//contains elements with colored rectangles above the match
+export class HighlightedMatch implements IndexedMatch {
+    startOffset: number;
+    startNode: Element;
+    endOffset: number;
+    endNode: Element;
+    index: number;
+    anchor: ParentedElement;
+    public elements: Element[] = [];
+    constructor(match: IndexedMatch, searchId: number, range: Range, anchor: DOMRect) {
+        this.startOffset = match.startOffset;
+        this.startNode = match.startNode;
+        this.endOffset = match.endOffset;
+        this.endNode = match.endNode;
+        this.anchor = match.anchor;
+
+        this.index = match.index;
+        this.getRectangles(range).forEach((rect) =>
             this.elements.push(createElement(match.index, searchId, rect, anchor)));
+    }
+
+    private getRectangles(range: Range): DOMRect[] {
+        range.setStart(this.startNode, this.startOffset);
+        range.setEnd(this.endNode, this.endOffset);
+        return Array.from(range.getClientRects());
     }
 
     public AppendSelf(parent: Element) {

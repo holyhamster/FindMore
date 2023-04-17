@@ -1,5 +1,7 @@
 import { Options } from "../../options";
 
+//collection of custom events that are fired on the root node of search panel
+
 export interface IndexChangeListener { onIndexChange(index: number): void; }
 export interface IndexChangeEmitter { emitIndexChange(index: number): void; }
 export class IndexChangeEvent extends Event {

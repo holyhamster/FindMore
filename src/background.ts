@@ -34,7 +34,6 @@ function processContentEvent(tabId: number, event: any) {
                     data: previousTabData,
                     context: previousTabData ? `fm-content-update-search` : `fm-content-update-options`
                 };
-
                 messaging.Send(tabId, message);
                 messaging.ResendCached(tabId);
             });
