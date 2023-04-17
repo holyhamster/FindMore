@@ -1,27 +1,21 @@
 import { SearchRegion } from './searchRegion';
 import { PerformanceTimer } from '../performanceTimer';
-import { Match } from '../match';
 import { FrameWalker } from './frameWalker';
-import { Interruptable } from '../interruptable';
 import {
     ClosePanelListener, ClosePanelsEvent,
     NewIFrameEmitter,
-    NewIFrameEvent,
-    SearchRestartEvent, SearchRestartListener
+    NewIFrameEvent
 } from '../searchEvents';
+import { Match } from './match';
 
 //Goes recursively through SearchRegion, sends matches to Highlighter
 
 export class DOMCrawler
-    implements Interruptable, SearchRestartListener, ClosePanelListener, NewIFrameEmitter {
+    implements ClosePanelListener, NewIFrameEmitter {
 
     constructor(
         private eventElem: Element,
         private passMatches: (match: Match[]) => void) {
-
-        this.eventElem.addEventListener(SearchRestartEvent.type, () => {
-            this.Interrupt();
-        });
 
         this.eventElem.addEventListener(ClosePanelsEvent.type, () => {
             this.onClosePanel();
@@ -29,6 +23,8 @@ export class DOMCrawler
     }
 
     private region: SearchRegion | undefined;
+    private invoked = false;    //search is on setTimeout
+    private interrupted = false;
     public Start(searchString: string, regex: RegExp) {
         this.interrupted = false;
 
@@ -36,42 +32,37 @@ export class DOMCrawler
             (iframe: HTMLIFrameElement) => this.emitNewIFrame(iframe));
         this.region = new SearchRegion(searchString, regex, frameWalker);
 
-        setTimeout(() => this.search(this.region!, this.passMatches), 1);
+        if (!this.invoked) {
+            this.invoked = true;
+            setTimeout(() => this.search(), DelayTime);
+        }
     }
 
-    private interrupted = false;
-    public Interrupt() {
-        this.interrupted = true;
-        this.region = undefined;
-    }
-
-    private search(
-        searchRegion: SearchRegion,
-        passMatches: (match: Match[]) => void,
-        executionTime = 0) {
-
-        let WALK_IN_PROGRESS, callsLeft = consecutiveCalls;
+    private search(executionTime = 0) {
+        let WALK_IN_PROGRESS;
+        this.invoked = false;
+        let callsLeft = consecutiveCalls;
         const measurer = new PerformanceTimer();
 
-        while (!this.interrupted && (callsLeft -= 1) >= 0 &&
-            (WALK_IN_PROGRESS = searchRegion.TryExpand())) {
-            const matches = searchRegion.GetMatches();
+        while (!this.interrupted && callsLeft-- >= 0 &&
+            (WALK_IN_PROGRESS = this.region!.TryExpand())) {
+            const matches = this.region!.GetMatches();
             if (matches?.length > 0)
-                passMatches(matches);
+                this.passMatches(matches);
         }
 
-        if (!WALK_IN_PROGRESS)
+        if (!WALK_IN_PROGRESS || this.interrupted)
             return;
 
         if ((executionTime += measurer.Get()) < recursionTimeLimit)
-            this.search(searchRegion, passMatches, executionTime)
-        else
-            setTimeout(() => this.search(searchRegion, passMatches), DelayTime);
+            this.search(executionTime)
+        else {
+            this.invoked = true;
+            setTimeout(() => this.search(), DelayTime);
+        }
     }
 
-    onClosePanel() { this.Interrupt(); }
-
-    onSearchRestart() { this.Interrupt(); }
+    onClosePanel() { this.interrupted = true; }
 
     emitNewIFrame(iframe: HTMLIFrameElement) {
         this.eventElem.dispatchEvent(new NewIFrameEvent(iframe))
